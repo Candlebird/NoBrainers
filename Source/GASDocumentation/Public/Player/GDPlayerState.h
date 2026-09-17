@@ -8,8 +8,10 @@
 #include "GameplayEffectTypes.h"
 #include "GDPlayerState.generated.h"
 
+class APawn;
+
 /**
- * 
+ *
  */
 UCLASS()
 class GASDOCUMENTATION_API AGDPlayerState : public APlayerState, public IAbilitySystemInterface
@@ -82,6 +84,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDPlayerState|Attributes")
 	int32 GetGoldBounty() const;
+
+	// The dead Hero's "downed" corpse actor, cached here when the controller is switched onto a
+	// SpectatorPawn on death. GetPawn() on the Controller no longer reaches the corpse once that
+	// switch happens, so this is what RespawnDeadPlayers must destroy on respawn.
+	UPROPERTY(BlueprintReadWrite, Category = "GASDocumentation|GDPlayerState")
+	APawn* DownedPawn;
 
 protected:
 	UPROPERTY()

@@ -27,6 +27,14 @@ void AGASDocumentationGameMode::HeroDied(AController* Controller)
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	ASpectatorPawn* SpectatorPawn = GetWorld()->SpawnActor<ASpectatorPawn>(SpectatorClass, Controller->GetPawn()->GetActorTransform(), SpawnParameters);
 
+	// Cache the dead Hero's downed corpse on the PlayerState before switching possession away from
+	// it, since Controller->GetPawn() will point at the SpectatorPawn from here on and the corpse
+	// would otherwise be unreachable when RespawnDeadPlayers later needs to destroy it.
+	if (AGDPlayerState* GDPlayerState = Controller->GetPlayerState<AGDPlayerState>())
+	{
+		GDPlayerState->DownedPawn = Controller->GetPawn();
+	}
+
 	Controller->UnPossess();
 	Controller->Possess(SpectatorPawn);
 

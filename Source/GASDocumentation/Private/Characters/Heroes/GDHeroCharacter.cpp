@@ -233,12 +233,18 @@ void AGDHeroCharacter::TurnRate(float Value)
 
 void AGDHeroCharacter::MoveForward(float Value)
 {
-	AddMovementInput(UKismetMathLibrary::GetForwardVector(FRotator(0, GetControlRotation().Yaw, 0)), Value);
+	if (IsAlive())
+	{
+		AddMovementInput(UKismetMathLibrary::GetForwardVector(FRotator(0, GetControlRotation().Yaw, 0)), Value);
+	}
 }
 
 void AGDHeroCharacter::MoveRight(float Value)
 {
-	AddMovementInput(UKismetMathLibrary::GetRightVector(FRotator(0, GetControlRotation().Yaw, 0)), Value);
+	if (IsAlive())
+	{
+		AddMovementInput(UKismetMathLibrary::GetRightVector(FRotator(0, GetControlRotation().Yaw, 0)), Value);
+	}
 }
 
 void AGDHeroCharacter::InitializeFloatingStatusBar()
