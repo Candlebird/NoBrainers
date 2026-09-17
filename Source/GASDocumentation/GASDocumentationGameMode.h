@@ -16,6 +16,11 @@ public:
 
 	void HeroDied(AController* Controller);
 
+	// Blueprint hook so subclasses (e.g. BP_GameMode_ZombieStore) can react to a player death
+	// (e.g. tracking downed players for Night pickup) without overriding HeroDied() in C++.
+	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|GameMode")
+	void OnPlayerDied(AController* DeadPlayer);
+
 protected:
 	float RespawnDelay;
 

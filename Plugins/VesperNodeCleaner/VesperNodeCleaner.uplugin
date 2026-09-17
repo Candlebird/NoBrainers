@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "VesperNodeCleaner",
+	"Description": "Auto-Format, Reroute, and Comment Auto-Fit tool for Blueprints.",
+	"Category": "Editor",
+	"CreatedBy": "Vesper system",
+	"CreatedByURL": "https://alwaysprettystore.com/VesperNodeCleaner",
+	"DocsURL": "https://alwaysprettystore.com/VesperNodeCleaner/documentation.php",
+	"MarketplaceURL": "com.epicgames.launcher://ue/Fab/product/bfc5c05a-ff8e-4e70-bb5b-d28b4d6493dc",
+	"SupportURL": "https://alwaysprettystore.com/VesperNodeCleaner/documentation.php",
+	"EngineVersion": "5.8.0",
+	"CanContainContent": false,
+	"Modules": [
+		{
+			"Name": "VesperNodeCleaner",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		}
+	]
+}

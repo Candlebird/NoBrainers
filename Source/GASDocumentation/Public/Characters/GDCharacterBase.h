@@ -93,6 +93,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDCharacter")
 	virtual void FinishDying();
 
+	// True once this Character has died on the Server. Replicated so downed/persisted bodies (e.g. the Hero) can be
+	// queried/reacted to on clients without relying on actor destruction.
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsDead, Category = "GASDocumentation|GDCharacter")
+	bool bIsDead = false;
+
+	UFUNCTION()
+	virtual void OnRep_IsDead();
+
+	//~ Begin AActor Interface
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	//~ End AActor Interface
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

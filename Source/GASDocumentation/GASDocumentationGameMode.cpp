@@ -30,17 +30,10 @@ void AGASDocumentationGameMode::HeroDied(AController* Controller)
 	Controller->UnPossess();
 	Controller->Possess(SpectatorPawn);
 
-	FTimerHandle RespawnTimerHandle;
-	FTimerDelegate RespawnDelegate;
+	OnPlayerDied(Controller);
 
-	RespawnDelegate = FTimerDelegate::CreateUObject(this, &AGASDocumentationGameMode::RespawnHero, Controller);
-	GetWorldTimerManager().SetTimer(RespawnTimerHandle, RespawnDelegate, RespawnDelay, false);
-
-	AGDPlayerController* PC = Cast<AGDPlayerController>(Controller);
-	if (PC)
-	{
-		PC->SetRespawnCountdown(RespawnDelay);
-	}
+	// Respawn is no longer timer-driven; ZombieStore game modes respawn dead players
+	// when the Day phase starts (see BP_GameMode_ZombieStore::RespawnDeadPlayers).
 }
 
 void AGASDocumentationGameMode::BeginPlay()

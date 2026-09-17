@@ -17,7 +17,8 @@ public class GASDocumentation : ModuleRules
             "GameplayTags",
             "GameplayTasks",
             "AIModule",
-            "UMG"
+            "UMG",
+            "EnhancedInput"
         });
     }
 }

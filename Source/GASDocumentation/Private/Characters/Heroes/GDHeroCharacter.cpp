@@ -165,7 +165,10 @@ void AGDHeroCharacter::FinishDying()
 		}
 	}
 
-	Super::FinishDying();
+	// Intentionally does NOT call Super::FinishDying(). The base implementation destroys the Character actor,
+	// but the Hero must persist in the world as a "downed" body (pickup-able during Night) rather than being
+	// destroyed on death. AGDCharacterBase::FinishDying() (Destroy()) is still used as-is by non-Hero Characters
+	// (e.g. Zombies).
 }
 
 /**

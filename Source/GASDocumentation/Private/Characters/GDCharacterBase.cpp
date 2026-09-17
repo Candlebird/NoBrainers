@@ -7,6 +7,7 @@
 #include "Characters/Abilities/GDGameplayAbility.h"
 #include "Characters/GDCharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "UI/GDDamageTextWidgetComponent.h"
 
 // Sets default values
@@ -235,6 +236,9 @@ void AGDCharacterBase::Die()
 	GetCharacterMovement()->GravityScale = 0;
 	GetCharacterMovement()->Velocity = FVector(0);
 
+	bIsDead = true;
+	OnRep_IsDead();
+
 	OnCharacterDied.Broadcast(this);
 
 	if (AbilitySystemComponent.IsValid())
@@ -261,6 +265,20 @@ void AGDCharacterBase::Die()
 void AGDCharacterBase::FinishDying()
 {
 	Destroy();
+}
+
+void AGDCharacterBase::OnRep_IsDead()
+{
+	// Base implementation intentionally left blank. Subclasses (e.g. AGDHeroCharacter) override this
+	// to react to the downed/dead state without relying on actor destruction, since replication of
+	// bIsDead can arrive independently of Die()/FinishDying() being called locally.
+}
+
+void AGDCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGDCharacterBase, bIsDead);
 }
 
 // Called when the game starts or when spawned
