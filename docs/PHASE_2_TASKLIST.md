@@ -202,11 +202,16 @@ Deduct cost, update inventory or spawn item/blueprint in world.
 
 6. Persistence & Save System
 
-[ ] 6.1 Save Game Slot Manager (USaveGame_Subsystem)
+[x] 6.1 Save Game Slot Manager (USaveGame_Subsystem)
 
-Create a Game Instance Subsystem handling local file read/write operations (USaveFile).
-
-Define serialization structs for in-run session state (Day count, Store Cash, player inventories) and meta-progression state (unlocked blueprints, meta-currency).
+- **Deviation from title (justified, documented by the architect):** `UGameInstanceSubsystem` cannot be a Blueprint (`Abstract, Within=GameInstance`, no `Blueprintable`), and the save payload is typed in UserDefinedStructs (`S_ItemSlot`, catalog rows) a C++ subsystem couldn't reference without duplicating shapes. Built as `BP_GameInstance_NoBrainers` (Blueprint `GameInstance` subclass) instead — same lifetime/singleton semantics, stays Blueprint-first per project preference. Wired as the project's `GameInstanceClass` in `Config/DefaultEngine.ini`.
+- New structs in `/Game/Data/Save/`: `S_SaveNameCount`, `S_SavePlayerInventory`, `S_SaveShelfState` (declared now, populated by 6.2), `S_SaveSession` (day/phase/cash/ad level/event state/kiosk purchase counts/player inventories/shelf states, versioned), `S_SaveMeta` (meta-currency, unlocked blueprint IDs, run stats, versioned). `S_ItemData` (holds mesh/texture object refs) is deliberately never serialized — only `ItemID` FName tokens via `S_ItemSlot`.
+- New SaveGame Blueprints `/Game/Core/Save/BP_SaveGame_Session` and `BP_SaveGame_Meta`.
+- Additive accessors: `BP_GameState_ZombieStore::GetSaveSnapshot`/`RestoreSavedState` (server-only), `BP_InventoryComponent::GetInventorySlots`/`RestoreInventory` (server-only). Existing logic on both untouched otherwise.
+- `BP_GameInstance_NoBrainers`: gather/save/load/apply/delete session, meta load-or-create/save/add-currency/unlock-blueprint, all gated on host authority (`GetGameMode()` validity check). `SaveVersion` mismatch on session load deletes the stale slot rather than applying it. Meta persists across a version bump (added/removed struct fields tolerate tagged serialization). Player-inventory restore keyed by join-order slot index — no stable cross-session player identity exists yet in the project (documented assumption, revisit when online identity lands).
+- Hooked into `BP_GameMode_ZombieStore`: `StartDayPhase` now calls `SaveSession` each day transition; `EndRun` calls `DeleteSessionSave` (roguelite runs reset) then `RecordRunEnded` (increments `TotalRunsCompleted`/`BestDayReached` only — does **not** award meta-currency, that's Phase 5's job); `RespawnDeadPlayers` restores each respawning pawn's pre-death inventory via `TakeNextPlayerInventory`/`RestoreInventory`, tracked by a new `NextJoiningPlayerIndex` counter var.
+- Task 2.1 hold respected (no changes to `BP_InteractionProbe`/`IA_Interact`/`IMC_Default`/interact binding). Compiled clean (0 errors/warnings) on all touched Blueprints, vesper-laid-out, saved.
+- **Needs manual testing (not yet done):** confirm `GameInstanceClass` override actually takes effect in PIE (log/print in `ReceiveInit`); full day-cycle save→restart→load round trip (day number/phase/cash/ad level restore correctly, meta currency/unlocks persist across PIE sessions); `EndRun` both victory/defeat paths (session slot actually deleted, `RecordRunEnded` logs correct final day); death/respawn inventory restore with 2+ simultaneous deaths (join-order indexing assumption not yet validated under real multiplayer timing).
 
 [ ] 6.2 Data Struct Serialization
 
