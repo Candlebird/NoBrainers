@@ -10,6 +10,14 @@ Architecture: Server-authoritative inventory, shelf management, customer archety
 
 Goal: Implement the complete daytime retail gameplay loop, including item data structures, inventory management, interactive shelf stocking with matching-bonus logic, diverse customer archetypes, dynamic customer events, and the employee discount shop.
 
+Status note (autonomous overnight run, unreviewed — check these design calls in the morning):
+- Task 3.2 (Customer AI): resolved an ambiguity between 2.3's matching bonus ("+25%/+50% Sell Price / Customer Buy Probability") and 3.2's price-tolerance check. Buy-probability and price-charged are treated as separate axes: a customer's price-tolerance check (`MaxPriceMultiplier`) is evaluated against the item's unmodified `BaseSellPrice`, not the matching-inflated price — so shelf matching bonuses raise both the revenue collected AND (via a separate probability roll) the chance of a sale, without making low-tolerance archetypes (e.g. Cheap) reject well-stocked shelves. Revert this if you intended matching to make items less attractive to price-sensitive customers.
+- Task 5.1 (Shared Store Money Engine) landed early/partially as a side effect of 3.2: `BP_GameState_ZombieStore` now has `StoreCash` (replicated int32) and `Server_AddCash()`, named exactly per 5.1's spec, since 3.2's own task text names `StoreCash` as the purchase deposit target. `Server_DeductCash()` and purchase-validation are NOT added yet — that's still open 5.1 work.
+- Task 3.2 built: `BP_ShelfActor` gained `GetNumSlots`/`GetSlotOffer`/`Server_PurchaseSlot`+`OnSlotPurchased` dispatcher; new `BP_CheckoutCounter`/`BP_CustomerExitPoint` actors; new `BP_Customer` character, `BB_Customer`/`BT_Customer`/`AIC_Customer`, and BT tasks `BTT_FindBestShelfSlot`/`BTT_TakeItemFromShelf`/`BTT_ClaimCheckoutCounter`/`BTT_CompleteCheckout`/`BTT_LeaveStore` + service `BTS_ValidateTargetShelf` (all under `Content/AI/Customer/`). `lint_behavior_tree`/`validate_behavior_tree` both pass clean (0 issues). Price-tolerance-vs-matching-bonus resolution used the axis-separation approach noted above; shelf-slot price tolerance check uses a flat baseline reference price of 100 (no better per-category anchor existed) — revisit if that skews archetype buying behavior once tested.
+- **Needs manual testing before trusting this in-game (not yet done, nav mesh not built, no PIE run):** build navigation over the store level, place a stocked shelf + `BP_CheckoutCounter` + `BP_CustomerExitPoint`, spawn a `BP_Customer` via `AIC_Customer`, and confirm the full loop (shelf pick → walk → purchase → walk to checkout → `StoreCash` increases → walk to exit → despawn), plus the shelf-sniped-mid-walk race case and multiple customers not double-claiming one checkout counter. See the 3.2 builder's full test notes if something looks off.
+
+Older status note: none of the checkbox items below changed state this session, but supporting work landed that a later pass should credit once its own checkbox exists — 1.2's `UInventoryComponent` (Blueprint: `BP_InventoryComponent`) now has a player-facing UI (`WBP_Inventory`/`WBP_InventorySlot`), toggled with the `IA_ToggleInventory` Tab binding wired into `BP_PlayerController_ZombieStore`. This isn't tracked as its own line item in this file (nor in `PHASE_6_TASKLIST.md`'s HUD/UI section) — a future task-list edit should add one rather than silently checking an existing box. Also fixed in passing: `BP_InteractionProbe::UpdateInteractionTarget` was throwing a pending-kill access error on `CurrentTarget` when an `AItemPickup` was destroyed mid-frame by pickup; it now uses `IsValid` instead of a null check before un-highlighting the old target. Task 2.1 (First-Person Interaction Raycast) remains unchecked — `BP_InteractionProbe` exists and drives target highlighting via a render-custom-depth stencil, but nothing in the project yet binds `IA_Interact` to an actual interact/confirm call, so 2.1 isn't fully satisfied yet.
+
 Task Breakdown
 
 1. Data Architecture & Inventory System
@@ -64,6 +72,8 @@ Implement line-trace in ACharacter_Player mapped to IA_Interact.
 
 Highlight targeted IInteractableInterface actors (Pickups, Shelves, Cash Registers, Traps).
 
+On hold — deferred until further notice. Current investigation found that pickup already works today via `GA_Interact` (a GAS ability bound to the legacy `Interact` ActionMapping, key F), which does its own independent camera line-trace and doesn't consume `BP_InteractionProbe`'s `CurrentTarget` at all. Do not pick this task back up until explicitly given permission.
+
 [x] 2.2 Shelf Actor Architecture (AShelfActor)
 
 Create AShelfActor:
@@ -90,7 +100,7 @@ Replicate slot bonus multipliers to client UI.
 
 3. Customer Archetypes & Buying Preferences
 
-[ ] 3.1 Customer Archetype Enum & Data Structure (ECustomerType)
+[x] 3.1 Customer Archetype Enum & Data Structure (ECustomerType)
 
 Define ECustomerType enum:
 
@@ -110,7 +120,7 @@ TrinketCollector: Priority buying logic targeting EItemCategory::Trinkets.
 
 Define FCustomerArchetypeData struct (Category preferences, Max Price Multiplier, Walk Speed, Mesh Variations).
 
-[ ] 3.2 Customer AI Behavior Tree Integration
+[x] 3.2 Customer AI Behavior Tree Integration
 
 Extend ACustomerCharacter and Behavior Tree (BT_Customer):
 
