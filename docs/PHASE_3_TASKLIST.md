@@ -47,13 +47,25 @@ Update weapon equipping logic so active weapons attach to hands and inactive wea
 
 2. Weapon System Expansion (Ammo, Reload & Raycast Tracers)
 
-[ ] 2.1 Ammo & Reload Mechanics
+[x] 2.1 Ammo & Reload Mechanics
 
 Extend existing first-person weapon classes to include:
 
 Replicated integer variables: CurrentAmmo, MagazineSize, ReserveAmmo.
 
 Server RPC: Server_Reload() to check reserve counts, execute reload animations, and replenish magazines.
+
+STATUS NOTE:
+
+- Deviation: no separate weapon class exists (confirmed in 1.1's planning pass — only the native `Gun` mesh component + GAS abilities). Ammo lives on the already-existing `S_EquipmentSlot` struct's `CurrentAmmo`/`ReserveAmmo` fields (per-slot, in `BP_EquipmentComponent::EquipmentSlots`), not as standalone weapon-class variables — avoids duplicating state that `Server_EquipItem` was already seeding from `DT_Weapons`' `MagazineSize`/`DefaultReserveAmmo`.
+- `BP_EquipmentComponent` additions: `bIsReloading` (replicated+RepNotify), `ReloadTimerHandle`, `DefaultReloadDuration=2.0`, `ReloadingSlotIndex`/`ReloadingItemID` (server bookkeeping); pure helpers `GetActiveAmmo()`/`CanReload()`; `RefreshAmmoTags()`/`CancelReload()`; RPCs `Server_Reload()`→`FinishReload()` (mid-reload slot-switch safe — aborts and grants no ammo if the active slot changed) and `Server_ConsumeAmmo(Count)` (intentionally caller-less — no code path decrements ammo on fire yet; that lands with task 2.2's raycast-firing rework). Cleanup (`CancelReload`+`RefreshAmmoTags`) hooked into `Server_SetActiveSlot`/`Server_CycleActiveSlot`/`Server_RemoveEquipment`/`Server_EquipItem`/`RestoreEquipment` so switching weapons mid-reload can't misdeliver ammo.
+- Gate, not decrement: new gameplay tags `State.Weapon.NoAmmo`/`State.Weapon.Reloading` added to `GA_FireGun`/`GA_FireRifle`'s `ActivationBlockedTags` (now 5 tags total, verified via CDO read-back) — firing is blocked while reloading or empty, but nothing yet sets ammo to 0 since `Server_ConsumeAmmo` has no caller. This is expected, not a bug, until 2.2.
+- Deviation: no reload animation/montage — `S_WeaponData` has no Montage/duration field and no reload Montage assets exist in the project (only bare AnimSequences); real per-weapon reload timing and animation is deferred to a later content pass. Reload duration is a single component-level `DefaultReloadDuration` (2.0s) for now.
+- Replication note: `COND_OwnerOnly`-style conditioning on ammo is not achievable in Blueprint (lifetime conditions are C++-only); ammo rides `EquipmentSlots`' existing unconditional replication. Fine at present low update frequency (equip/reload only) — flagged as a bandwidth concern to revisit once 2.2 makes `Server_ConsumeAmmo` fire every shot.
+- `AmmoItemID` is unset on every `DT_Weapons` row — reserve-ammo replenishment from inventory pickups is not implemented; reserve only comes from `DefaultReserveAmmo` at equip time. Flagged for whoever builds loot drops (task 6.x).
+- Input: new `IA_Reload` mapped to `R` in IMC_Default; controller-side chain built in `BP_PlayerController_ZombieStore` with a dangling Cast exec pin — this is the 5th entry on the known Monolith manual-editor punch list (alongside IA_EquipSlot1/2/3, IA_CycleWeapon from 1.1/1.2): a human needs to drop in an `EnhancedInputAction IA_Reload` node and wire its Started pin to Cast node `K2Node_DynamicCast_4` in that graph.
+- Compile: both touched Blueprints 0 errors/0 warnings. Saved.
+- Manual testing needed (once the punch-list wiring above is done): 2-client listen-server — press R with a full mag (no-op), empty a mag via console `Server_ConsumeAmmo`, confirm firing blocks (NoAmmo tag), reload and confirm reserve→magazine transfer after the 2s delay and firing resumes, then start a reload and switch weapon slots mid-reload to confirm ammo isn't misdelivered to the wrong slot.
 
 [ ] 2.2 Fast-Tracer Raycast Weapon Integration
 
