@@ -9,12 +9,9 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/DecalComponent.h"
 #include "Components/WidgetComponent.h"
-#include "EnhancedInputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GASDocumentation/GASDocumentationGameMode.h"
-#include "InputActionValue.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Player/GDPlayerController.h"
 #include "Player/GDPlayerState.h"
 #include "UI/GDFloatingStatusBarWidget.h"
@@ -56,39 +53,12 @@ AGDHeroCharacter::AGDHeroCharacter(const class FObjectInitializer& ObjectInitial
 	AIControllerClass = AGDHeroAIController::StaticClass();
 
 	DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
-
-	MoveAction = Cast<UInputAction>(StaticLoadObject(UInputAction::StaticClass(), nullptr, TEXT("/Game/Characters/Input/IA_Move.IA_Move")));
-	LookAction = Cast<UInputAction>(StaticLoadObject(UInputAction::StaticClass(), nullptr, TEXT("/Game/Characters/Input/IA_Look.IA_Look")));
-	JumpAction = Cast<UInputAction>(StaticLoadObject(UInputAction::StaticClass(), nullptr, TEXT("/Game/Characters/Input/IA_Jump.IA_Jump")));
 }
 
 // Called to bind functionality to input
 void AGDHeroCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-		if (MoveAction)
-		{
-			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGDHeroCharacter::Move);
-		}
-
-		if (LookAction)
-		{
-			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGDHeroCharacter::Look);
-		}
-
-		if (JumpAction)
-		{
-			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("%s() Expected an EnhancedInputComponent but found a legacy UInputComponent instead. Enhanced Input is required for movement."), *FString(__FUNCTION__));
-	}
 
 	// Bind player input to the AbilitySystemComponent. Also called in OnRep_PlayerState because of a potential race condition.
 	BindASCInput();
@@ -217,29 +187,6 @@ void AGDHeroCharacter::PostInitializeComponents()
 	if (GunComponent && GetMesh())
 	{
 		GunComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("GunSocket"));
-	}
-}
-
-void AGDHeroCharacter::Move(const FInputActionValue& Value)
-{
-	if (IsAlive())
-	{
-		const FVector2D MoveValue = Value.Get<FVector2D>();
-		const FRotator YawRotation(0, GetControlRotation().Yaw, 0);
-
-		AddMovementInput(UKismetMathLibrary::GetForwardVector(YawRotation), MoveValue.X);
-		AddMovementInput(UKismetMathLibrary::GetRightVector(YawRotation), MoveValue.Y);
-	}
-}
-
-void AGDHeroCharacter::Look(const FInputActionValue& Value)
-{
-	if (IsAlive())
-	{
-		const FVector2D LookValue = Value.Get<FVector2D>();
-
-		AddControllerYawInput(LookValue.X);
-		AddControllerPitchInput(LookValue.Y);
 	}
 }
 

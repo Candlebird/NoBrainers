@@ -88,6 +88,21 @@ Content/
     `BindASCInput()` / `OnRep_PlayerState()` dance needed because GAS input
     binding races against PlayerState replication (see the header comment on
     that race for context before touching player input setup).
+    **Move/Look/Jump are no longer bound in C++.** The old
+    `MoveAction`/`LookAction`/`JumpAction` properties and the
+    `Move()`/`Look()` implementations (Enhanced Input bound in
+    `SetupPlayerInputComponent`) were removed because that binding kept
+    breaking; the equivalent logic (yaw-relative `AddMovementInput`,
+    `AddControllerYawInput`/`AddControllerPitchInput` with mouse-look at 70%
+    of raw sensitivity and both move-strafe and look-pitch axes inverted
+    relative to the raw `IA_Move`/`IA_Look` values, `Jump()`/`StopJumping()`)
+    now lives entirely in `BP_HeroCharacter`'s EventGraph via
+    `IA_Move`/`IA_Look`/`IA_Jump` Enhanced Input event nodes.
+    `SetupPlayerInputComponent` in C++ now only calls
+    `Super::SetupPlayerInputComponent()` and `BindASCInput()` — GAS ability
+    input binding is untouched. If movement/look ever needs to move back to
+    C++, rebuild it from the BP graph in `BP_HeroCharacter`, not from git
+    history, since the old C++ implementation is gone.
   - `AGDCharacterBase` → **`AGDMinionCharacter`** (`Characters/Minions/GDMinionCharacter.h`)
     AI-controlled enemy base. `BP_RedMinion` / `BP_BlueMinion` are the sample's
     concrete enemies; the zombie is intended to be a sibling of these (per GDD
@@ -137,6 +152,22 @@ all under `Content/GASDocumentation/Characters/Hero/Abilities/<AbilityName>/`:
 
 - `Content/Interactable/BP_Interaction_Base` — generic interactable base,
   driven by `GA_Interact`.
+- **Interaction input already works via legacy input, not Enhanced Input —
+  check this before building anything new.** `GA_Interact` is activated by
+  the classic Action Mapping `"Interact"` (key **F**, defined in
+  `Config/DefaultInput.ini`), routed through `EGDAbilityInputID::Interact`
+  (`Source/GASDocumentation/GASDocumentation.h`) and
+  `AGDHeroCharacter::BindASCInput()`'s `BindAbilityActivationToInputComponent`
+  call (`Source/GASDocumentation/Private/Characters/Heroes/GDHeroCharacter.cpp`).
+  This is the mechanism the player already uses today to pick up items /
+  interact with the world — it predates and has nothing to do with Enhanced
+  Input. An `IA_Interact` Enhanced Input action asset exists but, as of this
+  writing, nothing consumes it — don't assume interaction is unbuilt just
+  because `IA_Interact`/`IMC_Default` isn't wired to anything. Before adding
+  new interaction (or any ability-trigger) input, check
+  `Config/DefaultInput.ini` ActionMappings, `EGDAbilityInputID`
+  (`GASDocumentation.h`), and `AGDCharacterBase`/`AGDHeroCharacter`'s
+  GAS input-binding first — it's likely already wired via the legacy path.
 - `Content/Interactable/BP_ShopStation_Base` — the shop/restock interaction
   from the GDD's day-loop ("Customers buy items → money → buy weapons/ammo/
   defenses"). This is the only shop-specific Blueprint that exists so far;
