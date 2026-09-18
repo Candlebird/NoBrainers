@@ -213,9 +213,16 @@ Deduct cost, update inventory or spawn item/blueprint in world.
 - Task 2.1 hold respected (no changes to `BP_InteractionProbe`/`IA_Interact`/`IMC_Default`/interact binding). Compiled clean (0 errors/warnings) on all touched Blueprints, vesper-laid-out, saved.
 - **Needs manual testing (not yet done):** confirm `GameInstanceClass` override actually takes effect in PIE (log/print in `ReceiveInit`); full day-cycle save→restart→load round trip (day number/phase/cash/ad level restore correctly, meta currency/unlocks persist across PIE sessions); `EndRun` both victory/defeat paths (session slot actually deleted, `RecordRunEnded` logs correct final day); death/respawn inventory restore with 2+ simultaneous deaths (join-order indexing assumption not yet validated under real multiplayer timing).
 
-[ ] 6.2 Data Struct Serialization
+[x] 6.2 Data Struct Serialization
 
 Ensure all dynamic structures (FItemData, inventory arrays, socket occupancy states, store advertisement level) implement proper serialization interfaces so runs can be safely loaded or resumed if needed.
+
+- `BP_ShelfActor`: new `ShelfSaveID` Name var (server-only, not replicated; authorable, falls back to a deterministic rounded-world-location string like `Shelf_<X>_<Y>_<Z>` when unset) plus `GetShelfSaveID`, `GetShelfSaveState` (packs `StockedItems` into `S_SaveShelfState`), and `RestoreShelfState` (HasAuthority-gated; sanitizes each `S_ItemSlot` against `DT_Items` row validity/`Quantity>0`, resizes to `SlotTransforms.Length`, rebuilds display meshes). Duplicate `ShelfSaveID`s across shelves are detected and the second occurrence is dropped with a warning rather than silently colliding.
+- `BP_GameInstance_NoBrainers`: new `GatherShelfStates`/`ApplyShelfStates` functions wired into the existing `GatherSessionState`/`ApplySessionState` so `S_SaveSession.ShelfStates` is now actually populated and restored (was declared-but-unused after 6.1).
+- Payload audit: confirmed zero object references (`UStaticMesh*`/`UTexture2D*`) are reachable anywhere in the save chain — the `S_ItemData`-never-serialized rule from 6.1 already covers everything; no further item-serialization work needed. `BP_ShippingCrate` deliberately excluded (crates are always empty at every save point, nothing to persist).
+- `BP_GameMode_ZombieStore`: new default-off `bResumeSessionOnStart` opt-in bool; if true and a session save exists, `BeginPlay` loads it after a 1-frame delay instead of always starting fresh. Off by default, so current PIE behavior is unchanged unless explicitly enabled.
+- Task 2.1 hold respected. Compiled clean (0 errors; 1 pre-existing unrelated cosmetic warning on `BP_ShelfActor`'s `GetShelfSaveID`, a generic Break Vector node), vesper-laid-out, all touched assets saved.
+- **Needs manual testing (not yet done):** place a few `BP_ShelfActor`s, stock them, save/reload and confirm stock restores (incl. fallback-ID stability if a shelf is moved between save and load); force two shelves to share a `ShelfSaveID` and confirm the duplicate-warning/drop path; toggle `bResumeSessionOnStart` true vs. false and confirm the load-on-start behavior differs as expected; confirm `RestoreShelfState`'s authority gate (no-op on clients).
 
 Acceptance Criteria
 
