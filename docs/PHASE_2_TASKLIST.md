@@ -167,11 +167,14 @@ Liquidates items dropped into it at the end of the day phase, adding earnings di
 
 5. Employee Discount Store & Purchasing System
 
-[ ] 5.1 Shared Store Money Engine
+[x] 5.1 Shared Store Money Engine
 
 Replicated variable in AGameState_ZombieStore: int32 StoreCash.
 
 Thread-safe transaction methods: Server_AddCash(), Server_DeductCash().
+
+- `StoreCash` (replicated, on `BP_GameState_ZombieStore`) and `Server_AddCash()` already existed from task 3.2; this task closed out the remainder. Added `GetStoreCash()` (pure getter, for 5.2's kiosk UI to read cash without a raw VariableGet across classes), `CanAfford(Cost)` (pure, rejects negative costs), and `Server_DeductCash(Cost) -> bSuccess` (HasAuthority-guarded, then CanAfford-guarded, all-or-nothing deduction; `bSuccess` output lets 5.3's purchase logic branch on whether to actually grant the item). Also retrofitted a HasAuthority guard onto the previously-unguarded `Server_AddCash` for consistency with the rest of the money engine. **Important for 5.3:** these are Blueprint functions, not RPCs — `BP_GameState_ZombieStore` isn't client-owned, so a client can't call `Server_DeductCash` remotely. 5.3's purchase flow must route through a `Server_`-prefixed Custom Event on the player's own PlayerController/Character (which *can* carry RPC flags), which then calls into the GameState function server-side. Compiled clean, saved.
+  - **Needs manual testing (not yet done):** verify a day-end shipping-crate payout still lands correctly after the `Server_AddCash` guard retrofit (should be unaffected, all existing callers are server-side); no other in-game test surface yet since there's no purchase UI to trigger `Server_DeductCash` until 5.2/5.3 land.
 
 [ ] 5.2 Employee Discount Kiosk UI (UUserWidget)
 
