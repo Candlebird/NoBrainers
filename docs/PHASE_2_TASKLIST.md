@@ -176,7 +176,7 @@ Thread-safe transaction methods: Server_AddCash(), Server_DeductCash().
 - `StoreCash` (replicated, on `BP_GameState_ZombieStore`) and `Server_AddCash()` already existed from task 3.2; this task closed out the remainder. Added `GetStoreCash()` (pure getter, for 5.2's kiosk UI to read cash without a raw VariableGet across classes), `CanAfford(Cost)` (pure, rejects negative costs), and `Server_DeductCash(Cost) -> bSuccess` (HasAuthority-guarded, then CanAfford-guarded, all-or-nothing deduction; `bSuccess` output lets 5.3's purchase logic branch on whether to actually grant the item). Also retrofitted a HasAuthority guard onto the previously-unguarded `Server_AddCash` for consistency with the rest of the money engine. **Important for 5.3:** these are Blueprint functions, not RPCs — `BP_GameState_ZombieStore` isn't client-owned, so a client can't call `Server_DeductCash` remotely. 5.3's purchase flow must route through a `Server_`-prefixed Custom Event on the player's own PlayerController/Character (which *can* carry RPC flags), which then calls into the GameState function server-side. Compiled clean, saved.
   - **Needs manual testing (not yet done):** verify a day-end shipping-crate payout still lands correctly after the `Server_AddCash` guard retrofit (should be unaffected, all existing callers are server-side); no other in-game test surface yet since there's no purchase UI to trigger `Server_DeductCash` until 5.2/5.3 land.
 
-[ ] 5.2 Employee Discount Kiosk UI (UUserWidget)
+[x] 5.2 Employee Discount Kiosk UI (UUserWidget)
 
 UI Kiosk interface displaying purchasable catalog:
 
@@ -187,6 +187,9 @@ Defense blueprints (Spike Traps, Turrets, Barricades).
 Shelf expansion upgrades.
 
 Marketing / Store Advertisements (Increases day foot traffic & night zombie threat).
+
+- New data assets `S_KioskCatalogEntry` (struct) + `DT_KioskCatalog` (DataTable), seeded with placeholder rows across all 5 categories (Ammo/Weapons/Defense/Upgrades/Marketing), costs sourced from `DT_Items.DiscountCost` where applicable, pending tuning. `WBP_KioskEntry` (row widget, click-to-buy via `OnMouseButtonDown` override since Monolith can't wire `UButton::OnClicked`) and `WBP_KioskCatalog` (catalog container: title/cash header, scrollable entry list, footer hint, polls `GameState::GetStoreCash` every 0.25s to refresh cash text and per-entry affordability, Escape-to-close via `OnKeyDown`). `BP_DiscountKiosk` interactable (parented to `BP_Interaction_Base`, mirrors `BP_ShippingCrate`'s pattern) opens the UI only for the locally-controlled interactor (`IsLocalController` guard, NOT `HasAuthority` — opposite case from the crate, since this is client-local UI, not server work). `BP_PlayerController_ZombieStore` gained `KioskWidget` var + `OpenKioskUI()`/`CloseKioskUI()`, additive only, existing interact/input wiring untouched (task 2.1 hold respected). `WBP_KioskCatalog::RequestPurchase(RowName)` is deliberately left as a stub (Print String + TODO) — task 5.3 implements the actual purchase/deduction flow against `Server_DeductCash`. Compiled clean (0 errors/warnings), saved.
+- **Needs manual testing (not yet done):** interact with a placed `BP_DiscountKiosk` to confirm the catalog opens with correct input-mode/cursor switch; click a `WBP_KioskEntry` to confirm the purchase click registers (entry hit-test visibility was fixed mid-build) and unaffordable entries don't fire; Escape closes the kiosk and other keys pass through as Unhandled; cash/affordability live-update as `StoreCash` changes, with the poll timer properly cleared on close (no leak).
 
 [ ] 5.3 Purchase Execution Logic
 
