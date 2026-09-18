@@ -156,11 +156,14 @@ Overrides default random spawn pool with a high-density wave of a specific targe
 
 Notifies clients via HUD banner/event notification to allow players to pre-stock shelves strategically based on upcoming customer surges.
 
-[ ] 4.3 Fallback Consignment / Shipping Crate (AShippingCrate)
+[x] 4.3 Fallback Consignment / Shipping Crate (AShippingCrate)
 
 Create AShippingCrate interactable actor (usable if NPC models/animations are disabled):
 
 Liquidates items dropped into it at the end of the day phase, adding earnings directly to AGameState_ZombieStore::StoreCash.
+
+- Task 4.3 built as Blueprint `BP_ShippingCrate` (not native `AShippingCrate`, same precedent as GameState/GameMode being Blueprint): parented to `BP_Interaction_Base`, reuses the existing `BPI_Interactable`/`GA_Interact` path (no changes to `BP_InteractionProbe`/`IA_Interact`/`IMC_Default`, task 2.1 stays on hold). Replicated `CrateContents` (`array<S_ItemSlot>`), `MaxSlots` (default 20, 0=unlimited), `LiquidationRate` (default 0.5, placeholder pending tuning), `bAbsorbOverlappingPickups` (default true), replicated `LastLiquidationTotal`. Deposits work two ways: interacting (F) dumps the player's whole inventory into the crate via `BP_InventoryComponent::Server_RemoveItem` + `AddItemToCrate`; overlapping a dropped `BP_ItemPickup` auto-absorbs it and destroys the pickup. `GetCrateValue()` prices contents from `DT_Items`/`S_ItemData.BaseSellPrice` at `LiquidationRate` (deliberately worse than a customer sale, since this is the fallback path). `BP_GameMode_ZombieStore` gained `LiquidateAllCrates()` (finds all crates, calls `Server_LiquidateCrate` on each) appended as the new terminal node in `StartNightPhase` after the existing `Announce Upcoming Event` call — no other StartNightPhase/StartDayPhase wiring touched. All cash flows through the existing `GameState::Server_AddCash`, HasAuthority-guarded throughout. Compiled clean, saved.
+  - **Needs manual testing (not yet done):** drop loose items near a crate and confirm overlap auto-absorb; interact with F to deposit full inventory; run a day→night transition and confirm `StoreCash` rises by ~half the deposited items' base sell value, crate empties, and the emptied state replicates to clients.
 
 5. Employee Discount Store & Purchasing System
 
