@@ -6,14 +6,19 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
-**Phase 1: Project Setup & Core Multiplayer Architecture** — not yet started.
+**Phase 2: Day Phase & Retail Loop** — not yet started. Phase 1 is complete.
 
-None of `PHASE_1_TASKLIST.md`'s checkboxes are checked, and the core framework classes it
-calls for (`AGameState_ZombieStore`, `AGameMode_ZombieStore`, `ACharacter_Player`,
-`UHealthComponent`, `APlayerController_ZombieStore`) don't exist in the project yet — the
-project is still running on the stock GASDocumentation `BP_GDGameMode`. Work done so far
-(FPS camera conversion, placeholder `BP_Zombie_Base` zombie) is prep/scratch work, not
-credited against any phase's task list.
+Phase 1's Day/Night state loop, player death/respawn cycle, and spectator controller are all
+built and verified in the live editor: `BP_GameState_ZombieStore` and `BP_GameMode_ZombieStore`
+(Blueprints subclassing `GameStateBase` and the GASDocumentation `BP_GDGameMode_C` respectively)
+drive `StartDayPhase`/`StartNightPhase`/`RespawnDeadPlayers`/`CheckRunOverCondition`, and
+`ASpectatorController_ZombieStore` (C++) handles spectating a downed player's teammates. Note
+the project settled on Blueprint-first for the GameState/GameMode layer rather than the
+from-scratch native `AGameState_ZombieStore`/`AGameMode_ZombieStore` classes `PHASE_1_TASKLIST.md`'s
+task text originally named — see that file's Status note.
+
+None of `PHASE_2_TASKLIST.md`'s checkboxes are checked yet. The only related asset in the
+project so far, `BP_ShopStation_Base`, is prep/scratch work, not credited against Phase 2.
 
 **Before starting work in any phase, check that phase's own file for `[ ]` vs `[x]` status —
 this section is a hint, not a substitute for the source of truth.**

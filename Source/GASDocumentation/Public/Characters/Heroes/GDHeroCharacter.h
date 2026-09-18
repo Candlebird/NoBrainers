@@ -43,6 +43,15 @@ public:
 	virtual void FinishDying() override;
 
 protected:
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "GASDocumentation|Input")
+	class UInputAction* MoveAction;
+
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "GASDocumentation|Input")
+	class UInputAction* LookAction;
+
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "GASDocumentation|Input")
+	class UInputAction* JumpAction;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GASDocumentation|Camera")
 	float BaseTurnRate = 45.0f;
 
@@ -82,23 +91,11 @@ protected:
 
 	virtual void PostInitializeComponents() override;
 
-	// Mouse
-	void LookUp(float Value);
+	// Enhanced Input: IA_Move (Axis2D, X = Forward/Back, Y = Right/Left)
+	void Move(const struct FInputActionValue& Value);
 
-	// Gamepad
-	void LookUpRate(float Value);
-
-	// Mouse
-	void Turn(float Value);
-
-	// Gamepad
-	void TurnRate(float Value);
-
-	// Mouse + Gamepad
-	void MoveForward(float Value);
-
-	// Mouse + Gamepad
-	void MoveRight(float Value);
+	// Enhanced Input: IA_Look (Axis2D, X = Turn, Y = LookUp)
+	void Look(const struct FInputActionValue& Value);
 
 	// Creates and initializes the floating status bar for heroes.
 	// Safe to call many times because it checks to make sure it only executes once.

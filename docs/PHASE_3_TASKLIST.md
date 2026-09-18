@@ -1,238 +1,116 @@
-Here is the breakdown for Phase 3: Night Phase \& Zombie Horde, structured as a technical Markdown document for Phase\_3\_Night\_Phase\_and\_Zombie\_Horde.md.
-
-
-
-Phase 3: Night Phase \& Zombie Horde
+Phase 3: Night Phase & Zombie Horde
 
 Technical Context
 
 Engine Version: Unreal Engine 5.7.4
 
-
-
 Perspective: First-Person
 
+Architecture: Server-authoritative zombie AI spawning, pathfinding, breach point management, raycast-based gunplay with fast visual tracers (no ammo/reload mechanics yet), new melee weapon implementation, equipment/inventory binding, and randomized loot drops.
 
-
-Architecture: Server-authoritative zombie AI spawning, pathfinding, breach point management, weapon hit-detection, and randomized loot distribution.
-
-
-
-Goal: Implement the night-time survival gameplay loop, including horde spawning scaled by store advertisements, breachable entry points, first-person gunplay/melee combat, and zombie loot drops.
-
-
+Goal: Implement the night-time survival gameplay loop by integrating existing base weapons, adding ammo/reload extensions, building the foundational inventory/holster system, introducing melee weapons, setting up zombie AI and breach mechanics, and configuring loot drops.
 
 Task Breakdown
 
-1\. Zombie AI \& Horde Spawning Manager
+1. Inventory & Equipment System Foundation
 
-\[ ] 1.1 Zombie Base Character (ACharacter\_ZombieBase)
+[ ] 1.1 Player Inventory Component (UInventoryComponent)
 
+Create UInventoryComponent attached to ACharacter_Player:
 
+Replicated inventory arrays and slot structural limits (Primary, Secondary, Melee, Consumables).
 
-Create ACharacter\_ZombieBase derived from ACharacter.
+Server RPCs for adding, removing, and switching equipped items.
 
+Client delegates for inventory UI updates.
 
+[ ] 1.2 Holster & Equipment Attachment System
+
+Define socket attachments on the first-person character mesh (Skel_Mesh_FP / Third-person mesh) for weapons (e.g., Spine, Thigh, Back sockets).
+
+Update weapon equipping logic so active weapons attach to hands and inactive weapons snap to their corresponding holster sockets.
+
+2. Weapon System Expansion (Ammo, Reload & Raycast Tracers)
+
+[ ] 2.1 Ammo & Reload Mechanics
+
+Extend existing first-person weapon classes to include:
+
+Replicated integer variables: CurrentAmmo, MagazineSize, ReserveAmmo.
+
+Server RPC: Server_Reload() to check reserve counts, execute reload animations, and replenish magazines.
+
+[ ] 2.2 Fast-Tracer Raycast Weapon Integration
+
+Standardize all firing logic to use line-trace (raycast) on the server.
+
+Implement visual "fake projectile" fast-tracers (Niagara particle systems or beam emitters) spawned from muzzle to impact point to simulate projectiles visually without ballistic physics overhead.
+
+3. Melee Weapons Implementation
+
+[ ] 3.1 Melee Weapon Base Class (AMeleeWeaponBase)
+
+Create AMeleeWeaponBase derived from AWeaponBase or actors:
+
+Attack animation states (Swing, Recovery).
+
+Hit detection using box/capsule sweeps along the weapon swing arc.
+
+[ ] 3.2 Server-Validated Melee Damage
+
+Implement server-side overlap/sweep validation to prevent client-side hit exploitation.
+
+Apply impulse force to zombie ragdolls or hit targets upon successful melee impact.
+
+4. Zombie AI & Horde Spawning Manager
+
+[ ] 4.1 Zombie Base Character (ACharacter_ZombieBase)
+
+Create ACharacter_ZombieBase derived from ACharacter.
 
 Add UHealthComponent (replicated).
 
-
-
 NavMesh Agent setup with custom locomotion speeds (walk/jog/sprint variations).
 
+Attack Component (UZombieAttackComponent) for melee sweeps against players or breach barriers.
 
+[ ] 4.2 Zombie AI Controller & Behavior Tree (BT_Zombie)
 
-Attack Component (UZombieAttackComponent): Melee sweep line-trace dealing damage to players or breach barriers.
-
-
-
-\[ ] 1.2 Zombie AI Controller \& Behavior Tree (BT\_Zombie)
-
-
-
-Create AAIController\_Zombie using Blackboard \& Behavior Tree:
-
-
+Create AAIController_Zombie using Blackboard & Behavior Tree:
 
 Priority 1: Target nearest active player within sight/hearing radius.
 
-
-
 Priority 2: If no line of sight, target nearest Breach Point (ABreachPoint) to enter the store.
 
+Priority 3: If inside store and path blocked by player-placed defense, attack defense actor.
 
-
-Priority 3: If inside store and path blocked by defense (turret/barricade), attack defense actor.
-
-
-
-\[ ] 1.3 Spawner System (AZombieSpawnerManager)
-
-
+[ ] 4.3 Spawner System (AZombieSpawnerManager)
 
 Create AZombieSpawnerManager active during NightPhase:
 
-
-
 Calculate total horde count based on BaseRunDifficulty + StoreAdvertisementLevel.
 
+Wave logic: Spawns zombies at exterior spawn points outside store boundaries in controlled bursts within performance caps.
 
+5. Store Entry & Breach Point System
 
-Wave logic: Spawns zombies at exterior spawn points outside store boundaries in controlled bursts.
+[ ] 5.1 Breach Point Actor (ABreachPoint)
 
-
-
-Tracks active count to keep within performance caps (e.g., max 30-50 active zombies on screen simultaneously).
-
-
-
-2\. Store Entry \& Breach Point System
-
-\[ ] 2.1 Breach Point Actor (ABreachPoint)
-
-
-
-Create ABreachPoint placed at windows, glass doors, and vent hatches around the store geometry.
-
-
+Create ABreachPoint placed at windows, glass doors, and vent hatches around store geometry.
 
 Replicated state variables: float Health, bool bIsBreached.
 
+Visual states: Intact -> Damaged -> Destroyed/Breached (collision disabled).
 
+[ ] 5.2 The Breach Action
 
-Visual states: Intact (Mesh 1) -> Damaged (Mesh 2) -> Destroyed/Breached (Mesh 3 + collision disabled).
+Zombies path toward unbreached ABreachPoint actors, attack them, and trigger breach events upon health depletion, allowing entry into the store interior via updated NavMesh links.
 
+6. Zombie Loot Drop System
 
+[ ] 6.1 Loot Table Architecture (FLootTable) & Drop Spawning
 
-\[ ] 2.2 Zombie Breach Interaction
+Data Table DT_ZombieLoot mapping zombie types to weighted item drop lists.
 
-
-
-Zombies path toward unbreached ABreachPoint actors blocking their way into the store.
-
-
-
-Attack animation loop damages the ABreachPoint.
-
-
-
-On breach complete: Broadcast breach event (audio cue for players), disable barrier collision, and update NavMesh to allow zombies into the store interior.
-
-
-
-\[ ] 2.3 Player Barrier Repair (Optional/Day Prep)
-
-
-
-Allow players to interact with breached ABreachPoint actors using resources or cash to repair window boards/glass before or during night.
-
-
-
-3\. First-Person Combat \& Weapons System
-
-\[ ] 3.1 Networked Weapon Base Class (AWeaponBase)
-
-
-
-Create AWeaponBase actor class (Attachable to ACharacter\_Player first-person mesh):
-
-
-
-Replicated variables: int32 CurrentAmmo, int32 ReserveAmmo, float FireRate, float BaseDamage.
-
-
-
-Server RPC: Server\_FireWeapon(FVector MuzzleLocation, FVector TargetImpact).
-
-
-
-Multicast RPC: Multicast\_PlayFireFX() (Muzzle flash, recoil animation, shot audio).
-
-
-
-\[ ] 3.2 Hit-Scan \& Projectile Implementation
-
-
-
-Hit-Scan Weapons (Pistol, Shotgun, SMG):
-
-
-
-Line-trace from camera center with weapon spread modifier.
-
-
-
-Validate impact on server and apply damage via UGameplayStatics::ApplyDamage().
-
-
-
-Melee Weapons (Baseball Bat, Crowbar):
-
-
-
-Capsule/Box trace along weapon arc during attack animation state.
-
-
-
-\[ ] 3.3 Weapon Inventory \& Switching
-
-
-
-Equip/Holster system for ACharacter\_Player supporting Primary, Secondary, and Melee slots.
-
-
-
-Bind input actions IA\_PrimaryAction (Fire), IA\_SecondaryAction (Aim Down Sights), and IA\_Reload.
-
-
-
-4\. Zombie Loot Drop System
-
-\[ ] 4.1 Loot Table Architecture (FLootTable)
-
-
-
-Data Table DT\_ZombieLoot mapping zombie types to weighted item drop lists.
-
-
-
-Items dropped match store retail items defined in DT\_Items (Phase 2).
-
-
-
-\[ ] 4.2 Loot Spawning on Death
-
-
-
-On ACharacter\_ZombieBase::Die() (Server-side):
-
-
-
-Roll against DT\_ZombieLoot drop probability.
-
-
-
-Spawn AItemPickup actor (from Phase 2) at zombie death transform with physics impulse (slight drop toss effect).
-
-
-
-Auto-destroy zombie ragdoll/body after configurable delay (e.g., 5 seconds) to maintain performance.
-
-
-
-Acceptance Criteria
-
-When NightPhase begins, the spawner manager scales and spawns zombie waves dynamically based on run progress and advertisement level.
-
-
-
-Zombies correctly path to store windows/doors, breach the barriers, and enter the store space.
-
-
-
-Players can fire weapons (hit-scan/melee), dealing validated damage to zombies with synced audio/visual effects across all clients.
-
-
-
-Defeated zombies play death ragdolls/animations and drop physical AItemPickup actors that players can store for the next Day phase.
+On ACharacter_ZombieBase::Die() (Server-side): roll against drop tables, spawn physical world pickup items with slight drop impulses, and clear zombie bodies after a set delay.
 

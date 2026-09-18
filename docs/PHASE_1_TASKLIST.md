@@ -8,6 +8,8 @@ Architecture: Dedicated / Listen Server Model (RPCs, Variable Replication, Owner
 
 Goal: Establish a baseline networked framework for up to 4 players with a functional Day/Night state loop and spectating support.
 
+Status: Complete. Verified against the live editor via Monolith — `BP_GameState_ZombieStore` and `BP_GameMode_ZombieStore` are Blueprint classes (extending `GameStateBase` and `BP_GDGameMode_C`/`AGASDocumentationGameMode` respectively) rather than the from-scratch native `AGameState_ZombieStore`/`AGameMode_ZombieStore` C++ classes this task list's task text names below — the project settled on Blueprint-first for this layer, with only the spectator controller (`ASpectatorController_ZombieStore`) implemented in C++. The task text below is left as originally written for traceability; treat "AGameState_ZombieStore"/"AGameMode_ZombieStore" as referring to those Blueprints.
+
 Task Breakdown
 0. Cleanup
 [x] 0.1 Remove Blueprint Player Prototype
@@ -73,7 +75,7 @@ Implement CheckRunOverCondition(): Count living players. If living count is 0 du
 
 Remove the default respawn timer that respawns players after death after 5 seconds. Set them to respawn only when the Day phase starts.
 
-[ ] 3.2 Player Death & Down State Logic
+[x] 3.2 Player Death & Down State Logic
 
 Use existing OnPlayerDeath() on BP_HeroCharacter (Server-side):
 
@@ -88,7 +90,7 @@ Switch AController view target to spectator logic.
 Remove current destruction of player, as later on we will be implementing "picking up downed players" during the night cycle
 
 4. Spectator & Respawn Loop
-[ ] 4.1 Spectator Controller Logic (APlayerController, C++)
+[x] 4.1 Spectator Controller Logic (APlayerController, C++)
 
 Create ASpectatorController_ZombieStore in C++.
 
@@ -98,7 +100,7 @@ Cycle through array of surviving BP_HeroCharacter actors on primary input (IA_Pr
 
 Set camera view target (SetViewTargetWithBlend) to active teammate.
 
-[ ] 4.2 Day Phase Respawn Cycle
+[x] 4.2 Day Phase Respawn Cycle
 
 In AGameMode_ZombieStore::StartDayPhase():
 

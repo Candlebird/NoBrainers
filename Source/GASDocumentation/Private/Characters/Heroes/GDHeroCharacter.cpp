@@ -9,8 +9,10 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/DecalComponent.h"
 #include "Components/WidgetComponent.h"
+#include "EnhancedInputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GASDocumentation/GASDocumentationGameMode.h"
+#include "InputActionValue.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Player/GDPlayerController.h"
@@ -54,6 +56,10 @@ AGDHeroCharacter::AGDHeroCharacter(const class FObjectInitializer& ObjectInitial
 	AIControllerClass = AGDHeroAIController::StaticClass();
 
 	DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+
+	MoveAction = Cast<UInputAction>(StaticLoadObject(UInputAction::StaticClass(), nullptr, TEXT("/Game/Characters/Input/IA_Move.IA_Move")));
+	LookAction = Cast<UInputAction>(StaticLoadObject(UInputAction::StaticClass(), nullptr, TEXT("/Game/Characters/Input/IA_Look.IA_Look")));
+	JumpAction = Cast<UInputAction>(StaticLoadObject(UInputAction::StaticClass(), nullptr, TEXT("/Game/Characters/Input/IA_Jump.IA_Jump")));
 }
 
 // Called to bind functionality to input
@@ -61,13 +67,28 @@ void AGDHeroCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	PlayerInputComponent->BindAxis("MoveForward", this, &AGDHeroCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AGDHeroCharacter::MoveRight);
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		if (MoveAction)
+		{
+			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGDHeroCharacter::Move);
+		}
 
-	PlayerInputComponent->BindAxis("LookUp", this, &AGDHeroCharacter::LookUp);
-	PlayerInputComponent->BindAxis("LookUpRate", this, &AGDHeroCharacter::LookUpRate);
-	PlayerInputComponent->BindAxis("Turn", this, &AGDHeroCharacter::Turn);
-	PlayerInputComponent->BindAxis("TurnRate", this, &AGDHeroCharacter::TurnRate);
+		if (LookAction)
+		{
+			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGDHeroCharacter::Look);
+		}
+
+		if (JumpAction)
+		{
+			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s() Expected an EnhancedInputComponent but found a legacy UInputComponent instead. Enhanced Input is required for movement."), *FString(__FUNCTION__));
+	}
 
 	// Bind player input to the AbilitySystemComponent. Also called in OnRep_PlayerState because of a potential race condition.
 	BindASCInput();
@@ -199,51 +220,26 @@ void AGDHeroCharacter::PostInitializeComponents()
 	}
 }
 
-void AGDHeroCharacter::LookUp(float Value)
+void AGDHeroCharacter::Move(const FInputActionValue& Value)
 {
 	if (IsAlive())
 	{
-		AddControllerPitchInput(Value);
+		const FVector2D MoveValue = Value.Get<FVector2D>();
+		const FRotator YawRotation(0, GetControlRotation().Yaw, 0);
+
+		AddMovementInput(UKismetMathLibrary::GetForwardVector(YawRotation), MoveValue.X);
+		AddMovementInput(UKismetMathLibrary::GetRightVector(YawRotation), MoveValue.Y);
 	}
 }
 
-void AGDHeroCharacter::LookUpRate(float Value)
+void AGDHeroCharacter::Look(const FInputActionValue& Value)
 {
 	if (IsAlive())
 	{
-		AddControllerPitchInput(Value * BaseLookUpRate * GetWorld()->DeltaTimeSeconds);
-	}
-}
+		const FVector2D LookValue = Value.Get<FVector2D>();
 
-void AGDHeroCharacter::Turn(float Value)
-{
-	if (IsAlive())
-	{
-		AddControllerYawInput(Value);
-	}
-}
-
-void AGDHeroCharacter::TurnRate(float Value)
-{
-	if (IsAlive())
-	{
-		AddControllerYawInput(Value * BaseTurnRate * GetWorld()->DeltaTimeSeconds);
-	}
-}
-
-void AGDHeroCharacter::MoveForward(float Value)
-{
-	if (IsAlive())
-	{
-		AddMovementInput(UKismetMathLibrary::GetForwardVector(FRotator(0, GetControlRotation().Yaw, 0)), Value);
-	}
-}
-
-void AGDHeroCharacter::MoveRight(float Value)
-{
-	if (IsAlive())
-	{
-		AddMovementInput(UKismetMathLibrary::GetRightVector(FRotator(0, GetControlRotation().Yaw, 0)), Value);
+		AddControllerYawInput(LookValue.X);
+		AddControllerPitchInput(LookValue.Y);
 	}
 }
 

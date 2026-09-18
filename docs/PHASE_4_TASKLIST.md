@@ -1,230 +1,126 @@
-Here is the breakdown for Phase 4: Defense \& Building Systems, structured as a technical Markdown document for Phase\_4\_Defense\_and\_Building\_Systems.md.
-
-
-
-Phase 4: Defense \& Building Systems
+Phase 4: Defense & Building Systems
 
 Technical Context
 
 Engine Version: Unreal Engine 5.7.4
 
-
-
 Perspective: First-Person
 
+Architecture: Node-based socket placement system (pre-defined world anchors), blueprint unlock registry, day-only build mode UI, and server-authoritative money transactions for placement.
 
-
-Architecture: Server-authoritative placement validation, replicated trap state management, and localized grid/surface snapping system.
-
-
-
-Goal: Allow players to purchase defense blueprints during the day, preview placement in first-person using a snapping ghost mesh, build automated traps/turrets/barricades, and maintain or repair them as zombies attack them.
-
-
+Goal: Implement a simplified build system where players spend store cash during the Day Phase to place unlocked defense blueprints onto specialized, pre-defined node sockets (Floor, Wall, TurretBase, Other).
 
 Task Breakdown
 
-1\. First-Person Placement \& Preview System
+1. Build Node Socket Architecture
 
-\[ ] 1.1 Placement Component (UPlacementComponent)
+[ ] 1.1 Defense Socket Actor (ADefenseSocket)
 
+Create ADefenseSocket actor placed fixedly throughout the store map.
 
+Replicated properties:
 
-Attach to ACharacter\_Player.
+EDefenseSocketType SocketType (Floor, Wall, TurretBase, Other).
 
+ADefenseBase* OccupyingDefense (Pointer to active placed defense, null if empty).
 
+bool bIsOccupied.
 
-Track active build mode state (bIsBuilding, TSubclassOf SelectedDefenseClass).
+Visual feedback: Node marker highlight visible only while the local player is in Build Mode.
 
+[ ] 1.2 Socket Trace & Selection Engine
 
+Line-trace from camera center while in Build Mode targeting ADefenseSocket actors.
 
-Continuous first-person line-trace along player camera view vector (configurable build range, e.g., 300–500 units).
+Highlight valid target sockets matching the category of the selected defense blueprint.
 
+2. Day-Only Build Mode & Blueprint System
 
+[ ] 2.1 Build Mode Input & HUD Overlay (IA_ToggleBuildMode)
 
-\[ ] 1.2 Ghost Preview Actor (ABuildPreviewActor)
+Bind key (B) to toggle Build Mode:
 
+Restriction: Allowed only during EGamePhase::DayPhase. Force exit Build Mode when transitioning to NightPhase.
 
+Open Radial / Carousel Build Menu (UW_BuildMenu) showing unlocked blueprints.
 
-Spawns on build mode enter. Dynamic translucent material:
+[ ] 2.2 Blueprint Registry & Progression Engine (UBlueprintSubsystem)
 
+Track unlocked defense classes per run:
 
+Default Starters (Unlocked automatically): Simple Spike Traps (Floor), Simple Swinging Traps (Wall).
 
-Green Material: Valid placement location.
+Shop Unlockables: Turrets (TurretBase), Barricades, Slow Strips, Gas Traps (Other).
 
+Integrate blueprint purchases into the Day Phase Employee Discount Store catalog.
 
+[ ] 2.3 Networked Node Build Transaction
 
-Red Material: Invalid placement location (colliding with walls, out of bounds, or blocking required pathways).
-
-
-
-Snap logic: Align to floor grid/normals or wall surfaces depending on defense type (EPlacementSurface::Floor, EPlacementSurface::Wall).
-
-
-
-\[ ] 1.3 Networked Build Execution
-
-
-
-Server RPC Server\_PlaceDefense(TSubclassOf DefenseClass, FTransform TargetTransform).
-
-
+Server RPC Server_PlaceDefenseOnSocket(ADefenseSocket* TargetSocket, TSubclassOf<ADefenseBase> DefenseClass).
 
 Server validation checks:
 
+Phase is currently DayPhase.
 
+TargetSocket is valid, unoccupied, and matches DefenseClass required SocketType.
 
-Player possesses defense blueprint or item in inventory.
+Player has unlocked the blueprint.
 
+Store cash reserves (AGameState_ZombieStore::StoreCash) are sufficient.
 
+Deduct store cash, mark socket as occupied, and spawn/attach ADefenseBase actor to node transform across all clients.
 
-Target location is within valid reach distance and surface constraints.
+3. Defense Base Class & Socket Trap Hierarchy
 
+[ ] 3.1 Core Defense Actor (ADefenseBase)
 
+Base class for node-attached defenses:
 
-Player or store has required funds/inventory item to consume.
+Associated socket type enum: EDefenseSocketType.
 
+Replicated UHealthComponent (Targetable and destructible by zombies).
 
+Durability / Health visual states.
 
-Deduct item/blueprint and spawn ADefenseBase actor across all clients.
+[ ] 3.2 Socket Trap Variants
 
+Floor Traps (SocketType::Floor):
 
+Spike Trap: Overlap trigger dealing instant physical damage; loses durability per activation.
 
-2\. Defense Base Class \& Structure Hierarchy
+Oil Slick / Ice Strip: Applies speed reduction status effect (UStatusEffect_Slow) to crossing zombies.
 
-\[ ] 2.1 Core Defense Actor (ADefenseBase)
+Wall Traps (SocketType::Wall):
 
+Swinging Blade / Mallet Trap: Swings outward on proximity trigger, applying knockback and physical damage.
 
+Turrets (SocketType::TurretBase):
 
-Create ADefenseBase derived from AActor (IInteractableInterface):
+Automated Turret: Mounts on designated turret bases; 360-degree target acquisition, firing line-traces at passing zombies.
 
+Other Defenses (SocketType::Other):
 
+Spotlights, barricades, gas dispensers, or utility generators.
 
-Replicated UHealthComponent (Zombies can target and destroy built defenses).
+4. Node Repair, Upgrade & Selling System
 
+[ ] 4.1 In-Build Mode Node Management
 
+While looking at an occupied ADefenseSocket during Build Mode:
 
-Replicated state enum: EDefenseState::Active, EDefenseState::Disabled, EDefenseState::Destroyed.
+Repair Option: Spend store cash to restore OccupyingDefense health/durability.
 
-
-
-Visual damage feedback (Particle/Decal swap as health drops).
-
-
-
-\[ ] 2.2 Navigation Mesh Integration
-
-
-
-Add UNavModifierComponent to ADefenseBase actors.
-
-
-
-Configure obstacle area types (e.g., barricades act as Nav Obstacles forcing zombie re-pathing, while floor traps allow zombie pathing over them).
-
-
-
-3\. Trap \& Automated Defense Classes
-
-\[ ] 3.1 Spike / Damage Traps (ATrap\_Spike)
-
-
-
-Floor-mounted defense actor.
-
-
-
-Overlap trigger box detects ACharacter\_ZombieBase instances.
-
-
-
-Trigger cooldown timer and apply AOE physical damage to overlapping zombies.
-
-
-
-Durability system: Deduct 1 durability point per activation until destroyed or depleted.
-
-
-
-\[ ] 3.2 Slow / Utility Traps (ATrap\_Slow)
-
-
-
-Floor/Wall-mounted defense actor (e.g., Glue pad, Oil slick, Ice strip).
-
-
-
-Applies speed reduction status effect (UStatusEffect\_Slow) to zombies within trigger volume.
-
-
-
-Replicates status particle effects to clients.
-
-
-
-\[ ] 3.3 Automated Turrets (ATurret\_Base)
-
-
-
-Wall or floor-mounted automated defense.
-
-
-
-Target acquisition component (USphereComponent) searching for nearest ACharacter\_ZombieBase.
-
-
-
-Rotating turret head (pitch/yaw smoothly interpolates toward active target).
-
-
-
-Firing loop: Line-trace or projectile damage with ammo counter and re-arm mechanic.
-
-
-
-4\. Defense Repair \& Deconstruction System
-
-\[ ] 4.1 Repair Mechanism
-
-
-
-First-person interaction with damaged ADefenseBase actors during DayPhase.
-
-
-
-Deduct store cash or repair materials to restore CurrentHealth / trap durability.
-
-
-
-\[ ] 4.2 Deconstruction / Relocation
-
-
-
-Allow players to dismantle built traps during DayPhase.
-
-
-
-Refund a percentage (e.g., 75%) of original cost to store cash reserves or return defense item to player inventory.
-
-
+Sell / Dismantle Option: Remove OccupyingDefense, refunding a portion of store cash (e.g., 75%) and freeing the socket for new construction.
 
 Acceptance Criteria
 
-Players can toggle build preview mode, showing a clear green/red ghost mesh that aligns smoothly with floors or walls.
+Building is restricted to pre-defined node locations (Floor, Wall, TurretBase, Other) and can only be activated during the Day Phase by pressing B.
 
+Players start each run with basic blueprints (Spike and Swinging Traps) unlocked by default and can buy advanced blueprints (Turrets, Gas Dispensers) at the store.
 
+Placing a defense on a node validates cash, socket type matching, and blueprint ownership on the server before spawning.
 
-Placing a defense correctly validates on the server, consumes the item/cash, and spawns the networked defense actor.
+Traps deal damage, apply status effects, or auto-target zombies based on their socket type during the Night Phase.
 
-
-
-Spike traps, slow traps, and automated turrets autonomously trigger on nearby zombies and apply damage or status effects.
-
-
-
-Zombies dynamically target and deal damage to player-built defenses if their paths are obstructed or if attacked by turrets.
-
-
-
-Players can repair or deconstruct placed defenses during the Day Phase.
+Players can repair or sell placed defenses directly from occupied node sockets while in Build Mode.
 
