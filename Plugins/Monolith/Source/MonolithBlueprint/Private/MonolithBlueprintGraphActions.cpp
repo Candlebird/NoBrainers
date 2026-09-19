@@ -8,6 +8,7 @@
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
 #include "K2Node_Event.h"
+#include "K2Node_CustomEvent.h"
 #include "K2Node_CreateDelegate.h"
 #include "EdGraphSchema_K2.h"
 #include "UObject/UObjectIterator.h"
@@ -108,6 +109,25 @@ void FMonolithBlueprintGraphActions::RegisterActions(FMonolithToolRegistry& Regi
 			.Required(TEXT("function_name"), TEXT("string"), TEXT("Function graph name"))
 			.Optional(TEXT("inputs"), TEXT("array"), TEXT("Array of {name, type} objects for inputs"))
 			.Optional(TEXT("outputs"), TEXT("array"), TEXT("Array of {name, type} objects for outputs"))
+			.Build());
+
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("set_custom_event_params"),
+		TEXT("Add input parameters to a Blueprint Custom Event node (K2Node_CustomEvent) in the event graph. Unlike set_function_params, this targets event nodes, not function graphs."),
+		FMonolithActionHandler::CreateStatic(&HandleSetCustomEventParams),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"), TEXT("Blueprint asset path"))
+			.Required(TEXT("event_name"), TEXT("string"), TEXT("Custom Event node name"), {TEXT("name")})
+			.Optional(TEXT("inputs"), TEXT("array"), TEXT("Array of {name, type} objects for inputs"))
+			.Build());
+
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("finalize_create_delegate"),
+		TEXT("Run the engine's own resolution logic (UK2Node_CreateDelegate::HandleAnyChangeWithoutNotifying) on an already-wired CreateDelegate node. Required after blueprint.add_node(CreateDelegate) + connect_pins wire the node's self pin and its delegate output pin to an AddDelegate/RemoveDelegate node. IMPORTANT: wiring the self pin alone already fires the node's own PinConnectionListChanged() and wipes its SelectedFunctionName back to NAME_None (this happens before the delegate pin is connected) — so by the time this action runs, the node no longer remembers which function it was bound to. Always pass function_name: this action re-applies it via SetFunction() immediately before resolving, which is what makes resolution succeed. function_name is NOT merely a fallback lookup key (SelectedFunctionName cannot be trusted for lookup, since it's the exact field that gets wiped) — prefer node_id for locating the node, with function_name additionally required to rebind it. Fails if the delegate output pin isn't connected yet. Returns selected_function_name, selected_function_guid, is_valid."),
+		FMonolithActionHandler::CreateStatic(&HandleFinalizeCreateDelegate),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"), TEXT("Blueprint asset path"))
+			.Optional(TEXT("graph_name"), TEXT("string"), TEXT("Graph to search (narrows node lookup when node_id is omitted, or disambiguates multiple CreateDelegate nodes)"))
+			.Optional(TEXT("node_id"), TEXT("string"), TEXT("CreateDelegate node ID (from add_node's response node_id field). Preferred/reliable lookup. If omitted, all CreateDelegate nodes in the Blueprint (optionally narrowed by graph_name) are scanned, and this action errors if more than one is found."))
+			.Optional(TEXT("function_name"), TEXT("string"), TEXT("The function/event this delegate should bind to (e.g. 'OnBuildMenuBlueprintSelected_Handler'). Always pass this — it is re-applied to the node via SetFunction() right before resolution runs, since the node's own memory of this value is wiped by earlier pin-wiring. Not used as a node lookup key."))
 			.Build());
 
 	Registry.RegisterAction(TEXT("blueprint"), TEXT("implement_interface"),
@@ -909,6 +929,259 @@ FMonolithActionResult FMonolithBlueprintGraphActions::HandleSetFunctionParams(co
 	Root->SetStringField(TEXT("function_name"), FuncName);
 	Root->SetNumberField(TEXT("inputs_added"), InputsAdded);
 	Root->SetNumberField(TEXT("outputs_added"), OutputsAdded);
+	return FMonolithActionResult::Success(Root);
+}
+
+// --- set_custom_event_params ---
+
+FMonolithActionResult FMonolithBlueprintGraphActions::HandleSetCustomEventParams(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath;
+	UBlueprint* BP = MonolithBlueprintInternal::LoadBlueprintFromParams(Params, AssetPath);
+	if (!BP)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Blueprint not found: %s"), *AssetPath));
+	}
+
+	FString EventName = Params->GetStringField(TEXT("event_name"));
+	if (EventName.IsEmpty())
+	{
+		Params->TryGetStringField(TEXT("name"), EventName);
+	}
+	if (EventName.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("Missing required parameter: event_name"));
+	}
+
+	// Custom Events live in the ubergraph pages, not FunctionGraphs.
+	UK2Node_CustomEvent* EventNode = nullptr;
+	for (UEdGraph* G : BP->UbergraphPages)
+	{
+		if (!G) continue;
+		for (UEdGraphNode* Node : G->Nodes)
+		{
+			UK2Node_CustomEvent* CustomEvent = Cast<UK2Node_CustomEvent>(Node);
+			if (CustomEvent && (CustomEvent->CustomFunctionName.ToString() == EventName || CustomEvent->GetFunctionName().ToString() == EventName))
+			{
+				EventNode = CustomEvent;
+				break;
+			}
+		}
+		if (EventNode) break;
+	}
+
+	if (!EventNode)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Custom Event '%s' not found in Blueprint: %s"), *EventName, *AssetPath));
+	}
+
+	// Parse EVERY requested pin type BEFORE touching the graph — see
+	// HandleSetFunctionParams for why this strict parse-then-mutate ordering matters.
+	auto ParsePinArray = [&Params](const TCHAR* FieldName, const TCHAR* Label,
+		TArray<TPair<FName, FEdGraphPinType>>& OutParsed, FString& OutError) -> bool
+	{
+		const TArray<TSharedPtr<FJsonValue>>* PinArray = nullptr;
+		if (!Params->TryGetArrayField(FieldName, PinArray) || !PinArray)
+		{
+			return true;
+		}
+
+		for (const TSharedPtr<FJsonValue>& PinVal : *PinArray)
+		{
+			const TSharedPtr<FJsonObject>* PinObj = nullptr;
+			if (!PinVal->TryGetObject(PinObj) || !PinObj) continue;
+
+			FString PinName, TypeStr;
+			(*PinObj)->TryGetStringField(TEXT("name"), PinName);
+			(*PinObj)->TryGetStringField(TEXT("type"), TypeStr);
+
+			if (PinName.IsEmpty() || TypeStr.IsEmpty()) continue;
+
+			FEdGraphPinType PinType;
+			FString TypeError;
+			if (!MonolithPinTypeGrammar::TryParsePinType(TypeStr, PinType, TypeError))
+			{
+				OutError = FString::Printf(TEXT("%s '%s' has an invalid type '%s': %s"),
+					Label, *PinName, *TypeStr, *TypeError);
+				return false;
+			}
+			OutParsed.Emplace(FName(*PinName), MoveTemp(PinType));
+		}
+		return true;
+	};
+
+	TArray<TPair<FName, FEdGraphPinType>> NewInputs;
+	FString ParseError;
+	if (!ParsePinArray(TEXT("inputs"), TEXT("Input"), NewInputs, ParseError))
+	{
+		return FMonolithActionResult::Error(ParseError);
+	}
+
+	if (NewInputs.Num() == 0)
+	{
+		return FMonolithActionResult::Error(TEXT("No valid inputs provided"));
+	}
+
+	int32 InputsAdded = 0;
+	for (const TPair<FName, FEdGraphPinType>& Input : NewInputs)
+	{
+		EventNode->CreateUserDefinedPin(Input.Key, Input.Value, EGPD_Output);
+		++InputsAdded;
+	}
+
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("event_name"), EventName);
+	Root->SetNumberField(TEXT("inputs_added"), InputsAdded);
+	return FMonolithActionResult::Success(Root);
+}
+
+// --- finalize_create_delegate ---
+//
+// blueprint.add_node's "CreateDelegate" branch deliberately stops short of full
+// resolution: at node-creation time the node's OutputDelegate pin is unconnected,
+// and UK2Node_CreateDelegate::HandleAnyChangeWithoutNotifying() would wipe
+// SelectedFunctionName back to NAME_None in that state (see the long comment on
+// that branch). The caller is expected to connect_pins the delegate output to an
+// AddDelegate/RemoveDelegate node's Delegate input first, then call this action
+// to run the engine's OWN resolution path now that the pin has a real signature
+// to validate against — this is exactly what PinConnectionListChanged() would
+// trigger interactively in the graph editor, run here explicitly for MCP-driven
+// authoring.
+FMonolithActionResult FMonolithBlueprintGraphActions::HandleFinalizeCreateDelegate(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath;
+	UBlueprint* BP = MonolithBlueprintInternal::LoadBlueprintFromParams(Params, AssetPath);
+	if (!BP)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Blueprint not found: %s"), *AssetPath));
+	}
+
+	FString GraphName = Params->GetStringField(TEXT("graph_name"));
+	FString NodeId = Params->GetStringField(TEXT("node_id"));
+	FString FunctionName = Params->GetStringField(TEXT("function_name"));
+
+	if (NodeId.IsEmpty() && FunctionName.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT(
+			"Provide 'node_id' (preferred, to locate the node) and/or 'function_name' (always "
+			"recommended — it is re-applied to the node right before resolution, since prior "
+			"pin-wiring already wiped the node's own memory of it)."));
+	}
+
+	UK2Node_CreateDelegate* CreateDelegateNode = nullptr;
+
+	if (!NodeId.IsEmpty())
+	{
+		TArray<FString> MatchGraphs;
+		UEdGraphNode* Node = MonolithBlueprintInternal::FindNodeById(BP, GraphName, NodeId, &MatchGraphs);
+		if (!Node)
+		{
+			return FMonolithActionResult::Error(FString::Printf(TEXT("Node not found: %s"), *NodeId));
+		}
+		if (GraphName.IsEmpty() && MatchGraphs.Num() > 1)
+		{
+			return FMonolithActionResult::Error(FString::Printf(
+				TEXT("Node ID '%s' exists in %d graphs (%s); pass graph_name to disambiguate."),
+				*NodeId, MatchGraphs.Num(), *FString::Join(MatchGraphs, TEXT(", "))));
+		}
+		CreateDelegateNode = Cast<UK2Node_CreateDelegate>(Node);
+		if (!CreateDelegateNode)
+		{
+			return FMonolithActionResult::Error(FString::Printf(TEXT("Node '%s' is not a CreateDelegate node."), *NodeId));
+		}
+	}
+	else
+	{
+		// Fallback (no node_id given): scan for the/a CreateDelegate node in the target
+		// graph(s). NOTE: SelectedFunctionName is exactly the field
+		// PinConnectionListChanged() wipes to NAME_None the moment the node's self pin
+		// gets wired (before the delegate pin is connected), so it CANNOT be trusted as
+		// a lookup key here — matching on it would silently fail for the very nodes this
+		// action exists to fix. If graph_name narrows it to a single CreateDelegate node,
+		// use that unambiguously; node_id is the preferred/reliable lookup otherwise.
+		auto SearchGraphArray = [&](const TArray<TObjectPtr<UEdGraph>>& Graphs, TArray<UK2Node_CreateDelegate*>& OutMatches)
+		{
+			for (UEdGraph* G : Graphs)
+			{
+				if (!G) continue;
+				if (!GraphName.IsEmpty() && G->GetName() != GraphName) continue;
+				for (UEdGraphNode* Node : G->Nodes)
+				{
+					if (UK2Node_CreateDelegate* Candidate = Cast<UK2Node_CreateDelegate>(Node))
+					{
+						OutMatches.Add(Candidate);
+					}
+				}
+			}
+		};
+
+		TArray<UK2Node_CreateDelegate*> Matches;
+		SearchGraphArray(BP->UbergraphPages, Matches);
+		SearchGraphArray(BP->FunctionGraphs, Matches);
+		SearchGraphArray(BP->MacroGraphs, Matches);
+
+		if (Matches.Num() == 0)
+		{
+			return FMonolithActionResult::Error(TEXT(
+				"No CreateDelegate node found. SelectedFunctionName cannot be used as a lookup "
+				"key (it gets wiped by pin-wiring before finalize runs) — pass node_id, or "
+				"graph_name to narrow the search to a graph containing exactly one CreateDelegate node."));
+		}
+		if (Matches.Num() > 1)
+		{
+			return FMonolithActionResult::Error(FString::Printf(
+				TEXT("%d CreateDelegate nodes found and function_name cannot disambiguate them "
+					"(SelectedFunctionName is unreliable pre-finalize). Pass node_id, or a "
+					"graph_name that narrows the search to exactly one CreateDelegate node."),
+				Matches.Num()));
+		}
+
+		CreateDelegateNode = Matches[0];
+	}
+
+	UEdGraphPin* DelegatePin = CreateDelegateNode->GetDelegateOutPin();
+	if (!DelegatePin || DelegatePin->LinkedTo.Num() == 0)
+	{
+		return FMonolithActionResult::Error(TEXT(
+			"CreateDelegate node's delegate output pin is not connected yet. Wire it to an "
+			"AddDelegate/RemoveDelegate node's Delegate input pin via connect_pins first, then "
+			"call finalize_create_delegate — resolution requires a connected pin with a real "
+			"delegate signature to validate against."));
+	}
+
+	// SelectedFunctionName is almost certainly NAME_None by this point: wiring the
+	// node's self pin (a separate connect_pins call made before this one) already
+	// fired PinConnectionListChanged() -> HandleAnyChangeWithoutNotifying() while the
+	// delegate pin was still unconnected, which wipes SelectedFunctionName back to
+	// NAME_None (see file-header comment). HandleAnyChangeWithoutNotifying() only
+	// RESOLVES an existing SelectedFunctionName/Guid pair — it can't rediscover a
+	// wiped name on its own. So function_name is authoritative here: re-apply it
+	// immediately before resolving, now that both the self pin and delegate pin are
+	// fully wired and a real signature is available to validate against.
+	if (!FunctionName.IsEmpty())
+	{
+		CreateDelegateNode->SetFunction(FName(*FunctionName));
+	}
+
+	CreateDelegateNode->HandleAnyChangeWithoutNotifying();
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+
+	// UK2Node_CreateDelegate::IsValid() is not BLUEPRINTGRAPH_API-exported (module-
+	// internal linkage only), so it can't be called from this module. Its own
+	// resolution logic (HandleAnyChangeWithoutNotifying, above) clears
+	// SelectedFunctionName back to NAME_None on failure when the delegate pin is
+	// unconnected, and otherwise only keeps it set if FMemberReference::ResolveMember
+	// succeeded — so "did resolution succeed" is equivalent to "is the name still set".
+	const FName ResolvedName = CreateDelegateNode->GetFunctionName();
+	const bool bResolved = ResolvedName != NAME_None;
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("asset_path"), AssetPath);
+	Root->SetStringField(TEXT("selected_function_name"), ResolvedName.ToString());
+	Root->SetStringField(TEXT("selected_function_guid"), CreateDelegateNode->SelectedFunctionGuid.ToString());
+	Root->SetBoolField(TEXT("is_valid"), bResolved);
 	return FMonolithActionResult::Success(Root);
 }
 

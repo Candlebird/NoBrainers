@@ -6,13 +6,14 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
-**Phase 4: Defense & Building Systems** — in progress. Sockets/trace (1.1, 1.2), Build
-Mode toggle/menu (2.1), blueprint unlock registry + kiosk integration (2.2), the
-placement/repair/sell RPCs (2.3, 4.1), `BP_DefenseBase` (3.1), and the Floor-socket traps
-(Spike Trap done, Slow Strip partial — no slow GameplayEffect exists yet) are done. Not
-started: a confirm-placement input to actually fire the placement RPC from the build
-menu, Repair/Sell in-Build-Mode UI, and the Wall/TurretBase/Other defense subclasses. Read
-`docs/PHASE_4_TASKLIST.md` for full detail — its Status Notes under each item are the
+**Phase 4: Defense & Building Systems** — build work complete (tasks 1.1–4.1), untested
+in PIE. Sockets/trace (1.1, 1.2), Build Mode toggle/menu with dispatcher binding and
+confirm-placement input (2.1), blueprint unlock registry + kiosk integration (2.2), the
+placement/repair/sell RPCs now callable end-to-end (2.3, 4.1), `BP_DefenseBase` (3.1), and
+all 3.2 defense subclasses (Floor/Wall/TurretBase/Other, including Slow Strip's `GE_Slow`
+GameplayEffect) are done and compile clean. Nothing left to build for this phase — next
+step is a full PIE playtest pass (see `PHASE_4_TASKLIST.md` section 5 for the checklist).
+Read `docs/PHASE_4_TASKLIST.md` for full detail — its Status Notes under each item are the
 authoritative record. Phase 3 (all tasks 1.1–6.2) and Phase 1 are complete.
 
 **Stale-index note:** this section previously said "Phase 2: in progress, not yet
