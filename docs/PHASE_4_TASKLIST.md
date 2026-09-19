@@ -72,6 +72,10 @@ Sockets auto-target/highlight while in Build Mode. Met (1.2).
 
 Next up: all Phase 4 build items (1.1–4.1) are implemented and compile clean. Nothing remains but the PIE playtest pass described under section 5 below — no further build work is blocking this phase.
 
+4.2 Project HUD (`WBP_HUD`) — unplanned, not in the original task breakdown
+
+Status: Done, compiles clean, committed 3545fa8. `/Game/UI/WBP_HUD` subclasses `UGDHUDWidget` (the GAS sample HUD) and adds a live ammo readout (`Ammo_Current`/`Ammo_Reserve`, hidden for non-gun slots) alongside the existing health/stamina bars and ability confirm/cancel text. Fed by `BP_EquipmentComponent.OnEquipmentUpdated`/`OnActiveSlotChanged` (broadcast from every mutating path, including OnReps, so remote clients update too). `BP_HeroCharacter` grants the starting loadout then broadcasts a new `OnPawnEquipmentReady` dispatcher on `BP_PlayerController_ZombieStore` so the HUD can bind even if it constructs before the pawn's equipment is ready — `WBP_HUD` falls back to that dispatcher on Construct if the equipment component isn't valid yet. Both `BP_PlayerController_ZombieStore` and the sample `BP_PlayerController` now point `UIHUDWidgetClass` at `WBP_HUD` (the sample PC isn't on the live path — `BP_GameMode_ZombieStore` is — so that change is harmless but not load-bearing). No cash/day-phase/build-mode HUD elements yet — out of scope for this pass. Untested in PIE.
+
 5. Playtest Map Population (`/Game/GASDocumentation/Maps/Map_Startup`)
 
 Status: Done, 3 passes, saved to disk. The startup map (both `GameDefaultMap` and `EditorStartupMap`) now has all actors needed to playtest Phases 3/4 end-to-end:

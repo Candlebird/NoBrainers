@@ -11,7 +11,9 @@ in PIE. Sockets/trace (1.1, 1.2), Build Mode toggle/menu with dispatcher binding
 confirm-placement input (2.1), blueprint unlock registry + kiosk integration (2.2), the
 placement/repair/sell RPCs now callable end-to-end (2.3, 4.1), `BP_DefenseBase` (3.1), and
 all 3.2 defense subclasses (Floor/Wall/TurretBase/Other, including Slow Strip's `GE_Slow`
-GameplayEffect) are done and compile clean. Nothing left to build for this phase — next
+GameplayEffect) are done and compile clean. An unplanned addition, the project HUD
+(`WBP_HUD`, health/stamina/ammo readout — see 4.2), also landed and compiles clean.
+Nothing left to build for this phase — next
 step is a full PIE playtest pass (see `PHASE_4_TASKLIST.md` section 5 for the checklist).
 Read `docs/PHASE_4_TASKLIST.md` for full detail — its Status Notes under each item are the
 authoritative record. Phase 3 (all tasks 1.1–6.2) and Phase 1 are complete.
