@@ -90,6 +90,46 @@ bool AGDPlayerController::SetRespawnCountdown_Validate(float RespawnTimeRemainin
 	return true;
 }
 
+void AGDPlayerController::Server_PlaceDefenseOnSocket_Implementation(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass)
+{
+	OnServerPlaceDefenseOnSocket(TargetSocket, DefenseClass);
+}
+
+bool AGDPlayerController::Server_PlaceDefenseOnSocket_Validate(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass)
+{
+	return true;
+}
+
+void AGDPlayerController::Server_RepairDefense_Implementation(AActor* TargetSocket)
+{
+	OnServerRepairDefense(TargetSocket);
+}
+
+bool AGDPlayerController::Server_RepairDefense_Validate(AActor* TargetSocket)
+{
+	return true;
+}
+
+void AGDPlayerController::Server_SellDefense_Implementation(AActor* TargetSocket)
+{
+	OnServerSellDefense(TargetSocket);
+}
+
+bool AGDPlayerController::Server_SellDefense_Validate(AActor* TargetSocket)
+{
+	return true;
+}
+
+void AGDPlayerController::Server_RequestKioskPurchase_Implementation(FName EntryID)
+{
+	OnServerRequestKioskPurchase(EntryID);
+}
+
+bool AGDPlayerController::Server_RequestKioskPurchase_Validate(FName EntryID)
+{
+	return true;
+}
+
 // Server only
 void AGDPlayerController::OnPossess(APawn* InPawn)
 {

@@ -34,6 +34,38 @@ public:
 	void SetRespawnCountdown_Implementation(float RespawnTimeRemaining);
 	bool SetRespawnCountdown_Validate(float RespawnTimeRemaining);
 
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void Server_PlaceDefenseOnSocket(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
+	void Server_PlaceDefenseOnSocket_Implementation(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
+	bool Server_PlaceDefenseOnSocket_Validate(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void Server_RepairDefense(AActor* TargetSocket);
+	void Server_RepairDefense_Implementation(AActor* TargetSocket);
+	bool Server_RepairDefense_Validate(AActor* TargetSocket);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void Server_SellDefense(AActor* TargetSocket);
+	void Server_SellDefense_Implementation(AActor* TargetSocket);
+	bool Server_SellDefense_Validate(AActor* TargetSocket);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void Server_RequestKioskPurchase(FName EntryID);
+	void Server_RequestKioskPurchase_Implementation(FName EntryID);
+	bool Server_RequestKioskPurchase_Validate(FName EntryID);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
+	void OnServerPlaceDefenseOnSocket(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
+	void OnServerRepairDefense(AActor* TargetSocket);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
+	void OnServerSellDefense(AActor* TargetSocket);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
+	void OnServerRequestKioskPurchase(FName EntryID);
+
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GASDocumentation|UI")
 	TSubclassOf<class UGDHUDWidget> UIHUDWidgetClass;
