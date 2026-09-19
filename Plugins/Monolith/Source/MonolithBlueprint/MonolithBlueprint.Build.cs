@@ -24,6 +24,9 @@ public class MonolithBlueprint : ModuleRules
 			"KismetCompiler",
 			"EditorScriptingUtilities",
 			"EnhancedInput",
+			// K2Node_EnhancedInputAction / K2Node_GetInputActionValue live in this
+			// editor-only module (not EnhancedInput itself) — needed for add_input_action_node.
+			"InputBlueprintNodes",
 			"Json",
 			"JsonUtilities"
 			// (Historical: StructUtils was added here by PR #40 but is deprecated

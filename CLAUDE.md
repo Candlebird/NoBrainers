@@ -22,6 +22,7 @@
 
 ## Subagents
 
+- **Granular dispatch, not monolithic multi-step builds.** When a feature's implementation plan breaks into N steps and each step is independently testable/understandable once finished, dispatch N separate builder-agent calls (one per step) rather than one agent call carrying the whole multi-step spec. This keeps individual runs cheap to verify, cheap to retry on failure, and cheap in tokens — a single agent grinding through a 7-step spec end-to-end can burn drastically more tokens than 7 short, focused dispatches, and a failure partway through is harder to diagnose/resume than a failure in one small step. Sequence the dispatches (each pointed at the prior step's landed state) rather than parallelizing steps that depend on each other's output.
 - **UI/UMG work → `ue-ui-builder`.** Any task touching a WidgetBlueprint (widget trees, layout, custom widget instancing via `ui.add_custom_widget`, or light Blueprint-graph wiring that follows a widget-tree change) should go to this dedicated agent rather than `ue-content-builder` or `ue-blueprint-builder`.
 - **Design-alignment review → `ue-vision-keeper`.** Read-only reviewer that grades a plan or landed change against project design docs and returns `ALIGNED`/`DRIFT`/`BLOCK`. Point it at whatever design docs this project settles on.
 

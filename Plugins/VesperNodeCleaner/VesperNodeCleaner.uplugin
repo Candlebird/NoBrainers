@@ -10,7 +10,7 @@
 	"DocsURL": "https://alwaysprettystore.com/VesperNodeCleaner/documentation.php",
 	"MarketplaceURL": "com.epicgames.launcher://ue/Fab/product/bfc5c05a-ff8e-4e70-bb5b-d28b4d6493dc",
 	"SupportURL": "https://alwaysprettystore.com/VesperNodeCleaner/documentation.php",
-	"EngineVersion": "5.8.0",
+	"EngineVersion": "5.7.0",
 	"CanContainContent": false,
 	"Modules": [
 		{

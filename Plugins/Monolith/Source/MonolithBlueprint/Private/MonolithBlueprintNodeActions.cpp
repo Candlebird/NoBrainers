@@ -25,6 +25,9 @@
 #include "K2Node_SpawnActorFromClass.h"
 #include "K2Node_DynamicCast.h"
 #include "K2Node_Timeline.h"
+#include "K2Node_EnhancedInputAction.h"
+#include "K2Node_GetInputActionValue.h"
+#include "InputAction.h"
 #include "K2Node_Event.h"
 #include "K2Node_ComponentBoundEvent.h"
 #include "K2Node_AddDelegate.h"
@@ -690,7 +693,7 @@ void FMonolithBlueprintNodeActions::RegisterActions(FMonolithToolRegistry& Regis
 			.Build());
 
 	Registry.RegisterAction(TEXT("blueprint"), TEXT("batch_execute"),
-		TEXT("Execute multiple Blueprint write operations on a single asset in one transaction. Each operation is { \"op\": \"action_name\", ...action_params_minus_asset_path }. Supported ops: add_node, remove_node, connect_pins, disconnect_pins, set_pin_default, set_node_position, add_variable, remove_variable, rename_variable, set_variable_type, set_variable_defaults, add_local_variable, remove_local_variable, add_component, remove_component, rename_component, reparent_component, set_component_property, duplicate_component, add_function, remove_function, rename_function, add_macro, remove_macro, rename_macro, add_event_dispatcher, set_function_params, implement_interface, remove_interface, scaffold_interface_implementation, add_timeline, add_event_node, add_comment_node, promote_pin_to_variable, add_replicated_variable, save_asset."),
+		TEXT("Execute multiple Blueprint write operations on a single asset in one transaction. Each operation is { \"op\": \"action_name\", ...action_params_minus_asset_path }. Supported ops: add_node, remove_node, connect_pins, disconnect_pins, set_pin_default, set_node_position, add_variable, remove_variable, rename_variable, set_variable_type, set_variable_defaults, add_local_variable, remove_local_variable, add_component, remove_component, rename_component, reparent_component, set_component_property, duplicate_component, add_function, remove_function, rename_function, add_macro, remove_macro, rename_macro, add_event_dispatcher, set_function_params, implement_interface, remove_interface, scaffold_interface_implementation, add_timeline, add_event_node, add_comment_node, add_input_action_node, promote_pin_to_variable, add_replicated_variable, save_asset."),
 		FMonolithActionHandler::CreateStatic(&HandleBatchExecute),
 		FParamSchemaBuilder()
 			.RequiredAssetPath(TEXT("asset_path"),         TEXT("Blueprint asset path"))
@@ -769,6 +772,17 @@ void FMonolithBlueprintNodeActions::RegisterActions(FMonolithToolRegistry& Regis
 			.Optional(TEXT("position"),    TEXT("array"),   TEXT("Node position as [x, y] — overridden if node_ids provided"))
 			.Optional(TEXT("width"),       TEXT("integer"), TEXT("Comment box width — overridden if node_ids provided"))
 			.Optional(TEXT("height"),      TEXT("integer"), TEXT("Comment box height — overridden if node_ids provided"))
+			.Build());
+
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("add_input_action_node"),
+		TEXT("Add an Enhanced Input node bound to a UInputAction asset. node_type 'event' (default) places a UK2Node_EnhancedInputAction — an event node with Started/Triggered/Ongoing/Canceled/Completed exec pins plus ActionValue/ElapsedTime/TriggeredTime/SourceAction outputs — into an event graph (ubergraph); only one such node per InputAction per Blueprint is meaningful, so a duplicate is flagged in the response instead of erroring. node_type 'get_value' places a pure UK2Node_GetInputActionValue (current value of the action, usable in any graph, e.g. Tick)."),
+		FMonolithActionHandler::CreateStatic(&HandleAddInputActionNode),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"),   TEXT("Blueprint asset path"))
+			.Required(TEXT("input_action"),  TEXT("string"),  TEXT("Asset path of the UInputAction (e.g. /Game/Input/Actions/IA_Jump)"))
+			.Optional(TEXT("node_type"),      TEXT("string"),  TEXT("'event' (default) for UK2Node_EnhancedInputAction, or 'get_value' for the pure UK2Node_GetInputActionValue"))
+			.Optional(TEXT("graph_name"),     TEXT("string"),  TEXT("Graph name — 'event' nodes require an event graph (defaults to EventGraph); 'get_value' nodes may target any graph"))
+			.Optional(TEXT("position"),       TEXT("array"),   TEXT("Node position as [x, y] (default: [0, 0])"))
 			.Build());
 
 	// ---- Phase 3A: Timeline read/edit ----
@@ -2550,6 +2564,7 @@ FMonolithActionResult FMonolithBlueprintNodeActions::HandleBatchExecute(const TS
 		else if (OpName == TEXT("add_timeline"))               SubResult = HandleAddTimeline(SubParams);
 		else if (OpName == TEXT("add_event_node"))             SubResult = HandleAddEventNode(SubParams);
 		else if (OpName == TEXT("add_comment_node"))           SubResult = HandleAddCommentNode(SubParams);
+		else if (OpName == TEXT("add_input_action_node"))      SubResult = HandleAddInputActionNode(SubParams);
 		// Wave 7 advanced ops
 		else if (OpName == TEXT("promote_pin_to_variable"))    SubResult = HandlePromotePinToVariable(SubParams);
 		else if (OpName == TEXT("add_replicated_variable"))    SubResult = FMonolithBlueprintVariableActions::HandleAddReplicatedVariable(SubParams);
@@ -3701,6 +3716,26 @@ FMonolithActionResult FMonolithBlueprintNodeActions::HandleAddEventNode(const TS
 		}
 	}
 
+	// Fallback: check implemented Blueprint Interfaces for a matching function.
+	// Void-return interface functions are wired as override K2Node_Event nodes
+	// placed directly in the event graph -- they never get a separate
+	// FunctionGraphs/ImplementedInterfaces[].Graphs entry, so this is the only
+	// correct way to "implement" this style of interface function.
+	if (!EventFunc)
+	{
+		for (const FBPInterfaceDescription& InterfaceDesc : BP->ImplementedInterfaces)
+		{
+			if (!InterfaceDesc.Interface) continue;
+			UFunction* TestFunc = InterfaceDesc.Interface->FindFunctionByName(EventFName, EIncludeSuperFlag::IncludeSuper);
+			if (TestFunc)
+			{
+				DeclaringClass = InterfaceDesc.Interface;
+				EventFunc = TestFunc;
+				break;
+			}
+		}
+	}
+
 	// If we found a native event in the inheritance chain, create an override event node
 	if (DeclaringClass && EventFunc)
 	{
@@ -3927,6 +3962,160 @@ FMonolithActionResult FMonolithBlueprintNodeActions::HandleAddCommentNode(const 
 	Root->SetObjectField(TEXT("bounds"), Bounds);
 	Root->SetStringField(TEXT("graph"), Graph->GetName());
 
+	return FMonolithActionResult::Success(Root);
+}
+
+// ============================================================
+//  add_input_action_node
+//
+// UK2Node_EnhancedInputAction / UK2Node_GetInputActionValue both need their
+// InputAction property set BEFORE AllocateDefaultPins() runs — that's where
+// the engine derives the event/value pins (trigger-event exec pins for the
+// event node, the dynamically-typed value pin for the get_value node). The
+// normal editor drag-in path (UInputActionEventNodeSpawner::CustomizeNodeDelegate)
+// does this same set-before-allocate ordering; mirrored here.
+// ============================================================
+
+FMonolithActionResult FMonolithBlueprintNodeActions::HandleAddInputActionNode(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath;
+	UBlueprint* BP = MonolithBlueprintInternal::LoadBlueprintFromParams(Params, AssetPath);
+	if (!BP)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Blueprint not found: %s"), *AssetPath));
+	}
+
+	FString InputActionPath = Params->GetStringField(TEXT("input_action"));
+	if (InputActionPath.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("add_input_action_node requires 'input_action' (asset path to a UInputAction)"));
+	}
+
+	const UInputAction* InputAction = FMonolithAssetUtils::LoadAssetByPath<UInputAction>(InputActionPath);
+	if (!InputAction)
+	{
+		return FMonolithActionResult::Error(FString::Printf(
+			TEXT("InputAction not found or wrong asset type: %s"), *InputActionPath));
+	}
+
+	FString NodeTypeStr = Params->GetStringField(TEXT("node_type"));
+	const bool bGetValue = NodeTypeStr.Equals(TEXT("get_value"), ESearchCase::IgnoreCase);
+	if (!NodeTypeStr.IsEmpty() && !bGetValue && !NodeTypeStr.Equals(TEXT("event"), ESearchCase::IgnoreCase))
+	{
+		return FMonolithActionResult::Error(FString::Printf(
+			TEXT("Unknown node_type '%s' — expected 'event' or 'get_value'"), *NodeTypeStr));
+	}
+
+	FString GraphName = Params->GetStringField(TEXT("graph_name"));
+	UEdGraph* Graph = nullptr;
+
+	if (bGetValue)
+	{
+		Graph = MonolithBlueprintInternal::FindGraphByName(BP, GraphName);
+	}
+	else
+	{
+		// Event node — must live in an event graph (ubergraph page), same
+		// restriction UK2Node_EnhancedInputAction::IsCompatibleWithGraph enforces.
+		if (GraphName.IsEmpty())
+		{
+			if (BP->UbergraphPages.Num() > 0)
+			{
+				Graph = BP->UbergraphPages[0];
+			}
+		}
+		else
+		{
+			for (UEdGraph* G : BP->UbergraphPages)
+			{
+				if (G && G->GetName() == GraphName)
+				{
+					Graph = G;
+					break;
+				}
+			}
+		}
+	}
+
+	if (!Graph)
+	{
+		return FMonolithActionResult::Error(FString::Printf(
+			TEXT("Graph not found: '%s'.%s"),
+			GraphName.IsEmpty() ? TEXT("EventGraph") : *GraphName,
+			bGetValue ? TEXT("") : TEXT(" 'event' input action nodes can only be placed in event graphs (ubergraph pages).")));
+	}
+
+	// Parse position
+	int32 PosX = 0;
+	int32 PosY = 0;
+	const TArray<TSharedPtr<FJsonValue>>* PosArray = nullptr;
+	if (Params->TryGetArrayField(TEXT("position"), PosArray) && PosArray && PosArray->Num() >= 2)
+	{
+		PosX = (int32)(*PosArray)[0]->AsNumber();
+		PosY = (int32)(*PosArray)[1]->AsNumber();
+	}
+
+	if (bGetValue)
+	{
+		UK2Node_GetInputActionValue* Node = NewObject<UK2Node_GetInputActionValue>(Graph);
+		// Not Node->Initialize(InputAction) — UK2Node_GetInputActionValue is
+		// UCLASS(MinimalAPI) and Initialize() has no _API export macro, so it
+		// has no external linkage outside the InputBlueprintNodes module and
+		// fails to link (LNK2019) when called from here. Direct UPROPERTY
+		// member access works fine across the module boundary.
+		Node->InputAction = InputAction;
+		Node->NodePosX = PosX;
+		Node->NodePosY = PosY;
+		Graph->AddNode(Node, /*bUserAction=*/true, /*bSelectNewNode=*/false);
+		Node->AllocateDefaultPins();
+		Node->CreateNewGuid(); // Gap #15: valid NodeGuid for deterministic cooking
+
+		FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
+
+		TSharedPtr<FJsonObject> Root = MonolithBlueprintInternal::SerializeNode(Node);
+		Root->SetStringField(TEXT("node_type"), TEXT("get_value"));
+		Root->SetStringField(TEXT("input_action"), InputActionPath);
+		Root->SetStringField(TEXT("graph"), Graph->GetName());
+		return FMonolithActionResult::Success(Root);
+	}
+
+	// Editor's drag-in path jumps to the existing node rather than duplicating
+	// it (UInputActionEventNodeSpawner::FindExistingNode) — there's no compile
+	// error for a duplicate, so mirror that as a warning rather than a hard error.
+	bool bDuplicate = false;
+	{
+		TArray<UK2Node_EnhancedInputAction*> ExistingNodes;
+		FBlueprintEditorUtils::GetAllNodesOfClass<UK2Node_EnhancedInputAction>(BP, ExistingNodes);
+		for (UK2Node_EnhancedInputAction* Existing : ExistingNodes)
+		{
+			if (Existing && Existing->InputAction == InputAction)
+			{
+				bDuplicate = true;
+				break;
+			}
+		}
+	}
+
+	UK2Node_EnhancedInputAction* Node = NewObject<UK2Node_EnhancedInputAction>(Graph);
+	Node->InputAction = InputAction;
+	Node->NodePosX = PosX;
+	Node->NodePosY = PosY;
+	Graph->AddNode(Node, /*bUserAction=*/true, /*bSelectNewNode=*/false);
+	Node->AllocateDefaultPins();
+	Node->CreateNewGuid(); // Gap #15: valid NodeGuid for deterministic cooking
+
+	FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
+
+	TSharedPtr<FJsonObject> Root = MonolithBlueprintInternal::SerializeNode(Node);
+	Root->SetStringField(TEXT("node_type"), TEXT("event"));
+	Root->SetStringField(TEXT("input_action"), InputActionPath);
+	Root->SetStringField(TEXT("graph"), Graph->GetName());
+	if (bDuplicate)
+	{
+		Root->SetStringField(TEXT("warning"), FString::Printf(
+			TEXT("Another EnhancedInputAction event node for '%s' already exists in this Blueprint — "
+				 "the compiler only needs one; consider reusing it instead."), *InputActionPath));
+	}
 	return FMonolithActionResult::Success(Root);
 }
 

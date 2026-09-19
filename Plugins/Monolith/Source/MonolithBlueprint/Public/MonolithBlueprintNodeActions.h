@@ -27,6 +27,7 @@ public:
 	static FMonolithActionResult HandleAddTimeline(const TSharedPtr<FJsonObject>& Params);
 	static FMonolithActionResult HandleAddEventNode(const TSharedPtr<FJsonObject>& Params);
 	static FMonolithActionResult HandleAddCommentNode(const TSharedPtr<FJsonObject>& Params);
+	static FMonolithActionResult HandleAddInputActionNode(const TSharedPtr<FJsonObject>& Params);
 
 	// Phase 3A — Timeline read/edit
 	static FMonolithActionResult HandleGetTimelineData(const TSharedPtr<FJsonObject>& Params);
