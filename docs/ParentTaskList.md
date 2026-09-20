@@ -13,8 +13,13 @@ placement/repair/sell RPCs now callable end-to-end (2.3, 4.1), `BP_DefenseBase` 
 all 3.2 defense subclasses (Floor/Wall/TurretBase/Other, including Slow Strip's `GE_Slow`
 GameplayEffect) are done and compile clean. An unplanned addition, the project HUD
 (`WBP_HUD`, health/stamina/ammo readout — see 4.2), also landed and compiles clean.
+After a first playtest pass, 4 more issues were reported and fixed overnight (see
+`PHASE_4_TASKLIST.md` section 6): shop terminal interactability, shelf interactability
+(shipped as click-to-transfer, not drag-and-drop — see section 6 for why), a 5-tier
+upgradable-shelf system, and a zombie-count-based (not fixed-timer) night-phase end
+condition. All landed and compile clean but are unverified in PIE.
 Nothing left to build for this phase — next
-step is a full PIE playtest pass (see `PHASE_4_TASKLIST.md` section 5 for the checklist).
+step is a full PIE playtest pass (see `PHASE_4_TASKLIST.md` sections 5 and 6 for the checklists).
 Read `docs/PHASE_4_TASKLIST.md` for full detail — its Status Notes under each item are the
 authoritative record. Phase 3 (all tasks 1.1–6.2) and Phase 1 are complete.
 
