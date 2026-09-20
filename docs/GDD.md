@@ -38,7 +38,7 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
 
 **Run Structure:** Roguelite — progress and gear reset each run.
 
-**Meta-Progression:** Persistent unlocks purchased with meta-currency, which is earned randomly through regular play (not tied to a fixed per-run payout).
+**Meta-Progression:** Persistent unlocks purchased with meta-currency, awarded as a lump sum at the end of each run (victory or defeat). The payout is calculated from that run's performance: total store cash generated, days survived, zombie kills, and shelves fully matched.
 
 ## 4. Enemies
 

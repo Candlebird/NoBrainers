@@ -47,15 +47,16 @@ $$\text{NightDifficulty} = (\text{CurrentDay} \times \text{BaseRunScalar}) \time
 
 ### 3. Run End-Conditions & Scoring
 
-* [ ] **3.1 Defeat & Victory Evaluation**
-* **Defeat State:** Triggered when all connected players are dead during `NightPhase`.
-* **Victory State:** Triggered upon surviving the final target day (e.g., Day 10) or fulfilling a store franchise goal.
+* [x] **3.1 Defeat & Victory Evaluation**
+* [x] **Defeat State:** Triggered when all connected players are dead during `NightPhase`. (Already implemented pre-existing in `CheckRunOverCondition` -> `EndRun(false)`; not built as part of this task.)
+* [x] **Victory State:** Triggered upon surviving the final target day (e.g., Day 10) or fulfilling a store franchise goal. (Implemented: `BP_GameMode_ZombieStore.EndNightPhase` now compares `BP_GameState_ZombieStore.CurrentDayNumber` against new `TargetDayToWin` (EditDefaultsOnly int, default 10) after a successful horde-clear, calling `EndRun(true)` instead of `StartDayPhase` once the target day is reached.)
 
-* [ ] **3.2 Run Summary Calculation**
+* [x] **3.2 Run Summary Calculation**
 * Calculate earned meta-currency (e.g., Franchise Points / Employee Coupons) based on:
 * Total Store Cash Generated (Sales + Shipping Crate liquidations).
 * Number of Days Survived.
 * Total Zombie Kills & Shelves Fully Matched.
+* Implemented: `BP_GameState_ZombieStore` tracks `TotalCashEarned`/`TotalZombieKills`/`ShelvesFullyMatched` live during play (incremented via `Server_AddCash`, `BP_ZombieSpawnerManager::NotifyZombieDied`, and `BP_ShelfMatchingComponent::EvaluateMatching`'s first-time-fully-matched transition), plus a new `S_RunSummary` struct (`/Game/Data/S_RunSummary`) stored as `LastRunSummary` on GameState. `BP_GameMode_ZombieStore::EndRun` now builds the summary, computes `MetaCurrencyAwarded` via a new tunable `CalculateRunReward` function (designer-editable weights: cash ratio, per-day/per-kill/per-shelf-matched flat amounts), stores it via `Server_SetRunSummary`, and awards the total into `S_SaveMeta` via the existing `AddMetaCurrency` path alongside `RecordRunEnded`'s existing `TotalRunsCompleted`/`BestDayReached` bump. `docs/GDD.md` updated to describe the stat-based end-of-run payout (previously said currency was earned randomly during play). Known limitation (pre-existing, not introduced here): meta-currency awarding is host-local only in listen-server co-op, since the save system is gated on host authority.
 
 ---
 
