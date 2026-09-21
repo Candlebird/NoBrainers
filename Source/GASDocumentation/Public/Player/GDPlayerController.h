@@ -50,9 +50,9 @@ public:
 	bool Server_SellDefense_Validate(AActor* TargetSocket);
 
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void Server_RequestKioskPurchase(FName EntryID);
-	void Server_RequestKioskPurchase_Implementation(FName EntryID);
-	bool Server_RequestKioskPurchase_Validate(FName EntryID);
+	void Server_RequestKioskPurchase(FName EntryID, class UDataTable* CatalogTable);
+	void Server_RequestKioskPurchase_Implementation(FName EntryID, class UDataTable* CatalogTable);
+	bool Server_RequestKioskPurchase_Validate(FName EntryID, class UDataTable* CatalogTable);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
 	void OnServerPlaceDefenseOnSocket(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
@@ -64,7 +64,7 @@ public:
 	void OnServerSellDefense(AActor* TargetSocket);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
-	void OnServerRequestKioskPurchase(FName EntryID);
+	void OnServerRequestKioskPurchase(FName EntryID, class UDataTable* CatalogTable);
 
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GASDocumentation|UI")

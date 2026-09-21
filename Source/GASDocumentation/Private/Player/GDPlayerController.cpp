@@ -120,12 +120,12 @@ bool AGDPlayerController::Server_SellDefense_Validate(AActor* TargetSocket)
 	return true;
 }
 
-void AGDPlayerController::Server_RequestKioskPurchase_Implementation(FName EntryID)
+void AGDPlayerController::Server_RequestKioskPurchase_Implementation(FName EntryID, UDataTable* CatalogTable)
 {
-	OnServerRequestKioskPurchase(EntryID);
+	OnServerRequestKioskPurchase(EntryID, CatalogTable);
 }
 
-bool AGDPlayerController::Server_RequestKioskPurchase_Validate(FName EntryID)
+bool AGDPlayerController::Server_RequestKioskPurchase_Validate(FName EntryID, UDataTable* CatalogTable)
 {
 	return true;
 }
