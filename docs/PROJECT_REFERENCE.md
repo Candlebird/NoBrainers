@@ -56,7 +56,7 @@ Content/
                                   Zombie (mesh/material only so far — see below)
       Shared/                    GameplayCues, GE templates, targeting
     Environment/                 level meshes
-    Maps/                        Map_Startup.umap (only map in the project)
+    Maps/                        Map_Startup.umap (day/night run level)
     UI/                          HUD/menu textures
   FPWeapon/                      First-person gun mesh/materials/textures
                                   (added for the FPS conversion)
@@ -176,9 +176,14 @@ all under `Content/GASDocumentation/Characters/Hero/Abilities/<AbilityName>/`:
 
 ## Maps
 
-- `Content/GASDocumentation/Maps/Map_Startup.umap` is the **only** map in
-  the project. There is no separate "store" level yet — day/night wave
-  structure from the GDD is not yet reflected in level layout.
+- `Content/GASDocumentation/Maps/Map_Startup.umap` is the day/night run level (the
+  zombie-store gameplay loop). There is no separate "store" level distinct from it —
+  day/night wave structure from the GDD is not yet reflected in level layout.
+- `Content/Levels/Map_MainMenu.umap` is the project's Main Menu level (added 2026-09-22),
+  set as both `GameDefaultMap` and `EditorStartupMap` in `Config/DefaultEngine.ini`. It uses
+  its own GameMode Override (`BP_GameMode_MainMenu`) so it doesn't inherit the global
+  `GlobalDefaultGameMode` (`BP_GameMode_ZombieStore`), and hosts `WBP_MainMenu` (which in
+  turn opens `WBP_MetaShop` for perk purchases) and `Button_StartRun` opens `Map_Startup`.
 
 ## Plugins
 

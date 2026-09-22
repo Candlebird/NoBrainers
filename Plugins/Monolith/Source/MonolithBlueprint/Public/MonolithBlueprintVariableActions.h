@@ -17,4 +17,7 @@ public:
 
 	// Wave 7 — Advanced
 	static FMonolithActionResult HandleAddReplicatedVariable(const TSharedPtr<FJsonObject>& Params);
+
+	// Getter/Setter accessor binding
+	static FMonolithActionResult HandleSetVariableAccessor(const TSharedPtr<FJsonObject>& Params);
 };

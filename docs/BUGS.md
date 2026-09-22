@@ -358,7 +358,7 @@
   do a genuine `Build.bat <Target>Editor Win64 Development -project=...` rebuild (not just Live
   Coding) before expecting the new action to be callable, then restart the editor.
 
-## Meta-Shop UI (`UW_MetaShop`) not yet built — perk unlock/spend flow has no player-facing widget
+## Meta-Shop UI (`UW_MetaShop`) not yet built — perk unlock/spend flow has no player-facing widget (RESOLVED)
 
 - **Area:** Persistent Save System & Meta-Progression Shop (`docs/PHASE_5_TASKLIST.md` Task 4.3).
 - **Repro:** N/A — feature gap, not a runtime repro.
@@ -373,5 +373,122 @@
   only way to unlock a perk is the debug function or direct data manipulation.
 - **Expected:** A Meta-Shop widget should let players spend earned meta-currency on perks
   between runs, mirroring the existing `WBP_BuildMenu`/`WBP_KioskCatalog` unlock-gating pattern.
-- **Status:** Open. Not built this pass — scope was the perk application pipeline and its race
-  condition fix, not the shop UI. Needs a follow-up UI pass (`ue-ui-builder`).
+- **Status:** Fixed (2026-09-22). Built per the Option B decision below via `ue-architect`
+  planning followed by granular `ue-ui-builder`/`ue-blueprint-builder` dispatches:
+  - `/Game/Core/GameModes/BP_GameMode_MainMenu` (parent `GameModeBase`) — its `BeginPlay`
+    creates `WBP_MainMenu`, adds it to viewport, sets Input Mode UI Only, shows the mouse
+    cursor. (The level's own Level Blueprint could not be used for this — see the tooling
+    gotcha note at the end of this entry.)
+  - `/Game/Levels/Map_MainMenu` — new level, GameMode Override set to `BP_GameMode_MainMenu`
+    so it doesn't inherit the global `GlobalDefaultGameMode` (`BP_GameMode_ZombieStore`).
+  - `/Game/UI/WBP_MainMenu` — shows current `MetaCurrency` (via `BP_GameInstance_NoBrainers`),
+    `Button_StartRun` opens `/Game/GASDocumentation/Maps/Map_Startup`, `Button_Quit` quits,
+    `Button_MetaShop` creates+shows `WBP_MetaShop` (passing itself as `MainMenuRef`) and
+    collapses itself.
+  - `/Game/UI/WBP_MetaShopEntry` — perk catalog row (icon/name/description/cost/Buy button),
+    mirrors `WBP_KioskEntry`'s layout; broadcasts an `OnBuyClicked(PerkID)` dispatcher so a
+    shared handler on the parent can identify which dynamically-spawned row fired.
+  - `/Game/UI/WBP_MetaShop` — shell widget mirroring `WBP_KioskCatalog`; `RebuildCatalog`
+    populates rows from `DT_MetaPerks`, per-row Owned/unaffordable/Buy states driven by
+    `BP_GameInstance_NoBrainers::IsPerkUnlocked`/`GetMetaCurrency`; purchase flow guards
+    against double-spend on an already-unlocked perk before calling `TrySpendMetaCurrency`
+    then `UnlockPerk`; `Button_Back` restores `MainMenuRef` and removes itself.
+  - `Config/DefaultEngine.ini`'s `GameDefaultMap`/`EditorStartupMap` repointed from the
+    GASDocumentation sample's `Map_Startup` to `/Game/Levels/Map_MainMenu`.
+  - **Tooling gotcha found this pass:** a level's `LevelScriptBlueprint` is a lazily-created
+    transient subobject that doesn't exist as a browsable asset until a human opens
+    "Blueprints → Open Level Blueprint" for that level at least once in the editor UI — Monolith
+    has no action that can create/edit one (confirmed via `monolith_discover`), and Python's
+    `run_python` can't reach it either (`ULevel::LevelScriptBlueprint` is a protected native
+    property with no exposed get-or-create API in this engine build's Python bindings). Worked
+    around by moving the BeginPlay widget-spawn logic into the level's GameMode instead, which
+    is a normal content-browser Blueprint asset Monolith can edit — sidesteps the gap entirely
+    and needs no new Monolith C++ work.
+  - **Deferred, not built this pass:** weapon/defense-blueprint meta-shop tabs (would need new
+    data-model work — `DT_KioskCatalog`/`DT_DefenseBlueprints` aren't meta-currency-denominated
+    and have no `RequiredUnlockID` set), a host/join co-op flow for "Start Run" (none exists
+    anywhere in the project), a "Continue" session-resume button, and returning to the Main
+    Menu after a run ends (`BP_GameMode_ZombieStore::EndRun` currently never travels anywhere).
+  - **Still needs in-PIE confirmation** — not yet playtested (see project-wide PIE-testing
+    limitation noted throughout this doc).
+  **Decision (2026-09-22, user-approved): the Meta-Shop UI's home is Option B — a real
+  Main Menu level/flow** (`Map_MainMenu` + `WBP_MainMenu`), not a hub-kiosk actor (Option A)
+  or a debug-key-openable widget stopgap (Option C). User's stated intent: "nail down a real
+  feature instead of a test fixture."
+
+## Player no longer spawns with a starting pistol
+
+- **Area:** `BP_HeroCharacter::OnASCReady` (`/Game/GASDocumentation/Characters/Hero/BP_HeroCharacter`).
+- **Repro:** Play a run in PIE; player pawn spawns/possesses with no starting pistol.
+- **Actual:** This session's perk-application work (see the Meta-Shop UI entry above) added a
+  new `HasAuthority` branch directly onto `Event OnASCReady`'s exec output pin, which silently
+  **replaced** (rather than fanned out from) the pre-existing wire running
+  `Event OnASCReady` → `Parent: OnASCReady` → `GrantStartingLoadoutIfEmpty` (on
+  `BP_EquipmentComponent`) → cast to `BP_PlayerController_ZombieStore` → `OnPawnEquipmentReady`.
+  The `Parent: OnASCReady` node's `execute` input pin had zero incoming connections, so the
+  starting-loadout grant (including the pistol) never fired.
+- **Expected:** Player should always spawn with a starting pistol from
+  `GrantStartingLoadoutIfEmpty`.
+- **Status:** Fixed (2026-09-22). Added a `Sequence` node between `Event OnASCReady` and its
+  two downstream chains (`then_0` → `Parent: OnASCReady` → loadout grant; `then_1` → the
+  `HasAuthority` perk-application branch), so both fire independently instead of one
+  overwriting the other's wire. Note for future edits to this event: Monolith's
+  `blueprint.connect_pins` **replaces** an existing single connection on an output exec pin
+  rather than adding a fan-out wire — always insert an explicit `Sequence` node when a second
+  chain needs to run off a pin that already has a connection. Compiled 0 errors/0 warnings,
+  saved. Still needs in-PIE verification (spawn a fresh pawn and confirm the pistol appears
+  alongside perk application still working).
+
+
+## No zombies spawn on entering night phase (regression, fixed — needs PIE confirmation)
+
+- **Area:** `BP_StoreEscalationComponent`'s four "Escalation State" getter functions
+  (`GetNightDifficulty`, `GetCustomerVolumeMultiplier`, `GetZombieHordeSizeMultiplier`,
+  `GetZombieStatMultiplier`), consumed by `BP_ZombieSpawnerManager::CalculateHordeCount`.
+- **Repro:** Enter night phase in PIE (e.g. via `BP_GameMode_ZombieStore::CloseShopEarly`).
+  Phase correctly transitions to Night (`BP_GameState_ZombieStore::CurrentPhase`), and
+  `BP_ZombieSpawnerManager`'s self-polling (`PollPhaseChange`→`HandlePhaseChanged`→
+  `StartWaveSpawning`) correctly detects the change and runs, but `RemainingToSpawn` ends up
+  `0` and `bWaveActive` stays `false` — zero zombies ever spawn.
+- **Root cause (confirmed):** `BP_StoreEscalationComponent`'s 4 state variables
+  (`NightDifficulty`, `CustomerVolumeMultiplier`, `ZombieHordeSizeMultiplier`,
+  `ZombieStatMultiplier`) have a Blueprint custom Property Getter bound to their matching
+  `Get<Name>()` pure function (a UE5.3+ Blueprint variable-details feature). Because each
+  getter's own graph body reads the variable via a normal `VariableGet` node, and the Kismet
+  compiler redirects *all* reads of an accessor-bound property (including from inside the
+  accessor's own body) through that same accessor function, every call to `Get<Name>()`
+  recurses into itself; UE's reentrancy guard aborts the call and returns the type's
+  zero-value instead of the real property value. Confirmed empirically: raw reflection reads
+  (`pie_get_object_properties`, Python `get_editor_property`) correctly return the real values
+  (e.g. `ZombieHordeSizeMultiplier=1.1`), but calling the function itself — via
+  `pie_call_function`, via Python `call_method`, and via the real in-game
+  `K2Node_CallFunction` inside `CalculateHordeCount` — always returns `0.0`, for all 4 sibling
+  getters, even against the CDO with no PIE running, and even after a forced
+  `BlueprintEditorLibrary.compile_blueprint` recompile (rules out stale-bytecode). Since
+  `CalculateHordeCount` calls `GetZombieHordeSizeMultiplier()` and multiplies by its result,
+  the horde-size calculation always yields `0`, so `StartWaveSpawning` sets `RemainingToSpawn=0`
+  and no zombies are ever queued to spawn.
+- **Expected:** Entering night phase should spawn a horde per `CalculateHordeCount`, using the
+  escalation component's real, non-zero multipliers.
+- **Status:** Fixed. The Getter/Setter binding lives in the Blueprint's `NewVariables` array
+  (`FBPVariableDescription`) as `BlueprintGetter`/`BlueprintSetter` metadata, which is blocked
+  from Python's `get_editor_property` reflection and had no existing Monolith action to unbind
+  it — so a new Monolith action, `blueprint.set_variable_accessor`, was written
+  (`Plugins/Monolith/Source/MonolithBlueprint/{Public,Private}/MonolithBlueprintVariableActions.{h,cpp}`)
+  wrapping `FBlueprintEditorUtils::SetBlueprintVariableMetaData`/`RemoveBlueprintVariableMetaData`
+  against `FBlueprintMetadata::MD_PropertyGetFunction`/`MD_PropertySetFunction`, taking
+  `asset_path`, `name`, and `clear_getter`/`clear_setter` (or `getter_function`/`setter_function`
+  to rebind instead of clear) params. After a full module rebuild (Live Coding does not persist
+  newly `RegisterAction`'d actions — see the Monolith tooling gotcha note in this file) and an
+  editor restart, the action was called against all 4 variables
+  (`NightDifficulty`, `CustomerVolumeMultiplier`, `ZombieHordeSizeMultiplier`,
+  `ZombieStatMultiplier` on `/Game/Core/Components/BP_StoreEscalationComponent`) with
+  `clear_getter=true, clear_setter=true`. The Blueprint now compiles with 0 errors/0 warnings
+  and was saved. **Still needs a PIE confirmation** (`CloseShopEarly` → confirm
+  `BP_ZombieSpawnerManager`'s `RemainingToSpawn` goes positive and zombies actually spawn from
+  the 8 `TargetPoint`s in `Map_Startup`) — not yet done, since testing here is limited to what
+  Monolith/editor tooling can verify without a live PIE session.
+  Note: the Unreal Editor crashed once during the original investigation (process fully exited)
+  after back-to-back `pie_call_function` calls into this recursive accessor — if repeating this
+  class of investigation, prefer CDO-level `call_method` tests over repeated `pie_call_function`
+  calls against a self-recursive accessor.

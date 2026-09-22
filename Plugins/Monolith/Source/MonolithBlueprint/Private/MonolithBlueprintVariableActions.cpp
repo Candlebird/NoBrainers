@@ -106,6 +106,24 @@ void FMonolithBlueprintVariableActions::RegisterActions(FMonolithToolRegistry& R
 			.Optional(TEXT("default_value"),         TEXT("string"),  TEXT("Default value as string"))
 			.Optional(TEXT("category"),              TEXT("string"),  TEXT("Category for organization in the Blueprint editor"))
 			.Build());
+
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("set_variable_accessor"),
+		TEXT("Bind or unbind a Blueprint-implemented custom Getter/Setter function on a member variable "
+		     "(the 'Getter'/'Setter' dropdowns in the variable's Details panel). Pass an empty string (or omit) "
+		     "to leave a side unchanged; pass clear_getter/clear_setter=true to explicitly unbind back to None. "
+		     "WARNING: binding a variable's own getter/setter function to read/write that same variable via a "
+		     "plain VariableGet/VariableSet node inside its own body creates infinite recursion (Kismet redirects "
+		     "all reads/writes of an accessor-bound property through the accessor, including inside itself) — "
+		     "the accessor function must use a different backing variable, not the accessor-bound property itself."),
+		FMonolithActionHandler::CreateStatic(&HandleSetVariableAccessor),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"),  TEXT("Blueprint asset path"))
+			.Required(TEXT("name"),        TEXT("string"),  TEXT("Variable name"))
+			.Optional(TEXT("getter_function"), TEXT("string"),  TEXT("Name of an existing Blueprint function to bind as this variable's Getter"))
+			.Optional(TEXT("setter_function"), TEXT("string"),  TEXT("Name of an existing Blueprint function to bind as this variable's Setter"))
+			.Optional(TEXT("clear_getter"), TEXT("boolean"), TEXT("Unbind the Getter back to None (default: false)"), TEXT("false"))
+			.Optional(TEXT("clear_setter"), TEXT("boolean"), TEXT("Unbind the Setter back to None (default: false)"), TEXT("false"))
+			.Build());
 }
 
 // ============================================================
@@ -864,6 +882,90 @@ FMonolithActionResult FMonolithBlueprintVariableActions::HandleAddReplicatedVari
 	{
 		Root->SetStringField(TEXT("on_rep_function"), OnRepFunctionName);
 	}
+	Root->SetBoolField(TEXT("success"), true);
+	return FMonolithActionResult::Success(Root);
+}
+
+// ============================================================
+//  set_variable_accessor
+// ============================================================
+
+FMonolithActionResult FMonolithBlueprintVariableActions::HandleSetVariableAccessor(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath;
+	UBlueprint* BP = MonolithBlueprintInternal::LoadBlueprintFromParams(Params, AssetPath);
+	if (!BP)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Blueprint not found: %s"), *AssetPath));
+	}
+
+	FString Name = Params->GetStringField(TEXT("name"));
+	if (Name.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("Missing required parameter: name"));
+	}
+
+	FName VarName(*Name);
+
+	bool bFound = false;
+	for (const FBPVariableDescription& Var : BP->NewVariables)
+	{
+		if (Var.VarName == VarName)
+		{
+			bFound = true;
+			break;
+		}
+	}
+	if (!bFound)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Variable not found: %s"), *Name));
+	}
+
+	FString GetterFunction = Params->GetStringField(TEXT("getter_function"));
+	FString SetterFunction = Params->GetStringField(TEXT("setter_function"));
+	bool bClearGetter = false;
+	bool bClearSetter = false;
+	Params->TryGetBoolField(TEXT("clear_getter"), bClearGetter);
+	Params->TryGetBoolField(TEXT("clear_setter"), bClearSetter);
+
+	if (GetterFunction.IsEmpty() && SetterFunction.IsEmpty() && !bClearGetter && !bClearSetter)
+	{
+		return FMonolithActionResult::Error(
+			TEXT("No-op: provide getter_function/setter_function to bind, or clear_getter/clear_setter=true to unbind"));
+	}
+
+	bool bGetterChanged = false;
+	bool bSetterChanged = false;
+
+	if (bClearGetter)
+	{
+		FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(BP, VarName, nullptr, FBlueprintMetadata::MD_PropertyGetFunction);
+		bGetterChanged = true;
+	}
+	else if (!GetterFunction.IsEmpty())
+	{
+		FBlueprintEditorUtils::SetBlueprintVariableMetaData(BP, VarName, nullptr, FBlueprintMetadata::MD_PropertyGetFunction, GetterFunction);
+		bGetterChanged = true;
+	}
+
+	if (bClearSetter)
+	{
+		FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(BP, VarName, nullptr, FBlueprintMetadata::MD_PropertySetFunction);
+		bSetterChanged = true;
+	}
+	else if (!SetterFunction.IsEmpty())
+	{
+		FBlueprintEditorUtils::SetBlueprintVariableMetaData(BP, VarName, nullptr, FBlueprintMetadata::MD_PropertySetFunction, SetterFunction);
+		bSetterChanged = true;
+	}
+
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("asset_path"), AssetPath);
+	Root->SetStringField(TEXT("variable"), Name);
+	if (bGetterChanged) Root->SetStringField(TEXT("getter"), bClearGetter ? TEXT("None") : GetterFunction);
+	if (bSetterChanged) Root->SetStringField(TEXT("setter"), bClearSetter ? TEXT("None") : SetterFunction);
 	Root->SetBoolField(TEXT("success"), true);
 	return FMonolithActionResult::Success(Root);
 }

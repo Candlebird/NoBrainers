@@ -6,6 +6,28 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-09-22):** Phase 5 work is active alongside Phase 4 (see below) — Tasks
+1.1/1.2, 2.1/2.2, 3.x (save/load, meta-unlock gating), and the perk data model/application
+pipeline (4.3's mechanical half) are built. **Two regressions surfaced from the user's own
+overnight PIE testing, logged in `docs/BUGS.md`:** a starting-pistol spawn regression
+(root-caused to this session's `OnASCReady` perk-application edit disconnecting the
+pre-existing loadout-grant wire — **fixed**, needs in-PIE confirmation) and a "no zombies
+spawn on entering night phase" regression (**fixed, needs in-PIE confirmation** — root cause
+was a self-recursive Blueprint Getter/Setter accessor binding on 4 `BP_StoreEscalationComponent`
+variables; fixed via a new Monolith action, `blueprint.set_variable_accessor`, that clears the
+binding; see BUGS.md for detail). Both regressions are fixed; the Meta-Shop UI (Task 4.3's remaining half, **Option B — a real
+Main Menu level**, user-approved) is now also built: `Map_MainMenu`, `BP_GameMode_MainMenu`,
+`WBP_MainMenu`, `WBP_MetaShop`, and `WBP_MetaShopEntry` all landed, compile clean, and are
+saved; `DefaultEngine.ini`'s default/editor startup maps now point at `Map_MainMenu`. Task 4.3
+is checked off in `docs/PHASE_5_TASKLIST.md`. This doubles as the start of Phase 6 (Art, UI &
+Audio) scope, since no Main Menu level/widget existed anywhere in the project before this.
+Full detail (asset list, a Level Blueprint tooling gotcha worked around via GameMode BeginPlay,
+and deliberately deferred scope — weapon/defense-blueprint shop tabs, co-op host/join,
+post-run return-to-menu) is in `docs/BUGS.md`'s Meta-Shop UI entry (now RESOLVED) and
+`docs/PHASE_5_TASKLIST.md`'s Task 4.3 STATUS NOTE. **Everything built this pass — both
+regression fixes and the new Main Menu/Meta-Shop UI — still needs in-PIE confirmation**, which
+is currently blocked on the user regaining PC access.
+
 **Phase 4: Defense & Building Systems** — build work complete (tasks 1.1–4.1), untested
 in PIE. Sockets/trace (1.1, 1.2), Build Mode toggle/menu with dispatcher binding and
 confirm-placement input (2.1), blueprint unlock registry + kiosk integration (2.2), the
