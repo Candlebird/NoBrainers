@@ -357,3 +357,21 @@
 - **Status:** Open (tooling, not game code). Workaround: after adding a new Monolith C++ action,
   do a genuine `Build.bat <Target>Editor Win64 Development -project=...` rebuild (not just Live
   Coding) before expecting the new action to be callable, then restart the editor.
+
+## Meta-Shop UI (`UW_MetaShop`) not yet built — perk unlock/spend flow has no player-facing widget
+
+- **Area:** Persistent Save System & Meta-Progression Shop (`docs/PHASE_5_TASKLIST.md` Task 4.3).
+- **Repro:** N/A — feature gap, not a runtime repro.
+- **Actual:** The underlying perk data model/pipeline is complete (`S_MetaPerkEntry`,
+  `DT_MetaPerks` with 4 seeded rows, one dedicated `GE_Perk_*` GameplayEffect per attribute,
+  `BP_PerkComponent`'s server-RPC `SubmitUnlockedPerks` with an idempotency guard, an
+  `OnASCReady` backstop on `BP_HeroCharacter` that re-fires the submission and re-applies a
+  `GE_PerkHealthTopUp` health top-up if pawn possession raced ahead of the RPC, and a
+  `Debug_UnlockAllPerks` dev entry point on `BP_GameInstance_NoBrainers`), but there is still no
+  in-game hub-kiosk widget (`UW_MetaShop`/similar) that lets a player browse `DT_MetaPerks`,
+  spend `MetaCurrency` via `TrySpendMetaCurrency`, and call `UnlockPerk` from UI. Currently the
+  only way to unlock a perk is the debug function or direct data manipulation.
+- **Expected:** A Meta-Shop widget should let players spend earned meta-currency on perks
+  between runs, mirroring the existing `WBP_BuildMenu`/`WBP_KioskCatalog` unlock-gating pattern.
+- **Status:** Open. Not built this pass — scope was the perk application pipeline and its race
+  condition fix, not the shop UI. Needs a follow-up UI pass (`ue-ui-builder`).
