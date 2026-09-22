@@ -33,17 +33,21 @@ STATUS NOTE (1.1/1.2): Built as `/Game/Core/Components/BP_StoreEscalationCompone
 
 ### 2. Day/Night Schedule & Dynamic Events
 
-* [ ] **2.1 Target Run Time & Day/Night Balancer**
+* [x] **2.1 Target Run Time & Day/Night Balancer**
 * Configure scalable phase duration timers in `AGameState_ZombieStore`:
 * `DayPhaseDuration`: ~60–90 seconds (fast-paced stocking, customer management, and node building).
 * `NightPhaseDuration`: ~90–150 seconds per night.
 
 * Target run length pacing: 5 to 12 total days per run (average 15 min, max 45 min).
 
-* [ ] **2.2 Customer Event Scheduler Integration**
+* [x] **2.2 Customer Event Scheduler Integration**
 * Coordinate `UCustomerEventManager` with run day progression:
 * Trigger high-density archetype surges (Nurses, Fighters, Rich, etc.) every 3 to 6 days.
 * Broadcast event notifications during the Day Phase transition to give players a chance to stock matched items and set up targeted node defenses.
+
+STATUS NOTE (2.1): Timers already existed on `BP_GameMode_ZombieStore` (`DayPhaseDuration`/`NightPhaseDuration`, `TimerHandle_Phase`/`TimerHandle_PhaseTick`) from earlier work, coexisting correctly with Phase 4's zombie-kill-count night-end condition (the timer is a failsafe cap, not the primary trigger). Found and fixed a real bug in the process: `TimerHandle_PhaseTick` (the looping 1s ticker driving `PhaseTimeRemaining`) was never cleared before being reset on phase transitions, so it leaked an extra looping timer per transition (2x speed on night 1, 3x on day 2, etc.) — fixed via a new `ClearPhaseTimers` function called first in `StartDayPhase`/`StartNightPhase`/`EndNightPhase`. Also replaced a magic-number `* 5.0` night-failsafe multiplier with a new tunable `NightTimeoutMultiplier` (default 1.5). New defaults: `DayPhaseDuration=75.0`, `NightPhaseDuration=120.0` (both within spec ranges; `NightTimeoutMultiplier=1.5` caps the failsafe at 180s/night). Note: at these defaults with `TargetDayToWin=10`, a full win-run is ~30–42 min depending on horde-clear timing — inside the 15–45 min band, but above the doc's stated "average 15 min" (a 15-min average would need ~5–6 days, not 10). Not resolved either way; flagging since the spec's own numbers are mutually inconsistent and no GDD text picks a side. `PhaseTimeRemaining` is computed/replicated on GameState but has no HUD consumer yet — needed for this to be PIE-verifiable; not yet built. Compiled 0/0, saved. **Needs manual PIE verification** (no HUD readout yet to verify against without one).
+
+STATUS NOTE (2.2): Already fully implemented in a prior session/commit (`ba3cd71`) under a Blueprint-first substitution for `UCustomerEventManager` — `BP_GameMode_ZombieStore` (`EventTable`→`/Game/Data/DT_CustomerEvents`, `MinDaysBetweenEvents=3`/`MaxDaysBetweenEvents=6`, `PickEventRow`/`RollNextEventDay`/`EvaluateDailyEvent`/`AnnounceUpcomingEvent`/`ApplyEventToSpawners`), `DT_CustomerEvents` (6 rows covering Nurse/Fighter/Rich/Scavenger/TrinketCollector/Cheap archetype surges), `BP_CustomerSpawner`'s `EventArchetypeRow`/`EventArchetypeShare`/`EventIntervalMultiplier`/`EventConcurrentBonus` override triad, and `WBP_EventBanner`. This pass closed the one remaining gap: added `OnEventChanged(EventRow, bIsUpcoming)` dispatcher to `BP_GameState_ZombieStore`, broadcast from its `SetActiveEvent`/`SetPendingEvent`/`ClearActiveEvent` functions, so UI (e.g. `WBP_EventBanner`) has something to bind to. Known limitation found in the process: see `docs/BUGS.md` — "`OnEventChanged` dispatcher doesn't reach remote clients (host-only event banner)." Compiled 0/0, saved. **Needs manual PIE verification.**
 
 ---
 

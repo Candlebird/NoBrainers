@@ -277,3 +277,26 @@
 - **Status:** Open, cosmetic/log-noise only — no functional break (saved `PlayerName` for that
   slot is just `""`). Optional cleanup: replace the `Select` with a `Branch` on
   `IsValid(PlayerState)` so `GetPlayerName` is only called on the true branch.
+
+## `OnEventChanged` dispatcher doesn't reach remote clients (host-only event banner)
+
+- **Area:** `BP_GameState_ZombieStore::SetActiveEvent` / `SetPendingEvent` / `ClearActiveEvent`
+  (Phase 5 Task 2.2, customer event scheduler).
+- **Repro:** `BP_GameMode_ZombieStore`'s event scheduling (`EvaluateDailyEvent`,
+  `AnnounceUpcomingEvent`, `ApplyEventToSpawners`) calls these three GameState functions to
+  push event state. Each is gated by a `HasAuthority` branch and only sets its replicated
+  variable (`ActiveEventRow`, `PendingEventRow`, `PendingEventDay`) — and now broadcasts the new
+  `OnEventChanged(EventRow, bIsUpcoming)` dispatcher — inside the true (server) branch.
+- **Actual:** `ActiveEventRow` and `PendingEventRow` are marked `replicated: true` but have no
+  `OnRep_*` handler (unlike `CurrentPhase`/`ZombiesRemaining`/`StoreCash`, which all have one).
+  Since `OnEventChanged`'s broadcast lives inside the server-only `HasAuthority` branch, it only
+  fires on the server/listen-host — remote clients receive the replicated variable value but
+  have no reactive path (no OnRep, no dispatcher) that fires when it changes.
+- **Expected:** In listen-server co-op, all clients should see `OnEventChanged` fire (and any UI
+  bound to it, e.g. `WBP_EventBanner`, react) whenever an event becomes active/pending/cleared,
+  not just the host.
+- **Status:** Open. Fix would add `OnRep_ActiveEventRow`/`OnRep_PendingEventRow` functions and
+  move the `OnEventChanged` broadcast into them (so it fires on every machine when the
+  replicated value changes), rather than broadcasting only inside the `HasAuthority` branch.
+  Not fixed yet — deferred pending confirmation this is the desired fix, consistent with the
+  project's existing host-local meta-currency limitation above.
