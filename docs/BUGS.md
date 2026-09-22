@@ -167,6 +167,78 @@
   `KismetMathLibrary::MakeVector`/`MakeTransform` CallFunction nodes instead, which compile
   cleanly.
 
+## Zombies never retarget — stay locked on a dead player's corpse
+
+- **Area:** Zombie AI targeting (`/Game/GASDocumentation/Characters/Minions/BTS_FindClosestPlayer`,
+  `docs/PHASE_3_TASKLIST.md` Task 4.2)
+- **Repro:** Let a zombie kill a player in PIE. The zombie keeps standing over/swinging at
+  the dead player instead of retargeting another player or entering a search state.
+- **Actual:** `BTS_FindClosestPlayer`'s `Event Receive Tick AI` does
+  `GetAllActorsOfClass(BP_HeroCharacter_C)` → `GetClosestActor` → writes `TargetActor`,
+  with no filter for whether a hero is alive. Dead heroes are never destroyed
+  (`AGDHeroCharacter::FinishDying()` deliberately skips `Super::FinishDying()`'s `Destroy()`
+  call), so a corpse remains a valid, nearest actor forever and keeps getting rewritten into
+  `TargetActor` every service tick. `BT_Zombie`'s chase-branch `TargetActor Is Set` decorator
+  never fails, so the zombie never re-evaluates.
+- **Expected:** A zombie whose target dies should retarget another living player (or clear
+  `TargetActor` and enter search/idle if none are alive).
+- **Status:** Fixed. `BTS_FindClosestPlayer`'s `EventGraph` now clears/rebuilds a local
+  `AliveHeroActors` array each tick via a `ForEachLoop` over `GetAllActorsOfClass`'s output,
+  filtering with `IsAlive()` on each hero before adding, and feeds the filtered array into
+  `GetClosestActor` instead of the raw actor list. Compiles with 0 errors/0 warnings.
+  Needs in-PIE verification (kill a player, confirm the zombie retargets a living player or
+  clears `TargetActor`).
+
+## Zombies can damage other zombies (no faction filter on melee sweep)
+
+- **Area:** Zombie melee combat (`/Game/Characters/BP_ZombieAttackComponent::PerformMeleeAttack`,
+  `docs/PHASE_3_TASKLIST.md` Task 4.1)
+- **Repro:** Multiple zombies clustered near each other in PIE; watch for zombies taking
+  damage/dying with no player nearby.
+- **Actual:** `PerformMeleeAttack`'s box sweep uses `ObjectTypeQuery1/2/3`
+  (WorldStatic/WorldDynamic/Pawn) with only the swinging zombie itself in `ActorsToIgnore`,
+  and the only damage gate is "does the hit actor have a valid AbilitySystemComponent" —
+  true for every zombie (all derive from `AGDCharacterBase`). No team/faction/class check
+  exists anywhere in the function, so a zombie's swing damages any other zombie caught in
+  the sweep. `BP_DefenseBase` actors have no ASC so they're unaffected (correctly routed to
+  the separate `BPI_Breachable` damage path instead).
+- **Expected:** Zombie melee should not damage other zombies, while still damaging players
+  and defense nodes normally.
+- **Status:** Fixed. Added a Branch at the top of the sweep's loop body (before the
+  existing ASC-validity Branch) that tests `NOT ClassIsChildOf(GetObjectClass(HitActor),
+  BP_ZombieBase_C)` (pure `GameplayStatics::GetObjectClass` + `KismetMathLibrary::
+  ClassIsChildOf` + `Not_PreBool`, no exec-pin cast-fail branching). False path (hit actor
+  is a zombie) skips straight to the next loop iteration; true path falls through into the
+  existing ASC-validity chain unchanged. Player-vs-zombie and zombie-vs-defense-node damage
+  paths are untouched. Blueprint compiles with 0 errors/0 warnings. Needs in-PIE
+  verification (see note below).
+
+## Dead zombies keep rotating/attacking during their despawn delay
+
+- **Area:** Zombie death/despawn (`/Game/Characters/BP_ZombieBase::HandleZombieDied`,
+  `docs/PHASE_3_TASKLIST.md` Task 4.3)
+- **Repro:** Kill a zombie in PIE and watch it during its ~7s despawn delay (`BodyDespawnDelay`).
+- **Actual:** `AGDCharacterBase::Die()` disables collision/gravity and plays the death montage
+  but never touches the AIController, behavior tree, or movement mode. `HandleZombieDied`
+  (bound to `OnCharacterDied`) only rolls loot and starts the despawn timer — it never stops
+  AI. So for the full despawn delay, `AIC_Zombie` keeps possessing the corpse, `BT_Zombie`
+  keeps ticking, `BTS_FindClosestPlayer` keeps updating `TargetActor`, and
+  `BTT_ZombieMeleeAttack` keeps firing — the corpse visibly yaws toward the player
+  (`bUseControllerRotationYaw = true`) and can keep dealing melee damage after death.
+- **Expected:** AI logic/rotation/attacks should stop the moment a zombie dies, not just
+  visually mask it via the death animation — before the despawn delay elapses.
+- **Status:** Fixed. In `HandleZombieDied`'s existing `HasAuthority`-gated branch, before
+  the existing loot/despawn logic (`Get Actor Of Class(BP_ZombieSpawnerManager)` →
+  `Server_RollAndSpawnLoot` → `BeginBodyDespawn`), added: `Get Controller` → `Cast To
+  AIC_Zombie` (CastFailed skips straight to the existing loot/despawn chain) → on success:
+  `Stop Movement`, `Clear Focus` (Gameplay priority), `Get BrainComponent` → `Stop Logic`
+  (reason "Died"), `Set bUseControllerRotationYaw = false` on self, `Get CharacterMovement`
+  → `Disable Movement` — then continues into the unchanged loot/despawn chain. No
+  `UnPossess` added; the controller stays possessing the corpse, only its AI/movement/
+  rotation is stopped. Compiled 0 errors/0 warnings, saved. Still needs in-PIE verification:
+  kill a zombie and confirm it stops moving/rotating/attacking immediately rather than
+  continuing to track and hit the player during the despawn delay.
+
 ## `GatherSessionState` logs a benign "Accessed None" for players with no PlayerState yet
 
 - **Area:** `BP_GameInstance_NoBrainers::GatherSessionState`
