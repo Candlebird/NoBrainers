@@ -109,6 +109,51 @@
   `WBP_ShelfSlot`'s root from `CanvasPanel` to a `SizeBox`
   (`WidthOverride=100`/`HeightOverride=30`) wrapping `SlotButton` directly.
 
+## Customer NPCs never spawn — `BP_CustomerSpawner` cast failure has no retry, and re-spawn timer never re-arms
+
+- **Area:** Customer spawning (`BP_CustomerSpawner`, `docs/PHASE_4_TASKLIST.md` Section 5 / `docs/PHASE_2_TASKLIST.md` Task 4.1)
+- **Repro:** Play any run to Day phase in PIE. No customer NPCs ever appear at shelves,
+  across any number of day/night cycles.
+- **Actual:** Originally two compounding bugs were reported and have since been confirmed
+  fixed and landed correctly:
+  1. `BeginPlay`'s `Cast To BP_GameState_ZombieStore` `CastFailed` exec pin is now wired
+     to a `Delay (0.5s)` → retry-the-cast loop, so a first-tick GameState race no longer
+     permanently disables the spawner.
+  2. `TrySpawnCustomer`'s "spawn allowed" success branch now re-arms
+     `SpawnTimerHandle` via `K2_SetTimer(FunctionName="TrySpawnCustomer", Time=GetCurrentSpawnInterval())`
+     after adding the new customer to `ActiveCustomers`, so spawning continues past one
+     customer per day-phase transition.
+
+  ~~Ruled out during investigation: ... archetype weighted-pick/nav-projection logic (both
+  have correct fallbacks).~~ — **This was wrong.** Follow-up investigation found the real
+  remaining root cause plus one hardening gap, both in `BP_CustomerSpawner`, now fixed:
+  3. **`GetSpawnTransform` had an inverted `Select` node.** The `Select` driven by
+     `K2_ProjectPointToNavigation`'s `ReturnValue` (true = projection succeeded) had its
+     two option pins wired backwards: Option `0` ("false"/projection-failed slot) received
+     `ProjectedLocation`, and Option `1` ("true"/succeeded slot) received the raw,
+     un-projected `Location`. Net effect: whenever projection succeeded, the function used
+     the raw un-projected point (potentially off-navmesh/floating); whenever projection
+     failed, it used `ProjectedLocation` from the very call that just reported failure
+     (effectively a zeroed/default vector), spawning customers at/near world origin.
+     Fixed by swapping the two option-pin wirings so Option `0` (failed) now receives the
+     raw `Location` fallback and Option `1` (succeeded) now receives `ProjectedLocation`.
+  4. **Unwired `CastFailed` on `Cast To BP_Customer` in `TrySpawnCustomer`.** If the
+     `SpawnActor` result failed to cast to `BP_Customer`, the function silently dead-ended
+     with no re-arm, permanently stalling further spawns after one failed spawn attempt.
+     Fixed by wiring `CastFailed` into the existing `K2_SetTimer` re-arm call so a failed
+     spawn attempt still reschedules the next `TrySpawnCustomer` tick.
+- **Expected:** Customer NPCs should reliably spawn every day phase, up to the concurrent
+  cap, for the duration of the day, at valid navmesh-projected spawn point locations.
+- **Status:** All four fixes above are landed and the Blueprint compiles clean (0
+  errors/warnings). **Still unverified in PIE** — someone needs to actually run a day
+  phase in-editor and confirm customer NPCs now appear at real spawn points (not at world
+  origin). Note this project has a separate known bug (tracked elsewhere in this file)
+  where NavMesh `RuntimeGeneration` config overrides don't retroactively apply to already-
+  built navmesh data in existing levels — if `Map_Startup`'s navmesh predates that config
+  change, it may need a manual navmesh rebuild in-editor before spawn-point projection
+  will actually succeed at runtime. This PIE verification (and the possible manual navmesh
+  rebuild) is an open follow-up, not resolved here.
+
 ## Monolith tooling: `add_node` with `MakeStruct` for Vector/Transform can produce uncompilable nodes
 
 - **Area:** Monolith MCP tooling gotcha, discovered while building zombie loot drops
