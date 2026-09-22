@@ -239,6 +239,29 @@
   kill a zombie and confirm it stops moving/rotating/attacking immediately rather than
   continuing to track and hit the player during the despawn delay.
 
+## Store escalation's "cash pool" and "breach point" scaling are unimplemented (deferred scope)
+
+- **Area:** Store Advertisement System (`/Game/Core/Components/BP_StoreEscalationComponent`,
+  `docs/PHASE_5_TASKLIST.md` Task 1.1)
+- **Repro:** N/A — known gap, not a regression.
+- **Actual:** Task 1.1's spec text says `CustomerVolumeMultiplier` should affect "cash pool"
+  and `ZombieHordeSizeMultiplier` should affect "spawn frequency at breach points." Neither
+  was implemented: (1) there is no customer wallet/spend-budget field anywhere in the data
+  model (`S_CustomerArchetypeData` only has `CustomerType`/`PreferredCategories`/
+  `MaxPriceMultiplier`/`WalkSpeed`/`MeshVariations`), so there's no cash-pool value to scale
+  without inventing a new per-archetype field with its own design implications; (2)
+  `BP_ZombieSpawnerManager` spawns zombies at its own designer-placed `SpawnPoints` array,
+  not at `BP_BreachPoint` actors (breach points are a BT pathing/target concern via
+  `BTS_ZombieBreachDecision`, unrelated to spawn cadence), so "breach point spawn frequency"
+  doesn't map onto any existing spawn-rate knob without re-plumbing the spawner.
+- **Expected:** Either a design decision on what "cash pool" and "breach point spawn
+  frequency" should concretely mean here, or the task spec updated to drop these two
+  clauses since the shipped system covers spawn rate/cap, horde size, and zombie stat
+  scaling without them.
+- **Status:** Open — deliberately deferred, not a bug in the landed system. Everything else
+  in Task 1.1/1.2 is built and compiles clean; see `docs/PHASE_5_TASKLIST.md` Status Note
+  (1.1/1.2) for what shipped.
+
 ## `GatherSessionState` logs a benign "Accessed None" for players with no PlayerState yet
 
 - **Area:** `BP_GameInstance_NoBrainers::GatherSessionState`

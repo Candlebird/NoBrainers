@@ -13,19 +13,21 @@
 
 ### 1. Store Advertisement & Threat Escalation Engine
 
-* [ ] **1.1 Store Advertisement System (`UStoreEscalationComponent`)**
+* [x] **1.1 Store Advertisement System (`BP_StoreEscalationComponent`)**
 * Replicated integer variable: `int32 StoreAdvertisementLevel`.
 * Multipliers calculated per level:
-* `CustomerVolumeMultiplier` (Increases daytime NPC foot traffic, archetype spawn rates, and cash pool).
-* `ZombieHordeSizeMultiplier` (Increases night zombie wave count and spawn frequency at breach points).
+* `CustomerVolumeMultiplier` (Increases daytime NPC foot traffic and archetype spawn rates).
+* `ZombieHordeSizeMultiplier` (Increases night zombie wave count).
 * `ZombieStatMultiplier` (Scales zombie movement speed, health pools, and melee damage).
 
-* [ ] **1.2 Dynamic Escalation Curve Calculation**
+* [x] **1.2 Dynamic Escalation Curve Calculation**
 * Implement mathematical scaling formula evaluated at the end of each `DayPhase`:
 
 $$\text{NightDifficulty} = (\text{CurrentDay} \times \text{BaseRunScalar}) \times (1.0 + (\text{StoreAdvertisementLevel} \times \text{AdScalar}))$$
 
 * Sync escalation metrics to HUD so players can weigh customer profit surges against increased night threat.
+
+STATUS NOTE (1.1/1.2): Built as `/Game/Core/Components/BP_StoreEscalationComponent` (Blueprint ActorComponent, replicated, mounted on `BP_GameState_ZombieStore`), per this project's Blueprint-first convention — the task text's `UStoreEscalationComponent` name was illustrative, not a C++ mandate. `StoreAdvertisementLevel` already existed on GameState (raised via the kiosk's `AdvertLevel` row → `Server_AddAdvertisementLevel`, pre-existing from Phase 2/3) and was reused as the single source of truth; the component derives `NightDifficulty`/`CustomerVolumeMultiplier`/`ZombieHordeSizeMultiplier`/`ZombieStatMultiplier` from it via `RecalculateEscalation`, called from `Server_AddAdvertisementLevel`, `AdvanceDay`, and `BP_GameMode_ZombieStore::StartNightPhase`. `EffectiveAdLevel = Max(StoreAdvertisementLevel - 1, 0)` so a fresh run with zero ad purchases has no escalation bonus. `ZombieHordeSizeMultiplier` and `ZombieStatMultiplier` derive from `NightDifficulty` (clamped, monotonic); `CustomerVolumeMultiplier` derives from ad level alone. Consumers: `BP_ZombieSpawnerManager::CalculateHordeCount` (replaced its old additive ad term with a multiplicative scale by `ZombieHordeSizeMultiplier`, to avoid double-counting ad level), `BP_CustomerSpawner::GetCurrentSpawnInterval`/`GetMaxConcurrent` (same replacement pattern for `CustomerVolumeMultiplier`, event-override precedence preserved), `BP_ZombieBase` (applies a new instant Multiplicative GameplayEffect `GE_ZombieScaling` — SetByCaller tag `Data.ZombieStatScale` on `MaxHealth`/`Health` — strictly *after* the existing Override-based `GE_ZombieAttributes`, plus scales `WalkSpeed`/`JogSpeed`/`SprintSpeed`/`BP_ZombieAttackComponent::MeleeDamageAmount` by the same multiplier), and `WBP_HUD` (new `TextBlock_ThreatLevel`, bound to the component's `OnEscalationChanged` dispatcher, showing `"Ads: {Level} | Threat: {NightDifficulty}"`). Deliberately deferred, not built: "cash pool" scaling for `CustomerVolumeMultiplier` (no customer wallet/spend-budget field exists in the current data model — see `docs/BUGS.md`) and "spawn frequency at breach points" for `ZombieHordeSizeMultiplier` (the spawner uses its own designer-placed `SpawnPoints`, not `BP_BreachPoint` actors; burst-interval scaling was also left un-touched since no concrete formula was specified). All new/edited Blueprints compiled 0 errors/0 warnings and are saved. **Needs manual PIE verification**: escalation values change correctly across ad purchases/day advances/night starts, HUD text is readable and updates live, zombie stat/speed/damage scaling and customer spawn-rate/cap scaling feel correct at multiple ad levels, and a fresh Day 1/Level 1 run shows no unwanted escalation bonus.
 
 ---
 
