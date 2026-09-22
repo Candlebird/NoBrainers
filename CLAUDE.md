@@ -9,6 +9,12 @@
 
 - **Start here:** `docs/ParentTaskList.md` is the index of build phases and states which phase is currently active — read it before picking up work so you aren't guessing the phase from git history or Content/. Each phase's detailed task breakdown lives in its own `docs/PHASE_<N>_TASKLIST.md`.
 
+## Bug Tracking
+
+- **`docs/BUGS.md` is the single tracker for unresolved bugs/known issues/known limitations** on this project — don't let them accumulate loose in phase tasklists or design docs. When a bug, gap, or known limitation is discovered during implementation, add an entry to `docs/BUGS.md` (Area/Repro/Actual/Expected/Status) and leave only a short pointer back to it (`See \`docs/BUGS.md\` — "<entry title>."`) at the discovery site (e.g. a phase tasklist STATUS NOTE) instead of writing the full description inline there.
+
+## Execution Rules
+
 ## Execution Rules
 
 - **Never Echo Raw JSON:** Do not repeat full JSON payloads returned by Monolith/MCP tools. Summarize tool outputs in brief bullet points.

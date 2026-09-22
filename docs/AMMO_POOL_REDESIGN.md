@@ -87,15 +87,14 @@ Cap should live as a field on the ammo-pool struct/lookup (not hardcoded per-cat
 in Blueprint logic), so future ammo categories just need a value, not new branches.
 `S_AmmoPoolEntry` should carry `Cap: int` (or the cap should come from `DT_AmmoCatalog`
 if that table adds a `MaxStockpile` column) so `Server_AddAmmoToPool`-style logic can
-clamp uniformly. Kiosk purchases and pickup consumption should silently clamp (excess
-buy is a no-op waste, not an error) rather than blocking the purchase.
+clamp uniformly. Kiosk purchases and pickup consumption should silently clamp on
+partial fills (excess buy is a no-op waste, not an error) rather than blocking the
+purchase — but if the pool is already fully at cap (so the purchase would yield zero net
+ammo), the kiosk should hard-block the purchase (no gold spent) rather than silently
+clamping a zero-gain buy. See `docs/BUGS.md` — "Kiosk allows ammo purchase past max
+stockpile."
 
-## Known bug (reported, not yet root-caused)
+## Known bug
 
-Firing a weapon and then reloading leaves the player unable to fire again afterward.
-Reported after the `GetActiveAmmo`/`FinishReload` pool wiring above landed, so the pool
-read/consume path is the prime suspect (e.g. `bIsReloading` or the fire ability's ammo
-gate not resetting cleanly once `ConsumeFromAmmoPool` runs), but this has not been
-diagnosed yet — needs a PIE repro (fire a few rounds, reload, try to fire again) and a
-trace through `BP_EquipmentComponent`'s reload/fire-ability-gating logic before a fix
-lands.
+See `docs/BUGS.md` — "Firing a weapon then reloading leaves the player unable to fire
+again."
