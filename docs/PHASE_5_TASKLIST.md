@@ -68,20 +68,24 @@ STATUS NOTE (2.2): Already fully implemented in a prior session/commit (`ba3cd71
 
 ### 4. Persistent Save System & Meta-Progression Shop
 
-* [ ] **4.1 Save Game Architecture (`USaveGame_ZombieStore`)**
+* [x] **4.1 Save Game Architecture (`USaveGame_ZombieStore`)**
 * Create `USaveGame_ZombieStore` class:
 * `int32 TotalMetaCurrency`.
 * `TArray<FName> UnlockedBlueprintIDs` (Defense blueprints permanently available in node build mode).
 * `TArray<FName> UnlockedWeaponIDs` (Weapons permanently added to the in-run Employee Discount catalog).
 * `TArray<FName> UnlockedPerkIDs` (Passive starting stat boosts).
 
-* [ ] **4.2 Save/Load Manager (`UMetaProgressionSubsystem`)**
+* [x] **4.2 Save/Load Manager (`UMetaProgressionSubsystem`)**
 * Create a local Game Instance Subsystem (`UGameInstanceSubsystem`) to handle reading/writing save files locally across runs.
 * Safely award and persist meta-currency upon run completion or defeat.
 
-* [ ] **4.3 Meta-Shop UI & Catalog Injection (`UW_MetaShop`)**
+* [ ] **4.3 Meta-Shop UI & Catalog Injection (`UW_MetaShop`)** — unlock injection done; shop UI itself pending a decision (see STATUS NOTE)
 * Main Menu / Hub Kiosk UI for spending meta-currency between runs.
 * Dynamically inject unlocked blueprints (`ADefenseBase`) into the node build menu and unlocked raycast/melee weapons into the daytime store catalog for future runs.
+
+STATUS NOTE (4.1/4.2): Both were already ~70% built pre-session as Blueprint on `/Game/Core/BP_GameInstance_NoBrainers` (this project's Blueprint-first substitution for `USaveGame_ZombieStore`/`UMetaProgressionSubsystem` — no C++ subsystem needed, same precedent as 1.1/1.2's `BP_StoreEscalationComponent`). The persistent meta-save is `/Game/Data/Save/S_SaveMeta` (wrapped by `/Game/Core/Save/BP_SaveGame_Meta`), with `MetaCurrency:int32` as the existing name for the spec's `TotalMetaCurrency` (not renamed — has live call sites) and pre-existing `UnlockedBlueprintIDs`. This pass added the two missing arrays (`UnlockedWeaponIDs`, `UnlockedPerkIDs`) to the struct, then added 8 new API functions to `BP_GameInstance_NoBrainers` mirroring the existing `UnlockBlueprint`/`IsBlueprintUnlocked` pattern: `GetMetaCurrency`, `TrySpendMetaCurrency`, `UnlockWeapon`/`IsWeaponUnlocked`/`GetUnlockedWeaponIDs`, `UnlockPerk`/`IsPerkUnlocked`/`GetUnlockedPerkIDs`. Caught and fixed a real bug in the process: the three pre-existing functions that mutate the struct (`UnlockBlueprint`, `AddMetaCurrency`, `RecordRunEnded`) had unconnected Break→Make passthrough pins for the two newly-added array fields, so calling any of them silently wiped both arrays back to empty — fixed by wiring the passthrough (see `docs/BUGS.md`, now marked Fixed). This work also extended the Monolith plugin itself with a new `blueprint.add_struct_field` action (no safe non-destructive way existed to add a field to an existing UserDefinedStruct) — see `docs/BUGS.md` for a tooling gotcha found while using it (a bad type-token silently produces the wrong field type instead of erroring). Compiled 0/0, saved. Persistent-save reads happen on whichever machine's GameInstance runs — inherits the same host-local limitation as meta-currency payout (`docs/BUGS.md`). **Needs manual PIE verification.**
+
+STATUS NOTE (4.3, partial): The unlock-injection half is done. Defense blueprints: `BP_GameState_ZombieStore`'s existing `DT_DefenseBlueprints` seeding loop (BeginPlay, `HasAuthority` branch) now unlocks a row if `bUnlockedByDefault` OR the persistent save's `IsBlueprintUnlocked` returns true — no build-menu UI change needed since `WBP_BuildMenu` already reads unlock state live via `GameState.IsBlueprintUnlocked` + `OnUnlocksChanged`. Weapons: added `RequiredUnlockID: FName` to `S_KioskCatalogEntry` (default `None` on all current `DT_KioskCatalog` rows — nothing is gated yet, this just adds the capability), gated server-side in `BP_PlayerController_ZombieStore::CanFulfillKioskEntry` (rejects with "This item requires a meta-shop unlock." if `RequiredUnlockID` is set and not in the player's `IsWeaponUnlocked`), and filtered client-side in `WBP_KioskCatalog::RebuildCatalog` (hides locked rows; fails open on cast failure since the server gate is the real boundary). Compiled 0/0, saved on all touched assets. **Not yet built:** the actual Meta-Shop UI/catalog/perk system that would let a player spend `MetaCurrency` to set these unlocks — blocked on a product decision about where it lives (no Main Menu level exists in this project yet): (A) a hub-kiosk actor placed in the run level reusing the existing interact→widget flow, (B) a real new Main Menu level (arguably Phase 6 "Art, UI & Audio" scope), or (C) a standalone debug-key-openable widget for now, deferring its permanent home. Also not yet built: the perk system (`DT_MetaPerks`, `GE_MetaPerks`) — no perk data model exists in the project at all yet. **Needs manual PIE verification** for the parts that are done (blueprint/weapon unlock injection).
 
 ---
 

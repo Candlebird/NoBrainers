@@ -35,6 +35,22 @@ void FMonolithBlueprintStructActions::RegisterActions(FMonolithToolRegistry& Reg
 			.Required(TEXT("fields"),    TEXT("array"),  TEXT("Array of field objects: [{name, type, default_value?}]. Type uses same strings as add_variable (bool, int, float, string, name, text, Vector, Rotator, Transform, object:ClassName, etc.)"))
 			.Build());
 
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("add_struct_field"),
+		TEXT("Add one or more new fields to an EXISTING User Defined Struct asset in place (preserves existing fields' GUIDs/wiring). Each field has a name, type (same type strings as add_variable), and optional default_value. Fails per-field if a field with that name already exists."),
+		FMonolithActionHandler::CreateStatic(&HandleAddStructField),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"), TEXT("Existing UserDefinedStruct asset path, e.g. /Game/Data/Save/S_SaveMeta"))
+			.Required(TEXT("fields"),    TEXT("array"),  TEXT("Array of field objects: [{name, type, default_value?}]. Type uses same strings as add_variable (bool, int, float, string, name, text, Vector, Rotator, Transform, object:ClassName, array:name, etc.)"))
+			.Build());
+
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("remove_struct_field"),
+		TEXT("Remove a single field from an EXISTING User Defined Struct asset in place (preserves other fields' GUIDs/wiring). Use to correct a mistaken add_struct_field call (e.g. wrong type) without deleting/recreating the whole struct. Any Make/Break nodes referencing the removed field's pin will show as orphaned until manually fixed."),
+		FMonolithActionHandler::CreateStatic(&HandleRemoveStructField),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"), TEXT("Existing UserDefinedStruct asset path, e.g. /Game/Data/S_MyStruct"))
+			.Required(TEXT("field_name"), TEXT("string"), TEXT("Display name of the field to remove."))
+			.Build());
+
 	Registry.RegisterAction(TEXT("blueprint"), TEXT("create_user_defined_enum"),
 		TEXT("Create a new User Defined Enum asset with the specified enumerator values."),
 		FMonolithActionHandler::CreateStatic(&HandleCreateUserDefinedEnum),
@@ -257,6 +273,188 @@ FMonolithActionResult FMonolithBlueprintStructActions::HandleCreateUserDefinedSt
 	Root->SetStringField(TEXT("asset_name"), AssetName);
 	Root->SetNumberField(TEXT("field_count"), FieldResults.Num());
 	Root->SetArrayField(TEXT("fields"), FieldResults);
+	Root->SetBoolField(TEXT("saved"), bSaved);
+	Root->SetBoolField(TEXT("success"), true);
+	return FMonolithActionResult::Success(Root);
+}
+
+// ============================================================
+//  add_struct_field
+// ============================================================
+
+FMonolithActionResult FMonolithBlueprintStructActions::HandleAddStructField(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath = Params->GetStringField(TEXT("asset_path"));
+	if (AssetPath.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("Missing required parameter: asset_path"));
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* FieldsArray = nullptr;
+	if (!Params->TryGetArrayField(TEXT("fields"), FieldsArray) || !FieldsArray || FieldsArray->Num() == 0)
+	{
+		return FMonolithActionResult::Error(TEXT("Missing or empty parameter: fields (array of {name, type, default_value?})"));
+	}
+
+	UObject* LoadedAsset = UEditorAssetLibrary::LoadAsset(AssetPath);
+	UUserDefinedStruct* Struct = Cast<UUserDefinedStruct>(LoadedAsset);
+	if (!Struct)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("UserDefinedStruct not found at: %s"), *AssetPath));
+	}
+
+	TArray<TSharedPtr<FJsonValue>> FieldResults;
+	int32 FieldIndex = 0;
+
+	for (const TSharedPtr<FJsonValue>& FieldVal : *FieldsArray)
+	{
+		const TSharedPtr<FJsonObject>* FieldObjPtr = nullptr;
+		if (!FieldVal.IsValid() || !FieldVal->TryGetObject(FieldObjPtr) || !FieldObjPtr || !(*FieldObjPtr).IsValid())
+		{
+			FieldResults.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Field %d: skipped (not a valid JSON object)"), FieldIndex)));
+			FieldIndex++;
+			continue;
+		}
+
+		const TSharedPtr<FJsonObject>& FieldObj = *FieldObjPtr;
+		FString FieldName = FieldObj->GetStringField(TEXT("name"));
+		FString TypeStr = FieldObj->GetStringField(TEXT("type"));
+
+		if (FieldName.IsEmpty() || TypeStr.IsEmpty())
+		{
+			FieldResults.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Field %d: skipped (missing name or type)"), FieldIndex)));
+			FieldIndex++;
+			continue;
+		}
+
+		// Reject duplicate field names against fields already on the struct.
+		if (!FStructureEditorUtils::IsUniqueVariableFriendlyName(Struct, FieldName))
+		{
+			TSharedPtr<FJsonObject> FieldResult = MakeShared<FJsonObject>();
+			FieldResult->SetStringField(TEXT("name"), FieldName);
+			FieldResult->SetStringField(TEXT("error"), TEXT("Field with this name already exists"));
+			FieldResults.Add(MakeShared<FJsonValueObject>(FieldResult));
+			FieldIndex++;
+			continue;
+		}
+
+		FEdGraphPinType PinType = MonolithPinTypeGrammar::ParsePinTypeFromString(TypeStr);
+
+		bool bAdded = FStructureEditorUtils::AddVariable(Struct, PinType);
+		if (!bAdded)
+		{
+			TSharedPtr<FJsonObject> FieldResult = MakeShared<FJsonObject>();
+			FieldResult->SetStringField(TEXT("name"), FieldName);
+			FieldResult->SetStringField(TEXT("error"), TEXT("AddVariable failed"));
+			FieldResults.Add(MakeShared<FJsonValueObject>(FieldResult));
+			FieldIndex++;
+			continue;
+		}
+
+		// Newly added variable is appended last to VarDesc.
+		TArray<FStructVariableDescription>& VarDesc = FStructureEditorUtils::GetVarDesc(Struct);
+		int32 DescIndex = VarDesc.Num() - 1;
+
+		if (VarDesc.IsValidIndex(DescIndex))
+		{
+			FGuid VarGuid = VarDesc[DescIndex].VarGuid;
+
+			// Rename to the desired display name.
+			FStructureEditorUtils::RenameVariable(Struct, VarGuid, FieldName);
+
+			// Set default value if provided.
+			FString DefaultValue = FieldObj->GetStringField(TEXT("default_value"));
+			if (!DefaultValue.IsEmpty())
+			{
+				FStructureEditorUtils::ChangeVariableDefaultValue(Struct, VarGuid, DefaultValue);
+			}
+
+			TSharedPtr<FJsonObject> FieldResult = MakeShared<FJsonObject>();
+			FieldResult->SetStringField(TEXT("name"), FieldName);
+			FieldResult->SetStringField(TEXT("type"), TypeStr);
+			FieldResult->SetStringField(TEXT("guid"), VarGuid.ToString());
+			if (!DefaultValue.IsEmpty())
+			{
+				FieldResult->SetStringField(TEXT("default_value"), DefaultValue);
+			}
+			FieldResults.Add(MakeShared<FJsonValueObject>(FieldResult));
+		}
+
+		FieldIndex++;
+	}
+
+	// Compile the struct
+	FStructureEditorUtils::CompileStructure(Struct);
+
+	// Save
+	Struct->GetPackage()->MarkPackageDirty();
+	bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Struct, false);
+
+	// Build response
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("asset_path"), AssetPath);
+	Root->SetNumberField(TEXT("field_count"), FieldResults.Num());
+	Root->SetArrayField(TEXT("fields"), FieldResults);
+	Root->SetBoolField(TEXT("saved"), bSaved);
+	Root->SetBoolField(TEXT("success"), true);
+	return FMonolithActionResult::Success(Root);
+}
+
+// ============================================================
+//  remove_struct_field
+// ============================================================
+
+FMonolithActionResult FMonolithBlueprintStructActions::HandleRemoveStructField(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath = Params->GetStringField(TEXT("asset_path"));
+	if (AssetPath.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("Missing required parameter: asset_path"));
+	}
+
+	FString FieldName = Params->GetStringField(TEXT("field_name"));
+	if (FieldName.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("Missing required parameter: field_name"));
+	}
+
+	UObject* LoadedAsset = UEditorAssetLibrary::LoadAsset(AssetPath);
+	UUserDefinedStruct* Struct = Cast<UUserDefinedStruct>(LoadedAsset);
+	if (!Struct)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("UserDefinedStruct not found at: %s"), *AssetPath));
+	}
+
+	FGuid FoundGuid;
+	const TArray<FStructVariableDescription>& VarDesc = FStructureEditorUtils::GetVarDesc(Struct);
+	for (const FStructVariableDescription& Var : VarDesc)
+	{
+		if (Var.FriendlyName == FieldName || Var.VarName.ToString() == FieldName)
+		{
+			FoundGuid = Var.VarGuid;
+			break;
+		}
+	}
+
+	if (!FoundGuid.IsValid())
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Field '%s' not found on struct: %s"), *FieldName, *AssetPath));
+	}
+
+	bool bRemoved = FStructureEditorUtils::RemoveVariable(Struct, FoundGuid);
+	if (!bRemoved)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("RemoveVariable failed for field '%s' on struct: %s"), *FieldName, *AssetPath));
+	}
+
+	FStructureEditorUtils::CompileStructure(Struct);
+
+	Struct->GetPackage()->MarkPackageDirty();
+	bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Struct, false);
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("asset_path"), AssetPath);
+	Root->SetStringField(TEXT("removed_field"), FieldName);
 	Root->SetBoolField(TEXT("saved"), bSaved);
 	Root->SetBoolField(TEXT("success"), true);
 	return FMonolithActionResult::Success(Root);

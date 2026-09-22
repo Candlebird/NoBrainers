@@ -8,6 +8,8 @@ public:
 	static void RegisterActions(FMonolithToolRegistry& Registry);
 
 	static FMonolithActionResult HandleCreateUserDefinedStruct(const TSharedPtr<FJsonObject>& Params);
+	static FMonolithActionResult HandleAddStructField(const TSharedPtr<FJsonObject>& Params);
+	static FMonolithActionResult HandleRemoveStructField(const TSharedPtr<FJsonObject>& Params);
 	static FMonolithActionResult HandleCreateUserDefinedEnum(const TSharedPtr<FJsonObject>& Params);
 
 	// DataTable actions (Phase 3C)

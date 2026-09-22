@@ -300,3 +300,60 @@
   replicated value changes), rather than broadcasting only inside the `HasAuthority` branch.
   Not fixed yet — deferred pending confirmation this is the desired fix, consistent with the
   project's existing host-local meta-currency limitation above.
+
+## `UnlockBlueprint`/`AddMetaCurrency`/`RecordRunEnded` silently wipe `UnlockedWeaponIDs`/`UnlockedPerkIDs`
+
+- **Area:** `BP_GameInstance_NoBrainers::UnlockBlueprint`, `::AddMetaCurrency`,
+  `::RecordRunEnded` (Phase 5 Task 4.2, Save/Load Manager).
+- **Repro:** Call any of these three pre-existing functions after `S_SaveMeta` gained the new
+  `UnlockedWeaponIDs`/`UnlockedPerkIDs` fields (added alongside this task). Each function reads
+  `CachedMeta.MetaData` via `Break S_SaveMeta`, then rebuilds the struct via `Make S_SaveMeta`
+  to write back — but the `Make` nodes never wire the `UnlockedWeaponIDs_12_...` /
+  `UnlockedPerkIDs_14_...` input pins to the corresponding `Break` outputs, leaving them at the
+  node's default (empty array).
+- **Actual:** Any call to `UnlockBlueprint`, `AddMetaCurrency`, or `RecordRunEnded` resets
+  `UnlockedWeaponIDs` and `UnlockedPerkIDs` to empty on the saved meta, discarding any
+  previously unlocked weapons/perks.
+- **Expected:** These functions should pass through fields they're not modifying unchanged, the
+  way the new `UnlockWeapon`/`UnlockPerk`/`TrySpendMetaCurrency` functions (added in this same
+  task) correctly do.
+- **Status:** Fixed. Connected `Break S_SaveMeta`'s `UnlockedWeaponIDs_12_...` and
+  `UnlockedPerkIDs_14_...` output pins straight through to the corresponding `Make S_SaveMeta`
+  input pins in `UnlockBlueprint`, `AddMetaCurrency`, and `RecordRunEnded` (pure passthrough, no
+  other logic changed). Verified `UnlockPerk`/`TrySpendMetaCurrency`/`UnlockWeapon` were already
+  wired correctly, and `LoadOrCreateMeta` intentionally leaves both arrays at empty-array default
+  since it only runs for a brand-new save. Blueprint compiles with 0 errors/0 warnings and was
+  saved.
+
+## Monolith tooling: `blueprint.add_struct_field`'s `type` param silently corrupts on an unrecognized token
+
+- **Area:** Monolith plugin, `MonolithBlueprintStructActions.cpp` (`blueprint.add_struct_field`
+  action, added during Phase 5 Task 4.1 to add a field to an existing UserDefinedStruct without
+  breaking live Make/Break call sites).
+- **Repro:** Call `blueprint.add_struct_field` with a `type` value that isn't in the action's
+  recognized lowercase vocabulary (`"name"`, `"bool"`, `"int"`, `"float"`, `"string"`, `"text"`,
+  `"Vector"`, `"Rotator"`, `"Transform"`, `"object:ClassName"`) — e.g. the C++-style `"FName"`
+  instead of `"name"`.
+- **Actual:** The action does not error or reject the call. It silently falls back to creating a
+  `bool` field instead. This actually happened once on `S_KioskCatalogEntry.RequiredUnlockID`
+  (Task 4.3), corrupting the field until caught and re-added with the correct `"name"` token.
+- **Expected:** An unrecognized `type` token should fail the action with an explicit error
+  listing valid tokens, not silently substitute `bool`.
+- **Status:** Open (tooling, not game code). Workaround: always double-check the created field's
+  actual type after calling `add_struct_field`/`remove_struct_field`, and use the exact
+  lowercase token vocabulary above rather than C++ type names.
+
+## Monolith tooling: Live Coding doesn't persist newly `RegisterAction`'d actions to the on-disk module
+
+- **Area:** Monolith plugin action registration workflow (`Registry.RegisterAction(...)` in any
+  `MonolithXxxActions.cpp`).
+- **Repro:** Add a brand-new Monolith action via `RegisterAction`, then patch it into the running
+  editor via `editor_query live_compile` (Live Coding) instead of a full rebuild.
+- **Actual:** Live Coding only patches the running editor process's in-memory module. The action
+  keeps reporting "Unknown action" when called — even after a full editor restart/relaunch —
+  because the on-disk module DLL was never actually rebuilt with the new registration.
+- **Expected:** A newly registered action should become callable after either a successful Live
+  Coding patch or an editor restart.
+- **Status:** Open (tooling, not game code). Workaround: after adding a new Monolith C++ action,
+  do a genuine `Build.bat <Target>Editor Win64 Development -project=...` rebuild (not just Live
+  Coding) before expecting the new action to be callable, then restart the editor.
