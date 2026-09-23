@@ -1,5 +1,19 @@
 # Known Bugs
 
+## Reload doesn't replenish magazine — GAS tag removal warning (discovered incidentally, uninvestigated)
+
+- **Area:** Weapon reload (`BP_EquipmentComponent` / GAS ability, `docs/PHASE_3_TASKLIST.md`
+  ammo & reload section). Not related to the Build Menu or customer-spawn fixes below — surfaced
+  as a pre-existing failure while running the full automation suite to verify those fixes.
+- **Repro:** Automation test `Test_Equipment_ReloadReplenishesMagazine` in
+  `Content/Tests/Automation` (`BP_TestController`), run via the standard PIE-smoke test-runner flow.
+- **Actual:** Test fails; log shows `[LogAbilitySystem][warning] Attempted to remove tag:
+  State.Weapon.Reloading from tag count container, but it is not explicitly in the container!`
+  during the reload sequence, and the magazine does not replenish.
+- **Expected:** Reloading should replenish the magazine without a GAS tag-container mismatch.
+- **Status:** Open, uninvestigated. Not touched this session — out of scope for the Build
+  Menu/customer-spawn fix work in progress; needs its own diagnostic pass.
+
 ## Decorative barrel actor has auto-generated name / no outliner folder
 
 - **Area:** Playtest map population (`docs/PHASE_4_TASKLIST.md` Section 5)
@@ -460,6 +474,90 @@
   saved. Still needs in-PIE verification (spawn a fresh pawn and confirm the pistol appears
   alongside perk application still working).
 
+
+## Build Menu: clicking a trap does nothing (root-caused, fix in progress)
+
+- **Area:** Build Mode targeting (`BP_BuildModeComponent::UpdateTargetSocket`,
+  `docs/PHASE_4_TASKLIST.md` Section 2.1/2.3).
+- **Repro:** Press `B` in-game during Day Phase (Build Menu opens), click a trap entry,
+  then aim at a build socket and press `F`.
+- **Actual:** Diagnostic confirmed clicking a menu entry *does* correctly wire through
+  `WBP_BuildEntry::OnClicked` → `BP_PlayerController_ZombieStore::HandleBuildMenuBlueprintSelected`
+  → `BP_BuildModeComponent::SetSelectedBlueprint` (menu closes as expected) — that half is
+  not the bug. The actual root cause is in `UpdateTargetSocket`: its
+  `Branch(NotEqual_ObjectObject(NewTarget, CurrentTargetSocket))` only recomputes
+  `bCurrentTargetValid` on the `true` branch (when the traced socket actor itself changes);
+  the `else` pin is unconnected, so if the player is already aiming at a socket *before*
+  selecting a blueprint (the common case — open menu, pick a trap, camera hasn't moved), the
+  cached `bCurrentTargetValid` from before selection never gets recomputed, and `F`
+  (`IA_ConfirmPlacement`) silently no-ops via `GetPlacementRequest.bValid == false`. There is
+  also no feedback anywhere on this failure path (`BP_PlayerController_ZombieStore`'s
+  `IfThenElse_6`/`IfThenElse_7` both have unconnected `else` pins), so a failed placement
+  looks identical to total unresponsiveness.
+- **Expected:** Selecting a blueprint while already aiming at a valid socket should allow
+  immediate placement with `F`; validity should be recomputed against the *current* selection
+  every trace tick, not only when the traced actor changes.
+- **Secondary/unconfirmed:** `BP_DefenseSocket::UserConstructionScript` has one node
+  (`SetCollisionResponseToAllChannels`) flagged with a validator error, but the actual build
+  trace uses object-type (`ObjectTypeQuery2`/WorldDynamic) matching, not channel response, so
+  this is likely dead code and not chased as part of this fix.
+- **Status:** Fixed and verified by automation (`Test_BuildModePlacementRequest`, added to
+  `Content/Tests/Automation`, PASSES as of this session's full test-bed run) — still needs a
+  real in-PIE manual confirmation (mouse/keyboard `B`→click→aim→`F` flow) since the automation
+  test drives the component's functions directly rather than simulating actual input. Landed
+  this session:
+  `UpdateTargetSocket` now recomputes `bCurrentTargetValid` on every trace tick (the `Branch`'s
+  previously-unconnected `else` pin now re-runs the occupied/socket-type validity check).
+  While validating that fix, `validate_blueprint` also caught the **exact same disconnected
+  Entry→Return exec pin bug independently present in two more functions on this Blueprint**:
+  `GetPlacementRequest` (the function that actually gates `F`-press placement — it was
+  silently always returning `bValid=false` regardless of any upstream fix, so the
+  `UpdateTargetSocket` fix alone would NOT have resolved the reported bug) and
+  `GetCurrentTargetSocket`. Both are pure functions but still had live (non-orphaned) exec
+  pins on their Return Nodes that needed wiring. All three fixes are landed; `BP_BuildModeComponent`
+  now validates with zero disconnected nodes.
+
+## Customers still don't spawn on Day phase (root-caused, fix in progress)
+
+- **Area:** Customer spawning (`BP_CustomerSpawner::GetMaxConcurrent`,
+  `docs/PHASE_4_TASKLIST.md` Section 5 / `docs/PHASE_2_TASKLIST.md` Task 4.1). See the
+  separate, earlier `BP_CustomerSpawner` entry above in this file, which lists 4 prior fixes
+  as landed and compiling clean.
+- **Repro:** Play a run to Day phase in PIE. No customer NPCs appear at shelves.
+- **Actual:** The 4 previously-landed fixes (cast-retry, timer re-arm, inverted `Select` in
+  `GetSpawnTransform`, unwired `CastFailed` in `TrySpawnCustomer`) are all genuine and
+  correct, but none of them touch the actual blocker. Root cause, confirmed via
+  `validate_blueprint` (`disconnected_nodes: [K2Node_FunctionResult_0 "Return Node" in graph
+  GetMaxConcurrent]`): `GetMaxConcurrent`'s `K2Node_FunctionEntry_0.then` exec pin is not
+  connected to `K2Node_FunctionResult_0.execute` — only the data-pin chain feeding the return
+  value (`BaseMaxConcurrent × EscalationComponent.GetCustomerVolumeMultiplier() +
+  EventConcurrentBonus`) is wired. With the exec pin disconnected, the function always returns
+  the int default `0`. `TrySpawnCustomer`'s gate `Branch(Length(ActiveCustomers) <
+  GetMaxConcurrent)` therefore always evaluates `0 < 0 = false`, permanently taking the
+  `else` branch, which just re-arms the spawn timer forever without ever reaching
+  `SpawnActor`. This is the exact same bug class as the already-fixed "no zombies spawn on
+  entering night phase" regression (an exec-pin disconnection between a function's Entry and
+  Return node silently returning a default value) — comparison against the working
+  `BP_ZombieSpawnerManager::CalculateHordeCount` (Return Node correctly wired) confirmed the
+  zombie path's spawn-point/nav-projection logic was never the differentiator. The NavMesh
+  `RuntimeGeneration` theory carried over from the earlier entry is not implicated here:
+  `Map_Startup`'s `RuntimeGeneration` is `Dynamic` (not `DynamicModifiersOnly`), and the
+  zombie spawner (which works) does no nav projection at all, so nav config was a red herring
+  for this particular bug.
+- **Expected:** Customer NPCs should reliably spawn every day phase.
+- **Secondary/unconfirmed (not spawn blockers, tracked for follow-up):**
+  `TrySpawnCustomer`'s `SpawnActor` leaves the expose-on-spawn `ArchetypeRow` pin
+  unconnected (set only after spawn via cast), so `BP_Customer::BeginPlay`'s row lookup
+  always sees `None` and `MaxWalkSpeed`/archetype data never actually apply; and `BeginPlay`
+  never seeds `LastKnownPhase` before its `Switch(CurrentPhase)` (unlike
+  `BP_ZombieSpawnerManager::BeginPlay`, which does), a latent bug if the spawner ever begins
+  play outside Day phase.
+- **Status:** Fixed and verified by automation (`Test_CustomerSpawnerMaxConcurrent`, added to
+  `Content/Tests/Automation`, PASSES as of this session's full test-bed run — confirms
+  `GetMaxConcurrent()==6` and that `TrySpawnCustomer()` actually grows `ActiveCustomers`).
+  Still needs a real in-PIE manual confirmation (play to Day phase, confirm customers appear
+  at shelves) since the automation test calls functions directly rather than running the full
+  phase-timer/spawn-loop over real time.
 
 ## No zombies spawn on entering night phase (regression, fixed — PIE-confirmed)
 
