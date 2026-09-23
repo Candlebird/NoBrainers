@@ -29,7 +29,15 @@
   save system is gated on host authority.
 - **Expected:** All connected players should have their earned meta-currency persisted, not
   just the host.
-- **Status:** Open, known limitation (pre-existing, not introduced by the run-summary work).
+- **Status:** Fixed, needs in-PIE confirmation. `BP_GameMode_ZombieStore::EndRun`'s direct
+  `AddMetaCurrency`/`RecordRunEnded` calls (which only ever ran against the host's own
+  GameInstance) were removed and replaced with a `For Each Loop` over the GameState's
+  PlayerArray that calls a new reliable owning-client RPC,
+  `Client_AwardRunResults(MetaCurrencyAwarded, FinalDay)`, on
+  `BP_PlayerController_ZombieStore` — each connected player (host included, exactly once)
+  now runs `AddMetaCurrency`/`RecordRunEnded` against their own local GameInstance/save.
+  Every player receives the same full run-wide payout (no per-player split — confirmed with
+  the user; `S_RunSummary` has no per-player fields to split by).
 
 ## Zombie loot-drop impulse is likely a visual no-op
 
@@ -295,11 +303,18 @@
 - **Expected:** In listen-server co-op, all clients should see `OnEventChanged` fire (and any UI
   bound to it, e.g. `WBP_EventBanner`, react) whenever an event becomes active/pending/cleared,
   not just the host.
-- **Status:** Open. Fix would add `OnRep_ActiveEventRow`/`OnRep_PendingEventRow` functions and
-  move the `OnEventChanged` broadcast into them (so it fires on every machine when the
-  replicated value changes), rather than broadcasting only inside the `HasAuthority` branch.
-  Not fixed yet — deferred pending confirmation this is the desired fix, consistent with the
-  project's existing host-local meta-currency limitation above.
+- **Status:** Fixed, needs in-PIE confirmation. Added `OnRep_ActiveEventRow`/
+  `OnRep_PendingEventRow` on `BP_GameState_ZombieStore`, each broadcasting `OnEventChanged`
+  (mirroring `OnRep_StoreCash`'s single-node body) and bound as the RepNotify handler for
+  `ActiveEventRow`/`PendingEventRow` respectively. **Correction to this entry's original
+  proposed fix:** the existing `OnEventChanged` broadcasts inside `SetActiveEvent`/
+  `SetPendingEvent`/`ClearActiveEvent`'s `HasAuthority` branches were kept, not moved — RepNotify
+  never fires on the authority itself, so removing them would silently break the host/listen-
+  server's own event banner. The two OnReps are an added client-side path alongside the
+  existing server-side broadcast, not a replacement for it. As of this fix, `OnEventChanged`
+  has no bound consumers yet (`WBP_EventBanner` polls `GetActiveEventRow`/`GetPendingEventRow`
+  off the replicated GameState vars directly rather than binding the dispatcher), so this was
+  a correctness/consistency fix rather than a live UI outage.
 
 ## `UnlockBlueprint`/`AddMetaCurrency`/`RecordRunEnded` silently wipe `UnlockedWeaponIDs`/`UnlockedPerkIDs`
 
@@ -407,8 +422,14 @@
   - **Deferred, not built this pass:** weapon/defense-blueprint meta-shop tabs (would need new
     data-model work — `DT_KioskCatalog`/`DT_DefenseBlueprints` aren't meta-currency-denominated
     and have no `RequiredUnlockID` set), a host/join co-op flow for "Start Run" (none exists
-    anywhere in the project), a "Continue" session-resume button, and returning to the Main
-    Menu after a run ends (`BP_GameMode_ZombieStore::EndRun` currently never travels anywhere).
+    anywhere in the project), and a "Continue" session-resume button. **Returning to the Main
+    Menu after a run ends is now fixed** (needs in-PIE confirmation) — `EndRun` sets a
+    `PostRunReturnDelay`-second timer (default 5s) after the per-player payout RPCs fire, then
+    calls a new `ReturnToMainMenu` function (`OpenLevel` to `PostRunLevelName`, default
+    `Map_MainMenu`) on the server, which server-travels all connected clients. This is a direct
+    travel with no run-summary screen (none exists yet; `LastRunSummary` is already replicated
+    on GameState so a future `WBP_RunSummary` can be added without re-plumbing — confirmed
+    acceptable scope with the user for now).
   - **Still needs in-PIE confirmation** — not yet playtested (see project-wide PIE-testing
     limitation noted throughout this doc).
   **Decision (2026-09-22, user-approved): the Meta-Shop UI's home is Option B — a real
