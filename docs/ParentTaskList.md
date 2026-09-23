@@ -40,8 +40,19 @@ After a first playtest pass, 4 more issues were reported and fixed overnight (se
 (shipped as click-to-transfer, not drag-and-drop — see section 6 for why), a 5-tier
 upgradable-shelf system, and a zombie-count-based (not fixed-timer) night-phase end
 condition. All landed and compile clean but are unverified in PIE.
-Nothing left to build for this phase — next
-step is a full PIE playtest pass (see `PHASE_4_TASKLIST.md` sections 5 and 6 for the checklists).
+**UPDATE (2026-09-22, overnight unattended session):** two more playtest-reported bugs
+root-caused and fixed — Build Menu placement (`BP_BuildModeComponent`, three exec-pin/logic
+fixes) and customers never spawning on Day phase (`BP_CustomerSpawner::GetMaxConcurrent`,
+one exec-pin fix). Both are automation-verified (new tests `Test_BuildModePlacementRequest`
+and `Test_CustomerSpawnerMaxConcurrent`, added to `Content/Tests/Automation`, both PASSING)
+but still need real in-PIE manual confirmation, since the automation drives the underlying
+functions directly rather than simulating real mouse/keyboard input or a real elapsed-time
+phase loop. Committed locally (`8025153`), not pushed. Full detail in `docs/BUGS.md`. A
+third, unrelated bug was discovered incidentally while running the full test-bed suite to
+verify these fixes — `Test_Equipment_ReloadReplenishesMagazine` fails on a GAS tag-container
+mismatch during reload — logged in `docs/BUGS.md` but deliberately left uninvestigated
+(out of scope for this session).
+Next step is a full PIE playtest pass (see `PHASE_4_TASKLIST.md` sections 5 and 6 for the checklists).
 Read `docs/PHASE_4_TASKLIST.md` for full detail — its Status Notes under each item are the
 authoritative record. Phase 3 (all tasks 1.1–6.2) and Phase 1 are complete.
 

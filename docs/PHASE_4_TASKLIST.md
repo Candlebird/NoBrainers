@@ -32,6 +32,19 @@ Status: Done. `IA_ToggleBuildMode` bound to `B` in `IMC_Default`. `BP_PlayerCont
 
 **Confirm-placement input landed:** new `IA_ConfirmPlacement` InputAction (Boolean), mapped to `F` in `IMC_Default` (LMB/RMB/E were already taken by `IA_PrimaryAction`/`IA_SecondaryAction`/`IA_Interact`). Bound in `BP_PlayerController_ZombieStore` (Started event) alongside `IA_ToggleBuildMode`: branches on `bBuildModeActive`, casts the controlled pawn to `BP_HeroCharacter`, reads `BuildModeComponent.GetPlacementRequest()` (`TargetSocket`/`DefenseClass`/`bValid`), and on a valid request with a non-null `DefenseClass` calls `Server_PlaceDefenseOnSocket(TargetSocket, DefenseClass)`. Compiled 0 errors, all touched assets saved. Untested in PIE — needs a playtest pass pressing `F` in Build Mode with a blueprint selected and a valid unoccupied socket targeted (expect spawn + cash deduction), and confirming it no-ops with Build Mode off, no selection, or an invalid/occupied socket.
 
+**STATUS NOTE (2026-09-22):** playtest reported clicking a trap in the Build Menu did
+nothing. Root-caused and fixed — see `docs/BUGS.md` ("Build Menu: clicking a trap does
+nothing"). Three separate `BP_BuildModeComponent` bugs, not the one originally suspected:
+`UpdateTargetSocket` only recomputed target validity when the traced socket actor itself
+changed (not on blueprint (re)selection), plus two latent disconnected Entry→Return exec
+pins in `GetPlacementRequest` (the actual `F`-press placement gate) and
+`GetCurrentTargetSocket` — same exec-pin bug class as the earlier night-phase zombie-spawn
+regression. All three fixed; `BP_BuildModeComponent` now validates with zero disconnected
+nodes. Automation-verified via new `Test_BuildModePlacementRequest`
+(`Content/Tests/Automation`, PASSING), but still needs the real in-PIE `B`→click→aim→`F`
+manual confirmation noted above, since the automation drives `GetPlacementRequest()`
+directly rather than simulating actual input.
+
 [x] 2.2 Blueprint Registry & Progression Engine (UBlueprintSubsystem)
 
 Status: Implemented as a replicated `UnlockedBlueprintIDs` array + `IsBlueprintUnlocked`/`Server_UnlockBlueprint` on `BP_GameState_ZombieStore` (Blueprint, not a `UBlueprintSubsystem`), seeded from `/Game/Data/DT_DefenseBlueprints` (6 rows: SpikeTrap, SwingingTrap, Turret, Barricade, SlowStrip, GasTrap — SpikeTrap/SwingingTrap `bUnlockedByDefault=true`). Landed fac8297. Kiosk integration (Turret/Barricade/SlowStrip/GasTrap purchasable via `DT_KioskCatalog` `FulfillmentType=Blueprint`, calling `Server_UnlockBlueprint` from `BP_PlayerController_ZombieStore`) landed alongside commit 8d9d9a4. SwingingTrap has no `BP_DefenseBase` subclass yet (see 3.2).
@@ -100,3 +113,12 @@ Needs a manual PIE playtest pass covering, as a non-host client where noted:
 - Shelf click-to-transfer stocking/taking as a non-host client — and confirm whether true drag-and-drop feel is wanted badly enough to revisit later (would need a C++ static factory function to construct the `DragDropOperation`, since Monolith can't author that node).
 - Shelf tier upgrade flow: cost readout, slot count changing live (4→6→8→12→16), and the "Max Tier" disabled state at Tier4.
 - Night-phase zombie-count-based end condition, including the failsafe-timer and defense-kill edge cases.
+
+7. Second Post-Playtest Fix Pass (2 more issues, overnight/unattended session, 2026-09-22)
+
+Status: both root-caused and fixed; automation-verified; unpushed local commit `8025153`.
+
+- Build Menu: clicking a trap did nothing → fixed. See section 2.1's STATUS NOTE above and `docs/BUGS.md` for the full three-part root cause (`BP_BuildModeComponent::UpdateTargetSocket`/`GetPlacementRequest`/`GetCurrentTargetSocket`). Automation-verified via `Test_BuildModePlacementRequest`.
+- Customers never spawn on Day phase → fixed. Root cause: `BP_CustomerSpawner::GetMaxConcurrent` had its `FunctionEntry.then`→`FunctionResult.execute` exec pin disconnected (same bug class as the earlier night-phase zombie-spawn regression), so it always returned `0`, permanently failing `TrySpawnCustomer`'s `Length(ActiveCustomers) < GetMaxConcurrent` gate. See `docs/BUGS.md` — "Customers still don't spawn on Day phase" for full detail, including two secondary/unconfirmed latent issues logged for follow-up (unset `ArchetypeRow` expose-on-spawn pin; `BeginPlay` not seeding `LastKnownPhase`). Automation-verified via `Test_CustomerSpawnerMaxConcurrent`.
+- Both new tests added to `Content/Tests/Automation` (`BP_TestController`), both PASSING as of the full test-bed run this session. Both fixes still need real in-PIE manual confirmation (actual `B`→click→aim→`F` input; a real Day-phase playthrough over elapsed time) since the automation drives the underlying Blueprint functions directly.
+- Incidental discovery while running the full suite (unrelated, not fixed this session, out of scope): `Test_Equipment_ReloadReplenishesMagazine` fails on a GAS tag-container mismatch (`Attempted to remove tag: State.Weapon.Reloading ... not explicitly in the container!`) during reload. Logged in `docs/BUGS.md`, needs its own diagnostic pass.
