@@ -461,7 +461,7 @@
   alongside perk application still working).
 
 
-## No zombies spawn on entering night phase (regression, fixed — needs PIE confirmation)
+## No zombies spawn on entering night phase (regression, fixed — PIE-confirmed)
 
 - **Area:** `BP_StoreEscalationComponent`'s four "Escalation State" getter functions
   (`GetNightDifficulty`, `GetCustomerVolumeMultiplier`, `GetZombieHordeSizeMultiplier`,
@@ -471,45 +471,41 @@
   `BP_ZombieSpawnerManager`'s self-polling (`PollPhaseChange`→`HandlePhaseChanged`→
   `StartWaveSpawning`) correctly detects the change and runs, but `RemainingToSpawn` ends up
   `0` and `bWaveActive` stays `false` — zero zombies ever spawn.
-- **Root cause (confirmed):** `BP_StoreEscalationComponent`'s 4 state variables
-  (`NightDifficulty`, `CustomerVolumeMultiplier`, `ZombieHordeSizeMultiplier`,
-  `ZombieStatMultiplier`) have a Blueprint custom Property Getter bound to their matching
-  `Get<Name>()` pure function (a UE5.3+ Blueprint variable-details feature). Because each
-  getter's own graph body reads the variable via a normal `VariableGet` node, and the Kismet
-  compiler redirects *all* reads of an accessor-bound property (including from inside the
-  accessor's own body) through that same accessor function, every call to `Get<Name>()`
-  recurses into itself; UE's reentrancy guard aborts the call and returns the type's
-  zero-value instead of the real property value. Confirmed empirically: raw reflection reads
-  (`pie_get_object_properties`, Python `get_editor_property`) correctly return the real values
-  (e.g. `ZombieHordeSizeMultiplier=1.1`), but calling the function itself — via
-  `pie_call_function`, via Python `call_method`, and via the real in-game
-  `K2Node_CallFunction` inside `CalculateHordeCount` — always returns `0.0`, for all 4 sibling
-  getters, even against the CDO with no PIE running, and even after a forced
-  `BlueprintEditorLibrary.compile_blueprint` recompile (rules out stale-bytecode). Since
-  `CalculateHordeCount` calls `GetZombieHordeSizeMultiplier()` and multiplies by its result,
-  the horde-size calculation always yields `0`, so `StartWaveSpawning` sets `RemainingToSpawn=0`
-  and no zombies are ever queued to spawn.
+- **Root cause (confirmed, corrected from an earlier misdiagnosis):** all 4 getter functions'
+  graphs had their `K2Node_FunctionEntry`'s `then` exec-output pin left **disconnected** from
+  the `K2Node_FunctionResult`'s `execute` exec-input pin — only the data pin
+  (`VariableGet`→`ReturnValue`) was wired. A Kismet function in this shape always executes the
+  disconnected result node with the return value's type default (i.e. always returns `0.0`),
+  regardless of purity or of any variable-accessor binding. This was verified with a controlled
+  A/B test: a throwaway pure function returning a hardcoded literal reproduced the same `0`
+  symptom when its exec pins were left disconnected, and returned the literal correctly once
+  `then`→`execute` was wired — isolating the defect to the disconnected exec pins, independent
+  of accessors. Since `CalculateHordeCount` calls `GetZombieHordeSizeMultiplier()` and
+  multiplies by its result, the horde-size calculation always yielded `0`, so
+  `StartWaveSpawning` set `RemainingToSpawn=0` and no zombies were ever queued to spawn.
+  An earlier pass at this bug incorrectly attributed it to Blueprint custom Property
+  Getter/Setter self-recursion (the `MD_PropertyGetFunction`/`MD_PropertySetFunction`
+  UE5.3+ variable-accessor feature) and "fixed" it by clearing that metadata via a new
+  Monolith action, `blueprint.set_variable_accessor`. That looked plausible under CDO-level
+  reflection checks, but a real live-PIE test (`pie_call_function` against the getters, and
+  the real in-game `CalculateHordeCount`→`GetZombieHordeSizeMultiplier` call) showed the
+  getters still returned `0` after that "fix" — proving the self-recursion theory was wrong.
+  `blueprint.set_variable_accessor` itself is legitimate and harmless (it is a real, correctly
+  implemented unbind action for that metadata) but was not the fix for this bug.
 - **Expected:** Entering night phase should spawn a horde per `CalculateHordeCount`, using the
   escalation component's real, non-zero multipliers.
-- **Status:** Fixed. The Getter/Setter binding lives in the Blueprint's `NewVariables` array
-  (`FBPVariableDescription`) as `BlueprintGetter`/`BlueprintSetter` metadata, which is blocked
-  from Python's `get_editor_property` reflection and had no existing Monolith action to unbind
-  it — so a new Monolith action, `blueprint.set_variable_accessor`, was written
-  (`Plugins/Monolith/Source/MonolithBlueprint/{Public,Private}/MonolithBlueprintVariableActions.{h,cpp}`)
-  wrapping `FBlueprintEditorUtils::SetBlueprintVariableMetaData`/`RemoveBlueprintVariableMetaData`
-  against `FBlueprintMetadata::MD_PropertyGetFunction`/`MD_PropertySetFunction`, taking
-  `asset_path`, `name`, and `clear_getter`/`clear_setter` (or `getter_function`/`setter_function`
-  to rebind instead of clear) params. After a full module rebuild (Live Coding does not persist
-  newly `RegisterAction`'d actions — see the Monolith tooling gotcha note in this file) and an
-  editor restart, the action was called against all 4 variables
-  (`NightDifficulty`, `CustomerVolumeMultiplier`, `ZombieHordeSizeMultiplier`,
-  `ZombieStatMultiplier` on `/Game/Core/Components/BP_StoreEscalationComponent`) with
-  `clear_getter=true, clear_setter=true`. The Blueprint now compiles with 0 errors/0 warnings
-  and was saved. **Still needs a PIE confirmation** (`CloseShopEarly` → confirm
-  `BP_ZombieSpawnerManager`'s `RemainingToSpawn` goes positive and zombies actually spawn from
-  the 8 `TargetPoint`s in `Map_Startup`) — not yet done, since testing here is limited to what
-  Monolith/editor tooling can verify without a live PIE session.
-  Note: the Unreal Editor crashed once during the original investigation (process fully exited)
-  after back-to-back `pie_call_function` calls into this recursive accessor — if repeating this
-  class of investigation, prefer CDO-level `call_method` tests over repeated `pie_call_function`
-  calls against a self-recursive accessor.
+- **Status:** Fixed and PIE-confirmed (2026-09-22). Wired `K2Node_FunctionEntry_0.then` →
+  `K2Node_FunctionResult_0.execute` on all 4 getter graphs via `blueprint.connect_pins`,
+  recompiled (0 errors/0 warnings), and saved on
+  `/Game/Core/Components/BP_StoreEscalationComponent`. Verified with a clean end-to-end PIE
+  run (fresh `load_level` → `start_pie` → `CloseShopEarly`): `BP_ZombieSpawnerManager`'s
+  `RemainingToSpawn` came back `1` and `bWaveActive` came back `true` (both were `0`/`false`
+  before the fix).
+  Note for future Blueprint authoring via Monolith: `blueprint.add_function` can produce a
+  function graph with `FunctionEntry.then` left unconnected to `FunctionResult.execute` even
+  when the data pins are correctly wired — always verify exec-pin connectivity (e.g. via
+  `blueprint.get_graph_data`'s `connected_to` arrays) on functions created this way, not just
+  that the data pins resolve.
+  Note: the Unreal Editor crashed once during the original (misdiagnosed) investigation
+  (process fully exited) after back-to-back `pie_call_function` calls — cause unconfirmed,
+  but avoid rapid repeated `pie_call_function` calls against the same function as a precaution.
