@@ -393,17 +393,24 @@
   (`bUseControllerRotationYaw = true`) and can keep dealing melee damage after death.
 - **Expected:** AI logic/rotation/attacks should stop the moment a zombie dies, not just
   visually mask it via the death animation — before the despawn delay elapses.
-- **Status:** Fixed. In `HandleZombieDied`'s existing `HasAuthority`-gated branch, before
-  the existing loot/despawn logic (`Get Actor Of Class(BP_ZombieSpawnerManager)` →
-  `Server_RollAndSpawnLoot` → `BeginBodyDespawn`), added: `Get Controller` → `Cast To
+- **Status:** Fixed and verified. In `HandleZombieDied`'s existing `HasAuthority`-gated
+  branch, before the existing loot/despawn logic (`Get Actor Of Class(BP_ZombieSpawnerManager)`
+  → `Server_RollAndSpawnLoot` → `BeginBodyDespawn`), added: `Get Controller` → `Cast To
   AIC_Zombie` (CastFailed skips straight to the existing loot/despawn chain) → on success:
   `Stop Movement`, `Clear Focus` (Gameplay priority), `Get BrainComponent` → `Stop Logic`
   (reason "Died"), `Set bUseControllerRotationYaw = false` on self, `Get CharacterMovement`
   → `Disable Movement` — then continues into the unchanged loot/despawn chain. No
   `UnPossess` added; the controller stays possessing the corpse, only its AI/movement/
-  rotation is stopped. Compiled 0 errors/0 warnings, saved. Still needs in-PIE verification:
-  kill a zombie and confirm it stops moving/rotating/attacking immediately rather than
-  continuing to track and hit the player during the despawn delay.
+  rotation is stopped. Verified via automation: `Test_Zombie_StopsLogicOnDeath` (added to
+  `BP_TestController`) applies lethal damage to a spawned zombie and asserts
+  `BrainComponent::IsRunning() == false` and `bUseControllerRotationYaw == false` shortly
+  after death. First version of the test used `GameplayStatics::ApplyDamage`, which does
+  nothing here — `AGDCharacterBase` has no `TakeDamage` override; health lives entirely in
+  a GAS `AttributeSetBase`, so `Die()` only fires from GAS attribute-change logic. Fixed the
+  test to apply damage via a `GameplayEffect` (`GE_MeleeDamage` + `SetByCallerMagnitude`
+  on tag `Data.Damage`), matching the pattern the already-passing
+  `Test_Zombie_RetargetsAfterTargetDies` uses to kill the player. Confirmed passing in a
+  clean single-session 22/22 PIE automation run.
 
 ## Store escalation's "cash pool" and "breach point" scaling are unimplemented (deferred scope)
 
