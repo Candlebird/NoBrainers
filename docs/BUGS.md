@@ -352,12 +352,15 @@
   never fails, so the zombie never re-evaluates.
 - **Expected:** A zombie whose target dies should retarget another living player (or clear
   `TargetActor` and enter search/idle if none are alive).
-- **Status:** Fixed. `BTS_FindClosestPlayer`'s `EventGraph` now clears/rebuilds a local
-  `AliveHeroActors` array each tick via a `ForEachLoop` over `GetAllActorsOfClass`'s output,
-  filtering with `IsAlive()` on each hero before adding, and feeds the filtered array into
-  `GetClosestActor` instead of the raw actor list. Compiles with 0 errors/0 warnings.
-  Needs in-PIE verification (kill a player, confirm the zombie retargets a living player or
-  clears `TargetActor`).
+- **Status:** Fixed and verified. `BTS_FindClosestPlayer`'s `EventGraph` now clears/rebuilds a
+  local `AliveHeroActors` array each tick via a `ForEachLoop` over `GetAllActorsOfClass`'s
+  output, filtering with `IsAlive()` on each hero before adding, and feeds the filtered array
+  into `GetClosestActor` instead of the raw actor list. Compiles with 0 errors/0 warnings.
+  Verified via automation: `Test_Zombie_RetargetsAfterTargetDies` in `BP_TestController`
+  spawns a zombie targeting the sole test player, kills the player via a lethal `GE_MeleeDamage`
+  GameplayEffect, and asserts the zombie's blackboard `TargetActor` is no longer the dead
+  player (it clears to null, since no other living hero exists in the test bed). Confirmed
+  passing in the same clean 23/23 PIE automation run as the other zombie-death tests.
 
 ## Zombies can damage other zombies (no faction filter on melee sweep)
 
