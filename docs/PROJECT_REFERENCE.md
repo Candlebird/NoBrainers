@@ -193,6 +193,7 @@ all under `Content/GASDocumentation/Characters/Hero/Abilities/<AbilityName>/`:
   plugin.
 - **VesperNodeCleaner** (`Plugins/VesperNodeCleaner/`) — paid Blueprint
   auto-layout plugin, used via `blueprint.auto_layout formatter: 'vesper'`.
+  Layout rules and ini tunables: `docs/VESPER_LAYOUT.md`.
 - Engine plugins `Bridge` and `VisualStudioTools` are enabled; `MagicLeap*`
   and `AndroidFileServer` are present but disabled.
 

@@ -83,8 +83,8 @@ void FVesperNodeCleanerModule::RegisterMenus()
 		Section.AddMenuEntryWithCommandList(
 			FVesperNodeCleanerCommands::Get().AutoFormatGraph,
 			PluginCommands,
-			LOCTEXT("VesperFormatNodesLabel", "Vesper: Auto-Format Selected"),
-			LOCTEXT("VesperFormatNodesTooltip", "Automatically arranges the selected nodes into clean, non-overlapping columns based on their connections.")
+			LOCTEXT("VesperFormatNodesLabel", "Vesper: Clean Graph"),
+			LOCTEXT("VesperFormatNodesTooltip", "Straightens exec and data wires, stacks inputs below their nodes and wraps each exec path in a titled comment. Formats the selection, or the whole graph if fewer than 2 nodes are selected.")
 		);
 
 		// NOTE: this entry was missing entirely in the previous version, so
@@ -108,7 +108,7 @@ void FVesperNodeCleanerModule::RegisterMenus()
 		FToolMenuEntry FormatEntry = FToolMenuEntry::InitToolBarButton(
 			FVesperNodeCleanerCommands::Get().AutoFormatGraph,
 			LOCTEXT("VesperCleanLabel", "Clean Graph"),
-			LOCTEXT("VesperCleanToolTip", "Auto-format the selected nodes with Vesper."),
+			LOCTEXT("VesperCleanToolTip", "Format the selected nodes with Vesper, or the whole graph if fewer than 2 are selected."),
 			FSlateIcon(FVesperNodeCleanerStyle::GetStyleSetName(), "VesperNodeCleaner.AutoFormatGraph")
 		);
 		FormatEntry.SetCommandList(PluginCommands);

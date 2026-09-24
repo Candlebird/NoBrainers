@@ -3,48 +3,96 @@
 ## Stack & Environment
 
 - **Engine:** 5.7
-- **MCP:** `Plugins/Monolith/Binaries/monolith_proxy.exe` (Monolith plugin — namespace tools for `blueprint`, `material`, `editor`, `cppreflect`, `network`, etc.)
+- **MCP:** `Plugins/Monolith/Binaries/monolith_proxy.exe` (Monolith plugin, with namespace tools for `blueprint`, `material`, `editor`, `cppreflect`, `network`, and so on).
+- **Default session model:** Sonnet (set in `.claude/settings.json`). The main session runs the orchestration: reading plans and reports and dispatching agents. That work doesn't need Opus, and running it on Opus is the most expensive part of a long run. Only `ue-architect` runs on Opus. Switch with `/model opus` for a session that needs it.
 
 ## Task List
 
-- **Start here:** `docs/ParentTaskList.md` is the index of build phases and states which phase is currently active — read it before picking up work so you aren't guessing the phase from git history or Content/. Each phase's detailed task breakdown lives in its own `docs/PHASE_<N>_TASKLIST.md`.
+- **Start here:** `docs/ParentTaskList.md` is the index of build phases and says which phase is active. Read it before picking up work so you aren't guessing the phase from git history or `Content/`. Each phase's detailed tasks live in its own `docs/PHASE_<N>_TASKLIST.md`. The phase file is authoritative when it disagrees with the index.
 
 ## Bug Tracking
 
-- **`docs/BUGS.md` is the single tracker for unresolved bugs/known issues/known limitations** on this project — don't let them accumulate loose in phase tasklists or design docs. When a bug, gap, or known limitation is discovered during implementation, add an entry to `docs/BUGS.md` (Area/Repro/Actual/Expected/Status) and leave only a short pointer back to it (`See \`docs/BUGS.md\` — "<entry title>."`) at the discovery site (e.g. a phase tasklist STATUS NOTE) instead of writing the full description inline there.
+- **`docs/BUGS.md` is the single tracker for unresolved bugs, known issues, and known limitations.** When you find one during implementation, add an entry there (Area/Repro/Actual/Expected/Status). At the place you found it (e.g. a phase tasklist STATUS NOTE), leave only a pointer: `See docs/BUGS.md — "<entry title>."` Don't write the full description there.
 
 ## Execution Rules
 
-## Execution Rules
-
-- **Never Echo Raw JSON:** Do not repeat full JSON payloads returned by Monolith/MCP tools. Summarize tool outputs in brief bullet points.
-- **Single-Action Confirmation:** When executing write/spawn commands in Unreal Engine, state only the changed properties or created objects — not a full narration of every tool call.
-- **Limited Testing Capabilities:** Testing capabilities here are limited. Whenever a change requires in-game testing, stop and tell me briefly what you need me to test before continuing.
-- **Subagent reports stay short:** A dispatched agent's report back to the orchestrator (or me) should default to the shortest form that still carries every fact the reader needs to act — a builder's report needs its `TOUCHED`/`COMPILE`/`SAVED` fields, not a narrated walkthrough of every tool call. Expand into full detail only when something actually went wrong (a BLOCK, a failure, an ambiguous case) or when explicitly asked.
+- **Never echo raw JSON.** Don't repeat full JSON payloads from Monolith/MCP tools. Summarize them in brief bullets.
+- **Single-action confirmation.** After a write or spawn in Unreal, state only the properties changed or objects created. Don't narrate every tool call.
+- **Limited testing capabilities.** When a change needs in-game testing, stop and tell me briefly what to test before continuing.
+- **Short subagent reports.** Builders report in the fixed format in "Builder report format" below. Expand into detail only when something went wrong (a failure, a BLOCK, an ambiguous case) or when asked.
 
 ## Version Control
 
-- **Gotcha:** `git checkout <branch>` / `git merge` can silently half-fail while the Unreal Editor has modified `.uasset` files open. Windows file locking means git can't unlink/overwrite a `.uasset` the editor currently holds a handle on (`unable to unlink ... Invalid argument`) — git does **not** fail atomically here: it happily checks out every file it *can* write, leaves locked ones exactly as they were before the checkout, and only then reports the error and aborts. The result is a working tree silently mixing old-branch and new-branch content, indistinguishable from a clean state via `git status` alone (some files show unexpectedly "modified"/"untracked" — fine, those are just locked ones stuck on newer content; but *other* files may have silently reverted to the older branch's content with no warning). If a checkout/merge reports an unlink error, don't assume the files it didn't mention are safe — diff the working tree against the branch you meant to land on (`git diff <target-branch> --stat`) and reconcile any unexpected differences (`git checkout <target-branch> -- <path>` per-file works fine even mid-mess, since it only touches the exact paths listed) before committing anything.
+- **Gotcha: a checkout or merge can half-fail while the editor is open.** While the Unreal Editor holds modified `.uasset` files open, Windows file locking stops git from unlinking or overwriting them (`unable to unlink ... Invalid argument`). Git doesn't fail atomically here. It checks out every file it *can* write, leaves the locked ones as they were, and only then reports the error. The working tree ends up mixing both branches' content, and `git status` alone can't show which files are wrong. After an unlink error, don't assume unmentioned files are safe. Run `git diff <target-branch> --stat` and fix any unexpected difference with `git checkout <target-branch> -- <path>`, file by file, before committing. That command is safe even mid-mess, because it only touches the paths you list.
 
 ## Subagents
 
-- **Granular dispatch, not monolithic multi-step builds.** When a feature's implementation plan breaks into N steps and each step is independently testable/understandable once finished, dispatch N separate builder-agent calls (one per step) rather than one agent call carrying the whole multi-step spec. This keeps individual runs cheap to verify, cheap to retry on failure, and cheap in tokens — a single agent grinding through a 7-step spec end-to-end can burn drastically more tokens than 7 short, focused dispatches, and a failure partway through is harder to diagnose/resume than a failure in one small step. Sequence the dispatches (each pointed at the prior step's landed state) rather than parallelizing steps that depend on each other's output.
-- **UI/UMG work → `ue-ui-builder`.** Any task touching a WidgetBlueprint (widget trees, layout, custom widget instancing via `ui.add_custom_widget`, or light Blueprint-graph wiring that follows a widget-tree change) should go to this dedicated agent rather than `ue-content-builder` or `ue-blueprint-builder`.
-- **Design-alignment review → `ue-vision-keeper`.** Read-only reviewer that grades a plan or landed change against project design docs and returns `ALIGNED`/`DRIFT`/`BLOCK`. Point it at whatever design docs this project settles on.
+### Roles
 
-### Token-Efficient Agent Usage
+| Agent | Model | Job |
+|---|---|---|
+| `ue-scout` | Haiku | Read-only fact gathering for large features: paths, signatures, graph summaries. Hands a fact sheet to the architect. |
+| `ue-architect` | Opus 5.5 | Read-only planner. Makes every design decision and outputs dispatch-ready task packets. |
+| `ue-blueprint-builder` | Sonnet | Blueprint graphs, DataAssets, DataTables, GAS, behavior trees. |
+| `ue-cpp-builder` | Sonnet | C++ under `Source/GASDocumentation/`, plus compiling it. |
+| `ue-ui-builder` | Sonnet | WidgetBlueprints, plus the light graph wiring that follows a widget-tree change. |
+| `ue-content-builder` | Sonnet | Materials, meshes, Niagara, audio, animation, level sequences. |
+| `ue-test-writer` | Sonnet | New `Test_*` checks in `Content/Tests/Automation/`. |
+| `ue-test-runner` | Haiku | Runs the test bed and reports PASS/FAIL. |
+| `ue-vision-keeper` | Sonnet | Read-only design-alignment review: `ALIGNED` / `DRIFT` / `BLOCK`. |
+| `ue-git-manager` | Haiku | Commits, pushes, PRs. |
 
-When dispatching multiple agents (whether in parallel or across a multi-step run), the biggest token drains are redundant discovery and verbose reporting. A few standing rules to avoid that:
+### Choosing the path: match the effort to the change
 
-- **Share discovery once, don't re-scan per task.** If several agents each need to understand the same area of the codebase, don't dispatch one full-scan agent per task in parallel — that burns tokens on redundant discovery. Instead dispatch a single discovery/architecture agent first, have it return a plan covering all the tasks, then only dispatch follow-up agents for a specific task if it needs more — and point that follow-up at the prior plan so it reuses the existing discovery instead of re-scanning the codebase.
-- **Every agent starts cold.** A dispatched agent has no memory of this conversation. Everything it needs (file paths, prior findings, the exact ask) must be handed to it explicitly in its dispatch packet — don't assume it can infer context the way a continued conversation would.
-- **Scope queries tightly.** Avoid project-wide scans. Supply explicit paths or exact target names whenever a tool or agent call takes them, rather than letting it search broadly.
-- **Background long-running agents; don't poll or guess.** Once a builder/agent is dispatched in the background, wait for its actual report rather than fabricating or predicting what it will say.
-- **Keep subagent reports short by default** (see Execution Rules above) — this matters even more at scale, since a wave of five verbose agent reports costs five times as much as one.
+- **Small change** (one asset, no Blueprint-vs-C++ question, e.g. a bug fix or tweak): dispatch the right builder directly with a packet you write yourself, using the architect's packet template (`.claude/agents/ue-architect.md`). Skip the scout, the architect, and both vision gates.
+- **Feature** (2+ assets, or it needs a Blueprint-vs-C++ decision): `ue-architect` → vision gate 1 on the plan → builders → `ue-test-writer` / `ue-test-runner` → vision gate 2 on the landed change → `ue-git-manager`.
+- **Large feature** (4+ assets, or it touches systems whose assets you can't name yet): dispatch `ue-scout` first, then pass its fact sheet to `ue-architect` so Opus reasons over gathered facts instead of doing the lookups itself. Then follow the feature path.
+
+### Dispatching the plan
+
+- **Dispatch the architect's task packets as written.** Each one is self-contained: it has every name, type, and signature decided, so a Sonnet builder can run it without design calls. Paste the packet verbatim, add the reports of any tasks it depends on, and add nothing else.
+- **One builder call per asset per dependency step.** Each call has a fixed cost: the system prompt, the tool schemas, and a cold read of the asset. So consecutive changes to the same asset go in one call. Split into separate calls only when something must happen in between (e.g. a C++ header change the Blueprint depends on), or when the assets are different. Never hand one agent a whole multi-asset spec. A 7-step spec in one call once ran to about 1M tokens.
+- **Run independent tasks in parallel.** Tasks the architect marks parallel (no shared assets, no dependency) go out together in one message.
+- **Every graph edit ends with a Vesper pass by the builder that made it.** `ue-blueprint-builder`, `ue-ui-builder`, and `ue-test-writer` run `blueprint.auto_layout` with `formatter: 'vesper'` on each graph they edited, then compile and save. They report the result in the `VESPER` field. No separate cleanup agent is needed. If a report shows `VESPER: failed` or the field is missing, re-dispatch only that asset's layout step to the same builder.
+
+### When a task fails
+
+1. **Retry once:** re-dispatch the same packet to the same builder, adding its failure report (error text and what landed).
+2. **If it fails again, escalate only that task:** send `ue-architect` the task packet, both failure reports, and the current state of the assets, and ask for a replacement packet for that task alone. Never re-plan the whole feature because one task failed.
+3. **If the replacement also fails,** stop and report to me.
+
+### Builder report format
+
+Every builder ends with exactly this block. Leave a field out only when it doesn't apply.
+
+```
+TASK: <task number/title from the packet>
+TOUCHED: <asset or file paths, (new)/(edit)>
+CHANGES: <short list: functions/variables/nodes/widgets/properties added or changed>
+COMPILE: ok | <error summary>
+VESPER: <graphs formatted> | failed: <reason> | n/a
+SAVED: yes | no
+USER TEST: <what to test in-game> | none
+NOTES: <gotchas found, deviations from the packet, blockers> | none
+```
+
+### Token rules
+
+- **Discover once.** Don't send several agents to scan the same area. The scout or the architect does it once, and the packets carry the findings forward.
+- **Every agent starts cold.** A dispatched agent can't see this conversation. Everything it needs goes in the packet: paths, prior findings, the exact ask.
+- **Scope tightly.** Give exact asset paths and names. No project-wide scans.
+- **Background agents: wait, don't guess.** Wait for the actual report. Never predict or invent it.
+- **Measure.** At the end of a feature run, log it with the `run-log` skill. In `summary`, put the total tokens for each agent call (from its completion notification) and the run total, so runs can be compared over time.
 
 ## MCP & Monolith Usage Rules
 
-- **Domain Namespaces:** Always prefer Monolith's namespace tools (`blueprint`, `material`, `editor`, `cppreflect`, `network`) over generic fallback actions.
-- **Scope Queries Tightly:** Avoid project-wide scans. Always supply explicit package paths (e.g., `/Game/Blueprints/Core/BP_PlayerCharacter`) or target exact Actor classes in scene queries.
-- **Error Self-Correction:** If a tool call fails due to invalid arguments or missing paths, inspect the tool schema, fix the payload, and attempt one retry before reporting the issue to me.
-- **Node Formatting/Readability:** To auto-layout a Blueprint graph for human readability, call `blueprint.auto_layout` and pass `formatter: 'vesper'` to route through the Vesper Node Cleaner plugin (`Plugins/VesperNodeCleaner/`, a paid Fab/Marketplace plugin) via Monolith's bridge (`Plugins/Monolith/Source/MonolithVesperBridge/`). This is a distinct code path from the tool's default `formatter: 'auto'`/`'monolith'` built-in Sugiyama layout or the `'blueprint_assist'` option — prefer `'vesper'` explicitly when the goal is a clean, human-readable graph, since it gives noticeably better real-world layout results than the built-in formatter. Vesper has no `layout_mode` concept (no pinning of already-placed nodes the way `'new_only'` does on the built-in formatter): passing `layout_mode='selected'` with `node_ids` filters which nodes it touches, but `'all'`/`'new_only'` both just format the whole graph.
+- **Param lookup.** To get an action's exact params, grep `.claude/monolith/SCHEMAS.md` for `^## <ns>.<action> ` with `-A 12`. Never Read the file whole. After a Monolith update, regenerate it with `.claude/monolith/build_schema_sheet.py`. A PreToolUse hook (`fix_params.py`) auto-corrects common param-name mistakes. A PostToolUse hook (`compact_output.py`) compacts `get_graph_data`/`get_node_details` output (set `MONOLITH_RAW=1` to disable it).
+- **Domain namespaces.** Prefer Monolith's namespace tools (`blueprint`, `material`, `editor`, `cppreflect`, `network`) over generic fallback actions.
+- **Scope queries tightly.** Always give explicit package paths (e.g. `/Game/Blueprints/Core/BP_PlayerCharacter`) or exact Actor classes.
+- **Error self-correction.** If a call fails on invalid arguments or a missing path, check the schema, fix the payload, and retry once before reporting to me.
+- **Graph layout: Vesper.** Call `blueprint.auto_layout` with `asset_path`, `graph_name`, and `formatter: 'vesper'`. That routes through the Vesper Node Cleaner plugin (`Plugins/VesperNodeCleaner/`) via `Plugins/Monolith/Source/MonolithVesperBridge/`. It lays graphs out much better than the default `'auto'`/`'monolith'` formatter, so always name it explicitly.
+  - **Scope:** `layout_mode` only matters as `'selected'` with `node_ids`. Any other value formats the whole graph, since Vesper doesn't pin already-placed nodes.
+  - **Re-running is safe:** its generated comment boxes are tagged and regenerated each run, and your own comments are kept.
+  - **Node sizes:** Monolith can't open an asset in the editor. If the graph is already open, Vesper measures real node sizes. If not, it estimates them from pin counts, which is fine for routine passes.
+  - **Always recompile after it runs.**
+  - **More detail:** the rules, the `[VesperNodeCleaner]` ini tunables, and the rebuild script (`.claude/monolith/rebuild_editor.ps1`) are in `docs/VESPER_LAYOUT.md`.

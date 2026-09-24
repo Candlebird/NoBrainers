@@ -2,18 +2,31 @@
 
 #include "VesperGraphLayout.h"
 #include "Editor.h"
+#include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraphNode_Comment.h"
+#include "EdGraphSchema_K2.h"
+#include "K2Node.h"
 #include "K2Node_VariableGet.h"
 #include "K2Node_CallFunction.h"
-#include "EdGraphSchema_K2.h"
+#include "K2Node_Event.h"
+#include "K2Node_CustomEvent.h"
+#include "K2Node_FunctionEntry.h"
+#include "K2Node_Knot.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "GraphEditor.h"
+#include "SGraphPanel.h"
+#include "SGraphNode.h"
+#include "SGraphPin.h"
 #include "Layout/WidgetPath.h"
+#include "Layout/SlateRect.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
+#include "Widgets/SWindow.h"
 #include "Input/Events.h"
+#include "Misc/ConfigCacheIni.h"
 #include "ScopedTransaction.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogVesperLayout, Log, All);
@@ -26,35 +39,86 @@ namespace
 	TWeakPtr<SGraphEditor> GLastKnownGraphEditor;
 	FDelegateHandle GFocusChangingHandle;
 
-	// Walks a widget path looking for the deepest SGraphEditor ancestor.
-	// Shared by GetActiveGraphEditor() and the global focus-change handler.
-	//
-	// NOTE: SGraphEditor is an abstract base class — every real graph editor
-	// widget instantiated at runtime (e.g. inside the Blueprint editor) is
-	// actually the private `SGraphEditorImpl` subclass, so GetTypeAsString()
-	// never returns the literal string "SGraphEditor". The original exact-
-	// match here was the actual root cause of "Detected: 0": it meant this
-	// lookup silently found nothing in *every* case, focus-related or not.
-	// Match by substring instead so both SGraphEditor and any subclass name
-	// (SGraphEditorImpl, etc.) are recognized.
+	// SGraphEditor is a thin wrapper. The widget doing the real work is the
+	// private SGraphEditorImpl subclass. Match both names exactly: a substring
+	// match on "GraphEditor" also hits unrelated widgets (action menus,
+	// minimaps) and static-casting those to SGraphEditor would crash.
+	bool IsGraphEditorWidget(const SWidget& Widget)
+	{
+		static const FName GraphEditorType(TEXT("SGraphEditor"));
+		static const FName GraphEditorImplType(TEXT("SGraphEditorImpl"));
+		const FName Type = Widget.GetType();
+		return Type == GraphEditorType || Type == GraphEditorImplType;
+	}
+
 	TSharedPtr<SGraphEditor> FindGraphEditorInPath(const FWidgetPath& Path)
 	{
 		for (int32 i = Path.Widgets.Num() - 1; i >= 0; --i)
 		{
-			const TSharedPtr<SWidget> Widget = Path.Widgets[i].Widget;
-			if (Widget->GetTypeAsString().Contains(TEXT("GraphEditor")))
+			const TSharedRef<SWidget>& Widget = Path.Widgets[i].Widget;
+			if (IsGraphEditorWidget(*Widget))
 			{
-				return StaticCastSharedPtr<SGraphEditor>(Widget);
+				return StaticCastSharedRef<SGraphEditor>(Widget);
 			}
 		}
 		return nullptr;
 	}
 
-	// Bound to FSlateApplication::OnFocusChanging(). Every time keyboard
-	// focus moves anywhere in the editor, remember the Graph Editor it was
-	// last inside — so that if focus later moves to something outside any
-	// Graph Editor (e.g. a toolbar button), we still have a recent, valid
-	// editor to fall back to.
+	// Depth-first search of a widget tree for a graph editor showing Graph.
+	TSharedPtr<SGraphEditor> FindGraphEditorInTree(const TSharedRef<SWidget>& Widget, const UEdGraph* Graph, int32 Depth)
+	{
+		if (IsGraphEditorWidget(*Widget))
+		{
+			TSharedRef<SGraphEditor> Editor = StaticCastSharedRef<SGraphEditor>(Widget);
+			if (Editor->GetCurrentGraph() == Graph)
+			{
+				return Editor;
+			}
+		}
+		if (Depth > 256)
+		{
+			return nullptr;
+		}
+		if (FChildren* Children = Widget->GetChildren())
+		{
+			for (int32 i = 0; i < Children->Num(); ++i)
+			{
+				if (TSharedPtr<SGraphEditor> Found = FindGraphEditorInTree(Children->GetChildAt(i), Graph, Depth + 1))
+				{
+					return Found;
+				}
+			}
+		}
+		return nullptr;
+	}
+
+	// Finds the live graph panel for Graph so real node sizes can be measured.
+	// Returns null when the graph isn't open in any visible editor tab.
+	SGraphPanel* FindPanelForGraph(const UEdGraph* Graph)
+	{
+		if (!Graph || !FSlateApplication::IsInitialized())
+		{
+			return nullptr;
+		}
+		if (const TSharedPtr<SGraphEditor> Last = GLastKnownGraphEditor.Pin())
+		{
+			if (Last->GetCurrentGraph() == Graph)
+			{
+				return Last->GetGraphPanel();
+			}
+		}
+		TArray<TSharedRef<SWindow>> Windows;
+		FSlateApplication::Get().GetAllVisibleWindowsOrdered(Windows);
+		for (const TSharedRef<SWindow>& Window : Windows)
+		{
+			if (const TSharedPtr<SGraphEditor> Found = FindGraphEditorInTree(Window, Graph, 0))
+			{
+				return Found->GetGraphPanel();
+			}
+		}
+		return nullptr;
+	}
+
 	void HandleGlobalFocusChanging(const FFocusEvent& /*FocusEvent*/, const FWeakWidgetPath& /*OldFocusedWidgetPath*/,
 		const TSharedPtr<SWidget>& /*OldFocusedWidget*/, const FWidgetPath& NewFocusedWidgetPath,
 		const TSharedPtr<SWidget>& /*NewFocusedWidget*/)
@@ -66,32 +130,1613 @@ namespace
 	}
 }
 
-namespace VesperLayoutSettings
+namespace VesperLayout
 {
-	// Horizontal distance between layers (columns).
-	static constexpr float ColumnSpacing = 350.f;
+	// Generated comment boxes get this value in NodeGuid.A so a later run can
+	// find and regenerate them without touching user-authored comments.
+	static constexpr uint32 GeneratedCommentTag = 0x5E5BE800;
+	static const TCHAR* ConfigSection = TEXT("VesperNodeCleaner");
 
-	// Vertical gap left between two stacked nodes in the same layer.
-	static constexpr float RowSpacing = 60.f;
+	// All spacing values are graph units (pixels at 1:1 zoom). Every field can
+	// be overridden in DefaultEditor.ini under [VesperNodeCleaner] using the
+	// exact field name (e.g. ExecGap=60, bGenerateComments=False,
+	// SingleColor=(R=0.1,G=0.28,B=0.5,A=1)).
+	struct FSettings
+	{
+		float ExecGap = 50.f;             // horizontal gap between exec nodes (feeder columns are added on top)
+		float DataGap = 32.f;             // horizontal gap between a data feeder and the node it feeds
+		float StackGap = 14.f;            // vertical gap between stacked feeders of the same node
+		float BranchRowGap = 36.f;        // vertical gap between exec branch rows
+		float ExecLaneClearance = 8.f;    // feeders stay this far below the consumer's exec wire
+		float AboveTolerance = 12.f;      // how far a straight first feeder may rise above a pure consumer's top
+		float BlockGap = 100.f;           // vertical gap between function blocks / groups
+		float GroupInnerGap = 40.f;       // vertical gap between blocks inside one group
+		float CommentPadding = 28.f;      // padding between comment edge and its contents
+		int32 CommentFontSize = 18;
+		int32 InnerCommentFontSize = 14;
+		bool bGenerateComments = true;    // wrap each block / group in a titled comment
+		bool bInnerGroupComments = true;  // also give each block inside a group its own comment
+		bool bGroupSimilar = true;        // group similar blocks
+		bool bDuplicateSharedGetters = true; // give each exec consumer its own copy of a shared self-variable getter
+		FLinearColor SingleColor = FLinearColor(0.10f, 0.28f, 0.50f);
+		FLinearColor GroupColor = FLinearColor(0.38f, 0.20f, 0.52f);
+		FLinearColor InnerColor = FLinearColor(0.16f, 0.16f, 0.18f);
+		FLinearColor LooseColor = FLinearColor(0.30f, 0.30f, 0.30f);
 
-	// Padding applied around the contents of a Comment box when auto-fitting.
-	static constexpr float CommentPadding = 40.f;
+		static FSettings Load()
+		{
+			FSettings S;
+			if (!GConfig)
+			{
+				return S;
+			}
+			auto F = [](const TCHAR* Key, float& Value) { GConfig->GetFloat(ConfigSection, Key, Value, GEditorIni); };
+			auto I = [](const TCHAR* Key, int32& Value) { GConfig->GetInt(ConfigSection, Key, Value, GEditorIni); };
+			auto B = [](const TCHAR* Key, bool& Value) { GConfig->GetBool(ConfigSection, Key, Value, GEditorIni); };
+			auto C = [](const TCHAR* Key, FLinearColor& Value)
+			{
+				FString Str;
+				FLinearColor Parsed;
+				if (GConfig->GetString(ConfigSection, Key, Str, GEditorIni) && Parsed.InitFromString(Str))
+				{
+					Value = Parsed;
+				}
+			};
+			F(TEXT("ExecGap"), S.ExecGap);
+			F(TEXT("DataGap"), S.DataGap);
+			F(TEXT("StackGap"), S.StackGap);
+			F(TEXT("BranchRowGap"), S.BranchRowGap);
+			F(TEXT("ExecLaneClearance"), S.ExecLaneClearance);
+			F(TEXT("AboveTolerance"), S.AboveTolerance);
+			F(TEXT("BlockGap"), S.BlockGap);
+			F(TEXT("GroupInnerGap"), S.GroupInnerGap);
+			F(TEXT("CommentPadding"), S.CommentPadding);
+			I(TEXT("CommentFontSize"), S.CommentFontSize);
+			I(TEXT("InnerCommentFontSize"), S.InnerCommentFontSize);
+			B(TEXT("bGenerateComments"), S.bGenerateComments);
+			B(TEXT("bInnerGroupComments"), S.bInnerGroupComments);
+			B(TEXT("bGroupSimilar"), S.bGroupSimilar);
+			B(TEXT("bDuplicateSharedGetters"), S.bDuplicateSharedGetters);
+			C(TEXT("SingleColor"), S.SingleColor);
+			C(TEXT("GroupColor"), S.GroupColor);
+			C(TEXT("InnerColor"), S.InnerColor);
+			C(TEXT("LooseColor"), S.LooseColor);
+			return S;
+		}
+	};
 
-	// Extra vertical space reserved for the Comment box title bar.
-	static constexpr float CommentTitleBarHeight = 40.f;
+	float CommentTitleHeight(int32 FontSize)
+	{
+		return FontSize * 1.5f + 14.f;
+	}
 
-	// Fallback node height used when a node has no pins to estimate from.
-	static constexpr float MinNodeHeight = 80.f;
+	bool IsGeneratedComment(const UEdGraphNode* Node)
+	{
+		return Node && Node->IsA<UEdGraphNode_Comment>() && Node->NodeGuid.A == GeneratedCommentTag;
+	}
 
-	// Approximate vertical space a single pin row occupies.
-	static constexpr float HeightPerPin = 22.f;
+	bool HasExecPin(const UEdGraphNode* Node)
+	{
+		for (const UEdGraphPin* Pin : Node->Pins)
+		{
+			if (Pin && !Pin->bHidden && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 
-	// A fan-out pure node (variable getter or BlueprintPure function call)
-	// only gets split into a dedicated duplicate for a consumer that sits
-	// farther than this from the original node; consumers within this
-	// distance keep sharing it since the shared link doesn't read as
-	// clutter at that range.
-	static constexpr float VariableSplitMaxDistance = 450.f;
+	bool IsPinVisible(const UEdGraphNode* Node, const UEdGraphPin* Pin)
+	{
+		if (!Pin || Pin->bHidden)
+		{
+			return false;
+		}
+		return !(Pin->bAdvancedView && Node->AdvancedPinDisplay == ENodeAdvancedPins::Hidden);
+	}
+
+	// The event delegate pin draws in the title bar, not as its own pin row.
+	bool IsHeaderPin(const UEdGraphNode* Node, const UEdGraphPin* Pin)
+	{
+		return Pin->Direction == EGPD_Output && Node->IsA<UK2Node_Event>() && Pin->PinName == UK2Node_Event::DelegateOutputName;
+	}
+
+	FString FirstLine(const FString& Text)
+	{
+		int32 Index;
+		return Text.FindChar(TEXT('\n'), Index) ? Text.Left(Index) : Text;
+	}
+
+	// ---------------------------------------------------------------------
+	// Node metrics: measured from the live graph panel when one is open,
+	// otherwise estimated from pins and titles.
+	// ---------------------------------------------------------------------
+	struct FMetrics
+	{
+		SGraphPanel* Panel = nullptr;
+		TMap<const UEdGraphNode*, FVector2D> SizeCache;
+
+		enum class EShape : uint8 { Normal, Compact, Variable, Knot };
+
+		static EShape GetShape(const UEdGraphNode* Node)
+		{
+			if (Node->IsA<UK2Node_Knot>())
+			{
+				return EShape::Knot;
+			}
+			if (Node->IsA<UK2Node_VariableGet>() && !HasExecPin(Node))
+			{
+				return EShape::Variable;
+			}
+			if (const UK2Node* K2 = Cast<UK2Node>(Node))
+			{
+				if (K2->ShouldDrawCompact())
+				{
+					return EShape::Compact;
+				}
+			}
+			return EShape::Normal;
+		}
+
+		TSharedPtr<SGraphNode> Widget(const UEdGraphNode* Node) const
+		{
+			return Panel ? Panel->GetNodeWidgetFromGuid(Node->NodeGuid) : nullptr;
+		}
+
+		FVector2D Size(const UEdGraphNode* Node)
+		{
+			if (const FVector2D* Cached = SizeCache.Find(Node))
+			{
+				return *Cached;
+			}
+			FVector2D Result = FVector2D::ZeroVector;
+			if (const TSharedPtr<SGraphNode> NodeWidget = Widget(Node))
+			{
+				const FVector2D Desired = NodeWidget->GetDesiredSize();
+				if (Desired.X > 4.f && Desired.Y > 4.f)
+				{
+					Result = Desired;
+				}
+			}
+			if (Result.IsZero())
+			{
+				Result = EstimateSize(Node);
+			}
+			SizeCache.Add(Node, Result);
+			return Result;
+		}
+
+		// Vertical distance from the node's top edge to the pin's center.
+		float PinOffset(const UEdGraphNode* Node, const UEdGraphPin* Pin)
+		{
+			if (!Pin)
+			{
+				return Size(Node).Y * 0.5f;
+			}
+			if (const TSharedPtr<SGraphNode> NodeWidget = Widget(Node))
+			{
+				if (const TSharedPtr<SGraphPin> PinWidget = NodeWidget->FindWidgetForPin(const_cast<UEdGraphPin*>(Pin)))
+				{
+					const FVector2D Offset = PinWidget->GetNodeOffset();
+					if (Offset.Y > 0.f && Offset.Y <= Size(Node).Y + 1.f)
+					{
+						return Offset.Y;
+					}
+				}
+			}
+			return EstimatePinOffset(Node, Pin);
+		}
+
+		static float TextWidth(const FString& Text, float CharWidth)
+		{
+			return Text.Len() * CharWidth;
+		}
+
+		static bool ShowsDefaultValueBox(const UEdGraphPin* Pin)
+		{
+			if (Pin->Direction != EGPD_Input || Pin->LinkedTo.Num() > 0)
+			{
+				return false;
+			}
+			const FName Category = Pin->PinType.PinCategory;
+			return Category != UEdGraphSchema_K2::PC_Exec && Category != UEdGraphSchema_K2::PC_Object
+				&& Category != UEdGraphSchema_K2::PC_Interface && Category != UEdGraphSchema_K2::PC_Wildcard
+				&& Category != UEdGraphSchema_K2::PC_Delegate && !Pin->PinType.IsContainer()
+				&& Pin->PinName != UEdGraphSchema_K2::PN_Self;
+		}
+
+		static float DefaultValueBoxWidth(const UEdGraphPin* Pin)
+		{
+			const FName Category = Pin->PinType.PinCategory;
+			if (Category == UEdGraphSchema_K2::PC_Boolean)
+			{
+				return 24.f;
+			}
+			if (Category == UEdGraphSchema_K2::PC_Struct)
+			{
+				return 150.f; // vectors / rotators show three fields
+			}
+			if (Category == UEdGraphSchema_K2::PC_String || Category == UEdGraphSchema_K2::PC_Text || Category == UEdGraphSchema_K2::PC_Name)
+			{
+				return FMath::Clamp(Pin->DefaultValue.Len() * 7.f + 30.f, 60.f, 220.f);
+			}
+			return 56.f;
+		}
+
+		static void CollectRows(const UEdGraphNode* Node, TArray<const UEdGraphPin*>& Inputs, TArray<const UEdGraphPin*>& Outputs)
+		{
+			for (const UEdGraphPin* Pin : Node->Pins)
+			{
+				if (!IsPinVisible(Node, Pin) || IsHeaderPin(Node, Pin))
+				{
+					continue;
+				}
+				(Pin->Direction == EGPD_Input ? Inputs : Outputs).Add(Pin);
+			}
+		}
+
+		static constexpr float RowHeight = 24.f;
+		static constexpr float HeaderHeight = 34.f;
+		static constexpr float ExtraTitleLine = 14.f;
+		static constexpr float CompactTopPad = 8.f;
+		static constexpr float VariableTopPad = 4.f;
+
+		static float NormalHeaderHeight(const UEdGraphNode* Node)
+		{
+			TArray<FString> Lines;
+			Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().ParseIntoArrayLines(Lines);
+			return HeaderHeight + ExtraTitleLine * FMath::Max(0, Lines.Num() - 1);
+		}
+
+		static FVector2D EstimateSize(const UEdGraphNode* Node)
+		{
+			TArray<const UEdGraphPin*> Inputs, Outputs;
+			CollectRows(Node, Inputs, Outputs);
+			const int32 Rows = FMath::Max(Inputs.Num(), Outputs.Num());
+
+			float RowWidth = 0.f;
+			for (int32 Row = 0; Row < Rows; ++Row)
+			{
+				float InWidth = 0.f, OutWidth = 0.f;
+				if (Inputs.IsValidIndex(Row))
+				{
+					const UEdGraphPin* Pin = Inputs[Row];
+					InWidth = 28.f + TextWidth(Pin->GetDisplayName().ToString(), 7.f) + (ShowsDefaultValueBox(Pin) ? DefaultValueBoxWidth(Pin) : 0.f);
+				}
+				if (Outputs.IsValidIndex(Row))
+				{
+					OutWidth = 28.f + TextWidth(Outputs[Row]->GetDisplayName().ToString(), 7.f);
+				}
+				RowWidth = FMath::Max(RowWidth, InWidth + OutWidth + 16.f);
+			}
+
+			switch (GetShape(Node))
+			{
+			case EShape::Knot:
+				return FVector2D(42.f, 16.f);
+			case EShape::Variable:
+			{
+				const UK2Node_VariableGet* Getter = CastChecked<UK2Node_VariableGet>(Node);
+				const float Width = 48.f + TextWidth(FName::NameToDisplayString(Getter->GetVarNameString(), false), 7.f);
+				return FVector2D(FMath::Max(Width, RowWidth), VariableTopPad * 2.f + FMath::Max(1, Rows) * RowHeight);
+			}
+			case EShape::Compact:
+			{
+				const FString Title = FirstLine(Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
+				const float Width = FMath::Max(70.f, 40.f + TextWidth(Title, 12.f)) + RowWidth * 0.6f;
+				return FVector2D(Width, CompactTopPad * 2.f + FMath::Max(1, Rows) * RowHeight);
+			}
+			default:
+			{
+				TArray<FString> Lines;
+				Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().ParseIntoArrayLines(Lines);
+				float TitleWidth = 0.f;
+				for (const FString& Line : Lines)
+				{
+					TitleWidth = FMath::Max(TitleWidth, TextWidth(Line, 7.5f));
+				}
+				const float Width = FMath::Max3(120.f, TitleWidth + 64.f, RowWidth);
+				float Height = NormalHeaderHeight(Node) + Rows * RowHeight + 10.f;
+				if (Node->AdvancedPinDisplay != ENodeAdvancedPins::NoPins)
+				{
+					Height += 22.f;
+				}
+				return FVector2D(Width, Height);
+			}
+			}
+		}
+
+		static float EstimatePinOffset(const UEdGraphNode* Node, const UEdGraphPin* Pin)
+		{
+			if (IsHeaderPin(Node, Pin))
+			{
+				return 16.f;
+			}
+			TArray<const UEdGraphPin*> Inputs, Outputs;
+			CollectRows(Node, Inputs, Outputs);
+			const TArray<const UEdGraphPin*>& Column = Pin->Direction == EGPD_Input ? Inputs : Outputs;
+			const int32 Row = FMath::Max(0, Column.IndexOfByKey(Pin));
+
+			switch (GetShape(Node))
+			{
+			case EShape::Knot:
+				return 8.f;
+			case EShape::Variable:
+				return VariableTopPad + Row * RowHeight + RowHeight * 0.5f;
+			case EShape::Compact:
+				return CompactTopPad + Row * RowHeight + RowHeight * 0.5f;
+			default:
+				return NormalHeaderHeight(Node) + Row * RowHeight + RowHeight * 0.5f;
+			}
+		}
+	};
+
+	// ---------------------------------------------------------------------
+	// Layout data
+	// ---------------------------------------------------------------------
+
+	// A data wire used as a tree edge: Child feeds Parent through ParentIn.
+	struct FFeedLink
+	{
+		UEdGraphNode* Child = nullptr;
+		UEdGraphPin* ChildOut = nullptr;
+		UEdGraphPin* ParentIn = nullptr;
+		UEdGraphNode* Parent = nullptr;
+		int32 ParentPinIndex = 0;
+	};
+
+	// Positions and occupied rectangles for a (partial) layout.
+	struct FLayoutCtx
+	{
+		TMap<UEdGraphNode*, FVector2D> Pos;
+		TArray<FBox2D> Rects;
+
+		FBox2D Bounds() const
+		{
+			FBox2D Result(ForceInit);
+			for (const FBox2D& Rect : Rects)
+			{
+				Result += Rect;
+			}
+			return Result;
+		}
+
+		void MergeFrom(const FLayoutCtx& Other, const FVector2D& Delta)
+		{
+			for (const TPair<UEdGraphNode*, FVector2D>& Pair : Other.Pos)
+			{
+				Pos.Add(Pair.Key, Pair.Value + Delta);
+			}
+			for (const FBox2D& Rect : Other.Rects)
+			{
+				Rects.Add(Rect.ShiftBy(Delta));
+			}
+		}
+	};
+
+	struct FBlock
+	{
+		TArray<UEdGraphNode*> Roots;     // exec roots, or data sinks for data-only blocks
+		TArray<UEdGraphNode*> ExecNodes;
+		TArray<UEdGraphNode*> Members;   // every node owned by the block
+		bool bDataOnly = false;
+		bool bLoose = false;
+		float OrigMinY = 0.f;
+		FString Title;
+		FString GroupKey;
+		FString GroupTitle;
+		TSet<FName> MemberRefs;
+		FLayoutCtx Layout;
+		UEdGraphNode_Comment* Adopted = nullptr;
+	};
+
+	struct FUserComment
+	{
+		UEdGraphNode_Comment* Comment = nullptr;
+		TArray<UEdGraphNode*> Contained;
+	};
+
+	// ---------------------------------------------------------------------
+	// The layout engine. One instance per format call.
+	// ---------------------------------------------------------------------
+	class FEngine
+	{
+	public:
+		FEngine(UEdGraph* InGraph, SGraphPanel* Panel)
+			: Graph(InGraph)
+			, S(FSettings::Load())
+		{
+			M.Panel = Panel;
+
+			// Function and macro graphs are already named by the graph itself,
+			// so a wrapping comment adds nothing. Previously generated comments
+			// are still deleted by CollectComments, and user comments are kept.
+			if (const UEdGraphSchema* Schema = Graph ? Graph->GetSchema() : nullptr)
+			{
+				const EGraphType Type = Schema->GetGraphType(Graph);
+				if (Type == GT_Function || Type == GT_Macro)
+				{
+					S.bGenerateComments = false;
+				}
+			}
+		}
+
+		int32 Run(const TArray<UEdGraphNode*>& InNodes);
+
+	private:
+		UEdGraph* Graph;
+		FSettings S;
+		FMetrics M;
+
+		TArray<UEdGraphNode*> LayoutNodes;
+		TSet<UEdGraphNode*> NodeSet;
+		FVector2D Anchor = FVector2D::ZeroVector;
+		TArray<FUserComment> UserComments;
+
+		TArray<FBlock> Blocks;
+		TMap<UEdGraphNode*, int32> BlockOf;
+		TMap<UEdGraphNode*, int32> ExecOrder;
+		TMap<UEdGraphNode*, FFeedLink> ParentLink;
+		TMap<UEdGraphNode*, TArray<FFeedLink>> Children;
+		TMap<UEdGraphNode*, float> FeederWidthCache;
+		TSet<UEdGraphNode*> Visited;
+
+		static constexpr int32 NoOwner = MAX_int32;
+
+		bool IsExec(const UEdGraphNode* Node) const { return HasExecPin(Node); }
+		FVector2D OrigPos(const UEdGraphNode* Node) const { return FVector2D(Node->NodePosX, Node->NodePosY); }
+
+		void CollectComments(const TArray<UEdGraphNode*>& InNodes);
+		void BuildExecBlocks();
+		void ResolveOwners();
+		int32 ResolvePure(UEdGraphNode* Node, TSet<UEdGraphNode*>& InProgress, TMap<UEdGraphNode*, int32>& OwnerKey);
+		UEdGraphNode* OwnerExec(UEdGraphNode* Node) const;
+		bool DuplicateSharedGetters();
+		void BuildDataOnlyBlocks();
+
+		void Place(UEdGraphNode* Node, const FVector2D& Pos, FLayoutCtx& Ctx);
+		float Drop(FLayoutCtx& Sub, FLayoutCtx& Ctx, float MinDy, float GapY);
+		float FeederWidth(UEdGraphNode* Node);
+		void LayoutExec(UEdGraphNode* Node, const UEdGraphPin* EnterPin, float X, float PinY, FLayoutCtx& Ctx);
+		void LayoutFeedersOf(UEdGraphNode* Node, FLayoutCtx& Ctx);
+		void LayoutFeederTree(UEdGraphNode* Node, const FVector2D& Pos, FLayoutCtx& Ctx);
+		void LayoutBlock(FBlock& Block);
+
+		void DescribeBlocks();
+		void PlaceBlocksAndComments();
+		void ApplyBlock(const FBlock& Block, const FVector2D& Offset);
+		UEdGraphNode_Comment* MakeOrFitComment(UEdGraphNode_Comment* Existing, const FBox2D& Rect, const FString& Title,
+			const FLinearColor& Color, int32 FontSize, int32 Depth);
+		void RefitUserComments();
+	};
+
+	int32 FEngine::Run(const TArray<UEdGraphNode*>& InNodes)
+	{
+		for (UEdGraphNode* Node : InNodes)
+		{
+			if (Node && !Node->IsA<UEdGraphNode_Comment>() && Node->GetGraph() == Graph)
+			{
+				LayoutNodes.Add(Node);
+			}
+		}
+		if (LayoutNodes.Num() < 2)
+		{
+			return 0;
+		}
+		NodeSet = TSet<UEdGraphNode*>(LayoutNodes);
+
+		Anchor = FVector2D(TNumericLimits<float>::Max(), TNumericLimits<float>::Max());
+		for (UEdGraphNode* Node : LayoutNodes)
+		{
+			Anchor.X = FMath::Min(Anchor.X, static_cast<float>(Node->NodePosX));
+			Anchor.Y = FMath::Min(Anchor.Y, static_cast<float>(Node->NodePosY));
+		}
+
+		CollectComments(InNodes);
+		BuildExecBlocks();
+		ResolveOwners();
+		if (S.bDuplicateSharedGetters && DuplicateSharedGetters())
+		{
+			ResolveOwners();
+		}
+		BuildDataOnlyBlocks();
+
+		for (FBlock& Block : Blocks)
+		{
+			LayoutBlock(Block);
+		}
+
+		// Safety net: anything the tree walk never reached (e.g. pure nodes in
+		// a data cycle) goes into one loose block laid out in a row.
+		TArray<UEdGraphNode*> Unplaced;
+		for (UEdGraphNode* Node : LayoutNodes)
+		{
+			if (!Visited.Contains(Node))
+			{
+				Unplaced.Add(Node);
+			}
+		}
+		if (Unplaced.Num() > 0)
+		{
+			FBlock& Leftover = Blocks.AddDefaulted_GetRef();
+			Leftover.bDataOnly = true;
+			Leftover.bLoose = true;
+			Leftover.Members = Unplaced;
+			Leftover.Roots = Unplaced;
+			Leftover.OrigMinY = TNumericLimits<float>::Max();
+			float X = 0.f;
+			for (UEdGraphNode* Node : Unplaced)
+			{
+				Visited.Add(Node);
+				Place(Node, FVector2D(X, 0.f), Leftover.Layout);
+				X += M.Size(Node).X + S.DataGap;
+			}
+		}
+
+		DescribeBlocks();
+		PlaceBlocksAndComments();
+		RefitUserComments();
+
+		if (UBlueprint* Blueprint = FBlueprintEditorUtils::FindBlueprintForGraph(Graph))
+		{
+			FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+		}
+		return LayoutNodes.Num();
+	}
+
+	// Sorts out comments before anything moves: generated comments touching
+	// this layout are deleted (they get regenerated), user comments remember
+	// which nodes they currently wrap so they can be refit afterwards.
+	void FEngine::CollectComments(const TArray<UEdGraphNode*>& InNodes)
+	{
+		const TSet<UEdGraphNode*> InputSet(InNodes);
+		TArray<UEdGraphNode_Comment*> ToDelete;
+
+		for (UEdGraphNode* Node : Graph->Nodes)
+		{
+			UEdGraphNode_Comment* Comment = Cast<UEdGraphNode_Comment>(Node);
+			if (!Comment)
+			{
+				continue;
+			}
+			const FBox2D CommentRect(FVector2D(Comment->NodePosX, Comment->NodePosY),
+				FVector2D(Comment->NodePosX + Comment->NodeWidth, Comment->NodePosY + Comment->NodeHeight));
+
+			TArray<UEdGraphNode*> Contained;
+			for (UEdGraphNode* Candidate : LayoutNodes)
+			{
+				const FVector2D Center = OrigPos(Candidate) + M.Size(Candidate) * 0.5f;
+				if (CommentRect.IsInside(Center))
+				{
+					Contained.Add(Candidate);
+				}
+			}
+
+			const bool bRelevant = InputSet.Contains(Comment) || Contained.Num() > 0;
+			if (!bRelevant)
+			{
+				continue;
+			}
+			if (IsGeneratedComment(Comment))
+			{
+				ToDelete.Add(Comment);
+			}
+			else if (Contained.Num() > 0)
+			{
+				UserComments.Add({ Comment, MoveTemp(Contained) });
+			}
+		}
+
+		if (ToDelete.Num() > 0)
+		{
+			Graph->Modify();
+			for (UEdGraphNode_Comment* Comment : ToDelete)
+			{
+				Comment->Modify();
+				Graph->RemoveNode(Comment);
+			}
+		}
+	}
+
+	// Exec blocks = connected components of exec wires. Exec order is a DFS in
+	// pin order from each block's roots, used to decide which exec node owns
+	// a shared pure node.
+	void FEngine::BuildExecBlocks()
+	{
+		TArray<UEdGraphNode*> ExecNodes;
+		for (UEdGraphNode* Node : LayoutNodes)
+		{
+			if (IsExec(Node))
+			{
+				ExecNodes.Add(Node);
+			}
+		}
+
+		TMap<UEdGraphNode*, UEdGraphNode*> UnionParent;
+		for (UEdGraphNode* Node : ExecNodes)
+		{
+			UnionParent.Add(Node, Node);
+		}
+		auto Find = [&UnionParent](UEdGraphNode* Node)
+		{
+			while (UnionParent[Node] != Node)
+			{
+				UnionParent[Node] = UnionParent[UnionParent[Node]];
+				Node = UnionParent[Node];
+			}
+			return Node;
+		};
+
+		TMap<UEdGraphNode*, bool> HasExecInputInSet;
+		for (UEdGraphNode* Node : ExecNodes)
+		{
+			for (UEdGraphPin* Pin : Node->Pins)
+			{
+				if (!Pin || Pin->Direction != EGPD_Output || Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
+				{
+					continue;
+				}
+				for (UEdGraphPin* Linked : Pin->LinkedTo)
+				{
+					UEdGraphNode* Target = Linked ? Linked->GetOwningNode() : nullptr;
+					if (Target && Target != Node && UnionParent.Contains(Target))
+					{
+						UnionParent[Find(Node)] = Find(Target);
+						HasExecInputInSet.Add(Target, true);
+					}
+				}
+			}
+		}
+
+		TMap<UEdGraphNode*, int32> BlockByRep;
+		for (UEdGraphNode* Node : ExecNodes)
+		{
+			UEdGraphNode* Rep = Find(Node);
+			int32* Existing = BlockByRep.Find(Rep);
+			const int32 Index = Existing ? *Existing : Blocks.AddDefaulted();
+			BlockByRep.Add(Rep, Index);
+			Blocks[Index].ExecNodes.Add(Node);
+			BlockOf.Add(Node, Index);
+		}
+
+		auto ByOriginalPos = [](const UEdGraphNode& A, const UEdGraphNode& B)
+		{
+			return A.NodePosY != B.NodePosY ? A.NodePosY < B.NodePosY : A.NodePosX < B.NodePosX;
+		};
+
+		int32 Counter = 0;
+		TFunction<void(UEdGraphNode*)> Visit = [&](UEdGraphNode* Node)
+		{
+			if (ExecOrder.Contains(Node))
+			{
+				return;
+			}
+			ExecOrder.Add(Node, Counter++);
+			for (UEdGraphPin* Pin : Node->Pins)
+			{
+				if (!Pin || Pin->Direction != EGPD_Output || Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
+				{
+					continue;
+				}
+				for (UEdGraphPin* Linked : Pin->LinkedTo)
+				{
+					UEdGraphNode* Target = Linked ? Linked->GetOwningNode() : nullptr;
+					if (Target && BlockOf.Contains(Target))
+					{
+						Visit(Target);
+					}
+				}
+			}
+		};
+
+		for (FBlock& Block : Blocks)
+		{
+			Block.ExecNodes.Sort(ByOriginalPos);
+			for (UEdGraphNode* Node : Block.ExecNodes)
+			{
+				if (!HasExecInputInSet.Contains(Node))
+				{
+					Block.Roots.Add(Node);
+				}
+			}
+			for (UEdGraphNode* Root : Block.Roots)
+			{
+				Visit(Root);
+			}
+			// Cycles with no entry point: start from whatever is left, top-left first.
+			for (UEdGraphNode* Node : Block.ExecNodes)
+			{
+				if (!ExecOrder.Contains(Node))
+				{
+					Block.Roots.Add(Node);
+					Visit(Node);
+				}
+			}
+		}
+	}
+
+	// Each pure node gets a tree parent: the direct consumer that leads to the
+	// earliest exec node. Children[] is the resulting feeder forest.
+	void FEngine::ResolveOwners()
+	{
+		ParentLink.Reset();
+		Children.Reset();
+		FeederWidthCache.Reset();
+		TMap<UEdGraphNode*, int32> OwnerKey;
+		TSet<UEdGraphNode*> InProgress;
+		for (UEdGraphNode* Node : LayoutNodes)
+		{
+			if (!IsExec(Node))
+			{
+				ResolvePure(Node, InProgress, OwnerKey);
+			}
+		}
+		for (const TPair<UEdGraphNode*, FFeedLink>& Pair : ParentLink)
+		{
+			Children.FindOrAdd(Pair.Value.Parent).Add(Pair.Value);
+		}
+		for (TPair<UEdGraphNode*, TArray<FFeedLink>>& Pair : Children)
+		{
+			Pair.Value.Sort([](const FFeedLink& A, const FFeedLink& B) { return A.ParentPinIndex < B.ParentPinIndex; });
+		}
+	}
+
+	int32 FEngine::ResolvePure(UEdGraphNode* Node, TSet<UEdGraphNode*>& InProgress, TMap<UEdGraphNode*, int32>& OwnerKey)
+	{
+		if (const int32* Known = OwnerKey.Find(Node))
+		{
+			return *Known;
+		}
+		if (InProgress.Contains(Node))
+		{
+			return NoOwner;
+		}
+		InProgress.Add(Node);
+
+		int32 Best = NoOwner;
+		FFeedLink BestLink;
+		for (UEdGraphPin* Pin : Node->Pins)
+		{
+			if (!Pin || Pin->Direction != EGPD_Output)
+			{
+				continue;
+			}
+			for (UEdGraphPin* Linked : Pin->LinkedTo)
+			{
+				UEdGraphNode* Consumer = Linked ? Linked->GetOwningNode() : nullptr;
+				if (!Consumer || Consumer == Node || !NodeSet.Contains(Consumer))
+				{
+					continue;
+				}
+				const int32 Key = IsExec(Consumer)
+					? ExecOrder.FindRef(Consumer)
+					: ResolvePure(Consumer, InProgress, OwnerKey);
+				// Prefer the earliest owner. For data-only nodes (no owner) still
+				// pick a consumer so the feeder tree stays connected.
+				if (!BestLink.Child || Key < Best)
+				{
+					Best = Key;
+					BestLink.Child = Node;
+					BestLink.ChildOut = Pin;
+					BestLink.ParentIn = Linked;
+					BestLink.Parent = Consumer;
+					BestLink.ParentPinIndex = Consumer->Pins.IndexOfByKey(Linked);
+				}
+			}
+		}
+
+		InProgress.Remove(Node);
+		OwnerKey.Add(Node, Best);
+		if (BestLink.Child)
+		{
+			ParentLink.Add(Node, BestLink);
+		}
+		return Best;
+	}
+
+	UEdGraphNode* FEngine::OwnerExec(UEdGraphNode* Node) const
+	{
+		for (int32 Guard = 0; Node && Guard < 4096; ++Guard)
+		{
+			if (IsExec(Node))
+			{
+				return Node;
+			}
+			const FFeedLink* Link = ParentLink.Find(Node);
+			Node = Link ? Link->Parent : nullptr;
+		}
+		return nullptr;
+	}
+
+	// A self-variable getter read by several exec nodes gets one copy per exec
+	// node, so each copy can sit right next to its reader with a short straight
+	// wire. Only plain getters with no linked inputs qualify: they are
+	// side-effect free and fully described by their VariableReference, so a
+	// copy is always identical. Pure function calls are never duplicated.
+	bool FEngine::DuplicateSharedGetters()
+	{
+		bool bAny = false;
+		const TArray<UEdGraphNode*> Snapshot = LayoutNodes;
+		for (UEdGraphNode* Node : Snapshot)
+		{
+			UK2Node_VariableGet* Getter = Cast<UK2Node_VariableGet>(Node);
+			if (!Getter || IsExec(Getter))
+			{
+				continue;
+			}
+
+			UEdGraphPin* Out = nullptr;
+			bool bQualifies = true;
+			for (UEdGraphPin* Pin : Getter->Pins)
+			{
+				if (!Pin)
+				{
+					continue;
+				}
+				if (Pin->Direction == EGPD_Input && Pin->LinkedTo.Num() > 0)
+				{
+					bQualifies = false;
+				}
+				else if (Pin->Direction == EGPD_Output && Pin->LinkedTo.Num() > 0)
+				{
+					bQualifies &= (Out == nullptr);
+					Out = Pin;
+				}
+			}
+			if (!bQualifies || !Out)
+			{
+				continue;
+			}
+
+			TMap<UEdGraphNode*, TArray<UEdGraphPin*>> Buckets;
+			for (UEdGraphPin* Linked : Out->LinkedTo)
+			{
+				UEdGraphNode* Consumer = Linked ? Linked->GetOwningNode() : nullptr;
+				if (Consumer && NodeSet.Contains(Consumer))
+				{
+					Buckets.FindOrAdd(OwnerExec(Consumer)).Add(Linked);
+				}
+			}
+			if (Buckets.Num() < 2)
+			{
+				continue;
+			}
+
+			// Earliest exec owner keeps the original. A null owner (data-only
+			// consumers) goes last. TArray::Sort dereferences pointer elements,
+			// so the null key is pulled out before sorting.
+			TArray<UEdGraphNode*> Owners;
+			Buckets.GetKeys(Owners);
+			const bool bHasNullOwner = Owners.Remove(nullptr) > 0;
+			Owners.Sort([this](const UEdGraphNode& A, const UEdGraphNode& B)
+			{
+				return ExecOrder.FindRef(&A) < ExecOrder.FindRef(&B);
+			});
+			if (bHasNullOwner)
+			{
+				Owners.Add(nullptr);
+			}
+
+			Graph->Modify();
+			Getter->Modify();
+			for (int32 i = 1; i < Owners.Num(); ++i)
+			{
+				UK2Node_VariableGet* Copy = NewObject<UK2Node_VariableGet>(Graph);
+				Copy->VariableReference = Getter->VariableReference;
+				Copy->SetFlags(RF_Transactional);
+				Copy->NodePosX = Getter->NodePosX;
+				Copy->NodePosY = Getter->NodePosY;
+				Graph->AddNode(Copy, /*bFromUI=*/false, /*bSelectNewNode=*/false);
+				Copy->CreateNewGuid();
+				Copy->PostPlacedNewNode();
+				Copy->AllocateDefaultPins();
+
+				UEdGraphPin* CopyOut = Copy->FindPin(Out->PinName, EGPD_Output);
+				if (!CopyOut || !(CopyOut->PinType == Out->PinType))
+				{
+					UE_LOG(LogVesperLayout, Warning, TEXT("[Vesper] Could not duplicate getter %s cleanly, leaving it shared."), *Getter->GetName());
+					Copy->DestroyNode();
+					break;
+				}
+
+				for (UEdGraphPin* ConsumerPin : Buckets[Owners[i]])
+				{
+					ConsumerPin->GetOwningNode()->Modify();
+					Out->BreakLinkTo(ConsumerPin);
+					CopyOut->MakeLinkTo(ConsumerPin);
+				}
+				LayoutNodes.Add(Copy);
+				NodeSet.Add(Copy);
+				bAny = true;
+			}
+		}
+		return bAny;
+	}
+
+	// Pure nodes with no exec owner form data-only blocks, one per connected
+	// data component. Owned pure nodes join their owner's block.
+	void FEngine::BuildDataOnlyBlocks()
+	{
+		TArray<UEdGraphNode*> Orphans;
+		for (UEdGraphNode* Node : LayoutNodes)
+		{
+			if (IsExec(Node))
+			{
+				Blocks[BlockOf[Node]].Members.Add(Node);
+				continue;
+			}
+			if (UEdGraphNode* Owner = OwnerExec(Node))
+			{
+				const int32 Index = BlockOf[Owner];
+				BlockOf.Add(Node, Index);
+				Blocks[Index].Members.Add(Node);
+			}
+			else
+			{
+				Orphans.Add(Node);
+			}
+		}
+
+		// Group orphans by their feeder-tree root.
+		TMap<UEdGraphNode*, int32> BlockByRoot;
+		for (UEdGraphNode* Node : Orphans)
+		{
+			UEdGraphNode* Root = Node;
+			for (int32 Guard = 0; Guard < 4096; ++Guard)
+			{
+				const FFeedLink* Link = ParentLink.Find(Root);
+				if (!Link || Link->Parent == Node)
+				{
+					break;
+				}
+				Root = Link->Parent;
+			}
+			int32* Existing = BlockByRoot.Find(Root);
+			int32 Index;
+			if (Existing)
+			{
+				Index = *Existing;
+			}
+			else
+			{
+				Index = Blocks.AddDefaulted();
+				Blocks[Index].bDataOnly = true;
+				Blocks[Index].Roots.Add(Root);
+				BlockByRoot.Add(Root, Index);
+			}
+			BlockOf.Add(Node, Index);
+			Blocks[Index].Members.Add(Node);
+		}
+
+		for (FBlock& Block : Blocks)
+		{
+			Block.OrigMinY = TNumericLimits<float>::Max();
+			for (UEdGraphNode* Node : Block.Members)
+			{
+				Block.OrigMinY = FMath::Min(Block.OrigMinY, static_cast<float>(Node->NodePosY));
+			}
+		}
+	}
+
+	void FEngine::Place(UEdGraphNode* Node, const FVector2D& Pos, FLayoutCtx& Ctx)
+	{
+		Ctx.Pos.Add(Node, Pos);
+		Ctx.Rects.Add(FBox2D(Pos, Pos + M.Size(Node)));
+	}
+
+	// Moves Sub down (never up) by the smallest amount >= MinDy that keeps
+	// every rect in Sub GapY clear of every rect in Ctx, then merges it.
+	// Returns the applied offset.
+	float FEngine::Drop(FLayoutCtx& Sub, FLayoutCtx& Ctx, float MinDy, float GapY)
+	{
+		static constexpr float GapX = 10.f;
+		float Dy = MinDy;
+		for (int32 Iteration = 0; Iteration < 4096; ++Iteration)
+		{
+			bool bMoved = false;
+			for (const FBox2D& Rect : Sub.Rects)
+			{
+				const FBox2D Shifted = Rect.ShiftBy(FVector2D(0.f, Dy));
+				for (const FBox2D& Other : Ctx.Rects)
+				{
+					const bool bOverlapX = Shifted.Min.X < Other.Max.X + GapX && Shifted.Max.X + GapX > Other.Min.X;
+					const bool bOverlapY = Shifted.Min.Y < Other.Max.Y + GapY && Shifted.Max.Y + GapY > Other.Min.Y;
+					if (bOverlapX && bOverlapY)
+					{
+						Dy = Other.Max.Y + GapY - Rect.Min.Y;
+						bMoved = true;
+						break;
+					}
+				}
+				if (bMoved)
+				{
+					break;
+				}
+			}
+			if (!bMoved)
+			{
+				break;
+			}
+		}
+		Ctx.MergeFrom(Sub, FVector2D(0.f, Dy));
+		return Dy;
+	}
+
+	// Horizontal room a node's feeder tree needs to its left.
+	float FEngine::FeederWidth(UEdGraphNode* Node)
+	{
+		if (const float* Cached = FeederWidthCache.Find(Node))
+		{
+			return *Cached;
+		}
+		FeederWidthCache.Add(Node, 0.f); // cycle guard
+		float Width = 0.f;
+		if (const TArray<FFeedLink>* Kids = Children.Find(Node))
+		{
+			for (const FFeedLink& Link : *Kids)
+			{
+				Width = FMath::Max(Width, S.DataGap + M.Size(Link.Child).X + FeederWidth(Link.Child));
+			}
+		}
+		FeederWidthCache.Add(Node, Width);
+		return Width;
+	}
+
+	// Places Node so the pin it was entered through sits exactly on PinY
+	// (straight exec wire), then its feeders, then its exec outputs: the
+	// first continues on the same row, every other one gets its own row
+	// dropped below everything placed so far.
+	void FEngine::LayoutExec(UEdGraphNode* Node, const UEdGraphPin* EnterPin, float X, float PinY, FLayoutCtx& Ctx)
+	{
+		Visited.Add(Node);
+
+		const UEdGraphPin* AnchorPin = EnterPin;
+		if (!AnchorPin)
+		{
+			for (const UEdGraphPin* Pin : Node->Pins)
+			{
+				if (Pin && !Pin->bHidden && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+				{
+					if (Pin->Direction == EGPD_Output)
+					{
+						AnchorPin = Pin;
+						break;
+					}
+					if (!AnchorPin)
+					{
+						AnchorPin = Pin;
+					}
+				}
+			}
+		}
+
+		const FVector2D Pos(X, PinY - M.PinOffset(Node, AnchorPin));
+		Place(Node, Pos, Ctx);
+		LayoutFeedersOf(Node, Ctx);
+
+		TArray<TPair<UEdGraphPin*, UEdGraphPin*>> Outs;
+		for (UEdGraphPin* Pin : Node->Pins)
+		{
+			if (!Pin || Pin->bHidden || Pin->Direction != EGPD_Output || Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
+			{
+				continue;
+			}
+			for (UEdGraphPin* Linked : Pin->LinkedTo)
+			{
+				UEdGraphNode* Target = Linked ? Linked->GetOwningNode() : nullptr;
+				if (Target && NodeSet.Contains(Target) && IsExec(Target))
+				{
+					Outs.Add(TPair<UEdGraphPin*, UEdGraphPin*>(Pin, Linked));
+				}
+			}
+		}
+
+		bool bFirst = true;
+		const float Right = Pos.X + M.Size(Node).X;
+		for (const TPair<UEdGraphPin*, UEdGraphPin*>& Out : Outs)
+		{
+			UEdGraphNode* Target = Out.Value->GetOwningNode();
+			if (Visited.Contains(Target))
+			{
+				continue; // merge point: already placed, the wire just joins it
+			}
+			const float OutPinY = Pos.Y + M.PinOffset(Node, Out.Key);
+			const float TargetX = Right + S.ExecGap + FeederWidth(Target);
+			if (bFirst)
+			{
+				LayoutExec(Target, Out.Value, TargetX, OutPinY, Ctx);
+				bFirst = false;
+			}
+			else
+			{
+				FLayoutCtx Branch;
+				LayoutExec(Target, Out.Value, TargetX, 0.f, Branch);
+				Drop(Branch, Ctx, OutPinY, S.BranchRowGap);
+			}
+		}
+	}
+
+	// Stacks Node's feeders to its left. The first one is placed so its wire
+	// is straight; each later one goes directly under the previous feeder's
+	// whole subtree. Nothing is allowed above the floor: for exec consumers
+	// the floor is just under the exec wire, for pure consumers it's the
+	// consumer's top edge (minus a small tolerance so a first wire can stay
+	// straight).
+	void FEngine::LayoutFeedersOf(UEdGraphNode* Node, FLayoutCtx& Ctx)
+	{
+		const TArray<FFeedLink>* Kids = Children.Find(Node);
+		if (!Kids)
+		{
+			return;
+		}
+		const FVector2D NodePos = Ctx.Pos[Node];
+
+		float Floor = NodePos.Y - S.AboveTolerance;
+		if (IsExec(Node))
+		{
+			Floor = NodePos.Y;
+			for (const UEdGraphPin* Pin : Node->Pins)
+			{
+				if (Pin && !Pin->bHidden && Pin->Direction == EGPD_Input && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+				{
+					Floor = FMath::Max(Floor, NodePos.Y + M.PinOffset(Node, Pin) + S.ExecLaneClearance);
+					break;
+				}
+			}
+		}
+
+		bool bHaveCursor = false;
+		float Cursor = 0.f;
+		for (const FFeedLink& Link : *Kids)
+		{
+			if (Visited.Contains(Link.Child))
+			{
+				continue;
+			}
+			const FVector2D ChildSize = M.Size(Link.Child);
+			const float TargetPinY = NodePos.Y + M.PinOffset(Node, Link.ParentIn);
+			const FVector2D ChildPos(NodePos.X - S.DataGap - ChildSize.X, TargetPinY - M.PinOffset(Link.Child, Link.ChildOut));
+
+			FLayoutCtx Sub;
+			LayoutFeederTree(Link.Child, ChildPos, Sub);
+			const FBox2D SubBounds = Sub.Bounds();
+
+			const float MinTop = bHaveCursor ? Cursor + S.StackGap : Floor;
+			const float MinDy = FMath::Max(0.f, MinTop - SubBounds.Min.Y);
+			const float Dy = Drop(Sub, Ctx, MinDy, S.StackGap);
+
+			Cursor = SubBounds.Max.Y + Dy;
+			bHaveCursor = true;
+		}
+	}
+
+	void FEngine::LayoutFeederTree(UEdGraphNode* Node, const FVector2D& Pos, FLayoutCtx& Ctx)
+	{
+		Visited.Add(Node);
+		Place(Node, Pos, Ctx);
+		LayoutFeedersOf(Node, Ctx);
+	}
+
+	void FEngine::LayoutBlock(FBlock& Block)
+	{
+		FLayoutCtx& Ctx = Block.Layout;
+		bool bFirst = true;
+		for (UEdGraphNode* Root : Block.Roots)
+		{
+			if (Visited.Contains(Root))
+			{
+				continue;
+			}
+			if (bFirst)
+			{
+				if (Block.bDataOnly)
+				{
+					LayoutFeederTree(Root, FVector2D::ZeroVector, Ctx);
+				}
+				else
+				{
+					LayoutExec(Root, nullptr, 0.f, 0.f, Ctx);
+				}
+				bFirst = false;
+				continue;
+			}
+			// Extra roots (several events merging into one chain, several data
+			// sinks) each get their own row under what's already there.
+			FLayoutCtx Sub;
+			if (Block.bDataOnly)
+			{
+				LayoutFeederTree(Root, FVector2D::ZeroVector, Sub);
+			}
+			else
+			{
+				LayoutExec(Root, nullptr, 0.f, 0.f, Sub);
+			}
+			Drop(Sub, Ctx, 0.f, S.BranchRowGap);
+		}
+	}
+
+	FString PrefixToken(const FString& Name)
+	{
+		int32 Underscore;
+		if (Name.FindChar(TEXT('_'), Underscore) && Underscore >= 2)
+		{
+			return Name.Left(Underscore);
+		}
+		int32 Index = 1;
+		while (Index < Name.Len() && !FChar::IsUpper(Name[Index]) && Name[Index] != TEXT(' '))
+		{
+			++Index;
+		}
+		return (Index >= 2 && Index < Name.Len()) ? Name.Left(Index) : FString();
+	}
+
+	bool IsLifecycleEvent(const FName& Name)
+	{
+		static const TSet<FName> Names = {
+			TEXT("ReceiveBeginPlay"), TEXT("ReceiveTick"), TEXT("ReceiveEndPlay"), TEXT("ReceiveDestroyed"),
+			TEXT("UserConstructionScript"), TEXT("ReceivePossessed"), TEXT("ReceiveUnpossessed"), TEXT("ReceiveRestarted"),
+			TEXT("ReceiveControllerChanged"), TEXT("Construct"), TEXT("PreConstruct"), TEXT("Destruct"), TEXT("Tick"),
+			TEXT("OnInitialized"), TEXT("BlueprintInitializeAnimation"), TEXT("BlueprintUpdateAnimation"),
+			TEXT("BlueprintBeginPlay"), TEXT("BlueprintPostEvaluateAnimation"), TEXT("ReceiveInitializeComponent"),
+		};
+		return Names.Contains(Name);
+	}
+
+	// Titles every block and assigns group keys. Blocks sharing a key (2+)
+	// become one group.
+	void FEngine::DescribeBlocks()
+	{
+		for (FBlock& Block : Blocks)
+		{
+			UEdGraphNode* Root = Block.Roots.Num() > 0 ? Block.Roots[0] : (Block.Members.Num() > 0 ? Block.Members[0] : nullptr);
+			if (!Root)
+			{
+				continue;
+			}
+
+			if (Root->IsA<UK2Node_FunctionEntry>())
+			{
+				Block.Title = FName::NameToDisplayString(Graph->GetName(), false);
+			}
+			else
+			{
+				Block.Title = FirstLine(Root->GetNodeTitle(ENodeTitleType::ListView).ToString());
+			}
+
+			for (UEdGraphNode* Node : Block.Members)
+			{
+				if (const UK2Node_Variable* Variable = Cast<UK2Node_Variable>(Node))
+				{
+					Block.MemberRefs.Add(Variable->GetVarName());
+				}
+				else if (const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node))
+				{
+					if (Call->FunctionReference.IsSelfContext())
+					{
+						Block.MemberRefs.Add(Call->FunctionReference.GetMemberName());
+					}
+				}
+			}
+
+			const bool bEntryLike = Root->IsA<UK2Node_Event>() || Root->IsA<UK2Node_FunctionEntry>()
+				|| Root->GetClass()->GetName().Contains(TEXT("Input"));
+			Block.bLoose = Block.bLoose || Block.bDataOnly || (Block.ExecNodes.Num() == 1 && !bEntryLike);
+
+			if (Block.bLoose)
+			{
+				Block.GroupKey = TEXT("~Loose");
+				Block.GroupTitle = TEXT("Unconnected Nodes");
+				continue;
+			}
+			if (!S.bGroupSimilar)
+			{
+				continue;
+			}
+
+			const FString ClassName = Root->GetClass()->GetName();
+			if (ClassName.Contains(TEXT("Input")))
+			{
+				Block.GroupKey = TEXT("Input");
+				Block.GroupTitle = TEXT("Input Events");
+			}
+			else if (const UK2Node_CustomEvent* Custom = Cast<UK2Node_CustomEvent>(Root))
+			{
+				const FString Token = PrefixToken(Custom->CustomFunctionName.ToString());
+				if (!Token.IsEmpty())
+				{
+					Block.GroupKey = TEXT("Prefix:") + Token;
+					Block.GroupTitle = Token + TEXT(" Events");
+				}
+			}
+			else if (const UK2Node_Event* Event = Cast<UK2Node_Event>(Root))
+			{
+				const FName FunctionName = Event->GetFunctionName();
+				const FString NameStr = FunctionName.ToString();
+				if (IsLifecycleEvent(FunctionName))
+				{
+					Block.GroupKey = TEXT("Lifecycle");
+					Block.GroupTitle = TEXT("Lifecycle Events");
+				}
+				else if (NameStr.Contains(TEXT("Overlap")) || NameStr.Contains(TEXT("Hit")) || NameStr.Contains(TEXT("Collision")))
+				{
+					Block.GroupKey = TEXT("Collision");
+					Block.GroupTitle = TEXT("Collision & Overlap Events");
+				}
+				else
+				{
+					Block.GroupKey = TEXT("Overrides");
+					Block.GroupTitle = TEXT("Event Overrides");
+				}
+			}
+		}
+
+		if (!S.bGroupSimilar)
+		{
+			return;
+		}
+
+		// A key used by a single block is no group at all.
+		TMap<FString, int32> KeyCounts;
+		for (const FBlock& Block : Blocks)
+		{
+			if (!Block.GroupKey.IsEmpty())
+			{
+				KeyCounts.FindOrAdd(Block.GroupKey)++;
+			}
+		}
+		for (FBlock& Block : Blocks)
+		{
+			if (!Block.bLoose && !Block.GroupKey.IsEmpty() && KeyCounts[Block.GroupKey] < 2)
+			{
+				Block.GroupKey.Reset();
+				Block.GroupTitle.Reset();
+			}
+		}
+
+		// Remaining solo blocks: group the ones that mostly touch the same
+		// variables/functions (Jaccard similarity >= 0.5).
+		TArray<int32> Solo;
+		for (int32 i = 0; i < Blocks.Num(); ++i)
+		{
+			if (Blocks[i].GroupKey.IsEmpty() && Blocks[i].MemberRefs.Num() >= 2)
+			{
+				Solo.Add(i);
+			}
+		}
+		for (int32 a = 0; a < Solo.Num(); ++a)
+		{
+			FBlock& First = Blocks[Solo[a]];
+			for (int32 b = a + 1; b < Solo.Num(); ++b)
+			{
+				FBlock& Second = Blocks[Solo[b]];
+				if (!Second.GroupKey.IsEmpty() && Second.GroupKey != First.GroupKey)
+				{
+					continue;
+				}
+				const TSet<FName> Shared = First.MemberRefs.Intersect(Second.MemberRefs);
+				const TSet<FName> Union = First.MemberRefs.Union(Second.MemberRefs);
+				if (Union.Num() == 0 || static_cast<float>(Shared.Num()) / Union.Num() < 0.5f)
+				{
+					continue;
+				}
+				if (First.GroupKey.IsEmpty())
+				{
+					TArray<FName> SharedNames = Shared.Array();
+					SharedNames.Sort(FNameLexicalLess());
+					First.GroupKey = FString::Printf(TEXT("Related:%d"), Solo[a]);
+					First.GroupTitle = TEXT("Uses ") + FName::NameToDisplayString(SharedNames[0].ToString(), false);
+				}
+				Second.GroupKey = First.GroupKey;
+				Second.GroupTitle = First.GroupTitle;
+			}
+		}
+	}
+
+	void FEngine::ApplyBlock(const FBlock& Block, const FVector2D& Offset)
+	{
+		for (const TPair<UEdGraphNode*, FVector2D>& Pair : Block.Layout.Pos)
+		{
+			Pair.Key->NodePosX = FMath::RoundToInt(Pair.Value.X + Offset.X);
+			Pair.Key->NodePosY = FMath::RoundToInt(Pair.Value.Y + Offset.Y);
+		}
+	}
+
+	UEdGraphNode_Comment* FEngine::MakeOrFitComment(UEdGraphNode_Comment* Existing, const FBox2D& Rect, const FString& Title,
+		const FLinearColor& Color, int32 FontSize, int32 Depth)
+	{
+		UEdGraphNode_Comment* Comment = Existing;
+		if (!Comment)
+		{
+			Graph->Modify();
+			Comment = NewObject<UEdGraphNode_Comment>(Graph);
+			Comment->SetFlags(RF_Transactional);
+			Graph->AddNode(Comment, /*bFromUI=*/false, /*bSelectNewNode=*/false);
+			Comment->CreateNewGuid();
+			Comment->PostPlacedNewNode();
+			Comment->AllocateDefaultPins();
+			Comment->NodeGuid.A = GeneratedCommentTag;
+			Comment->NodeComment = Title;
+			Comment->CommentColor = Color;
+			Comment->FontSize = FontSize;
+			Comment->CommentDepth = Depth;
+			Comment->bCommentBubbleVisible_InDetailsPanel = false;
+			Comment->bCommentBubbleVisible = false;
+		}
+		else
+		{
+			Comment->Modify();
+		}
+		Comment->NodePosX = FMath::RoundToInt(Rect.Min.X);
+		Comment->NodePosY = FMath::RoundToInt(Rect.Min.Y);
+		Comment->NodeWidth = FMath::RoundToInt(Rect.GetSize().X);
+		Comment->NodeHeight = FMath::RoundToInt(Rect.GetSize().Y);
+		return Comment;
+	}
+
+	struct FGroup
+	{
+		FString Key;
+		FString Title;
+		TArray<FBlock*> Blocks;
+		float OrigY = 0.f;
+		bool bIsGroup = false;
+		bool bLoose = false;
+	};
+
+	void FEngine::PlaceBlocksAndComments()
+	{
+		// A user comment that wraps exactly one block (including its root)
+		// becomes that block's frame, keeping the user's title and color.
+		for (FUserComment& User : UserComments)
+		{
+			const int32* FirstBlock = User.Contained.Num() > 0 ? BlockOf.Find(User.Contained[0]) : nullptr;
+			if (!FirstBlock)
+			{
+				continue;
+			}
+			bool bSingleBlock = true;
+			for (UEdGraphNode* Node : User.Contained)
+			{
+				const int32* Index = BlockOf.Find(Node);
+				bSingleBlock &= (Index && *Index == *FirstBlock);
+			}
+			FBlock& Block = Blocks[*FirstBlock];
+			if (bSingleBlock && !Block.bLoose && Block.Roots.Num() > 0 && User.Contained.Contains(Block.Roots[0]) && !Block.Adopted)
+			{
+				Block.Adopted = User.Comment;
+				User.Contained.Reset(); // handled here, skip the generic refit
+			}
+		}
+
+		// Build groups.
+		TArray<FGroup> Groups;
+		TMap<FString, int32> GroupByKey;
+		for (FBlock& Block : Blocks)
+		{
+			if (Block.Layout.Rects.Num() == 0)
+			{
+				continue;
+			}
+			if (Block.GroupKey.IsEmpty())
+			{
+				FGroup& Group = Groups.AddDefaulted_GetRef();
+				Group.Blocks.Add(&Block);
+				Group.OrigY = Block.OrigMinY;
+				continue;
+			}
+			int32* Existing = GroupByKey.Find(Block.GroupKey);
+			FGroup& Group = Existing ? Groups[*Existing] : Groups.AddDefaulted_GetRef();
+			if (!Existing)
+			{
+				GroupByKey.Add(Block.GroupKey, Groups.Num() - 1);
+				Group.Key = Block.GroupKey;
+				Group.Title = Block.GroupTitle;
+				Group.OrigY = Block.OrigMinY;
+				Group.bLoose = Block.bLoose;
+			}
+			Group.Blocks.Add(&Block);
+			Group.OrigY = FMath::Min(Group.OrigY, Block.OrigMinY);
+		}
+		for (FGroup& Group : Groups)
+		{
+			Group.bIsGroup = Group.Blocks.Num() > 1;
+			Group.Blocks.Sort([](const FBlock& A, const FBlock& B) { return A.OrigMinY < B.OrigMinY; });
+			if (!Group.bIsGroup && Group.bLoose)
+			{
+				Group.Blocks[0]->Title = TEXT("Unconnected: ") + Group.Blocks[0]->Title;
+			}
+		}
+		Groups.Sort([](const FGroup& A, const FGroup& B)
+		{
+			if (A.bLoose != B.bLoose)
+			{
+				return B.bLoose; // loose nodes always last
+			}
+			return A.OrigY < B.OrigY;
+		});
+
+		const float Pad = S.CommentPadding;
+		const float TitleH = CommentTitleHeight(S.CommentFontSize);
+		const float InnerTitleH = CommentTitleHeight(S.InnerCommentFontSize);
+		float CursorY = Anchor.Y;
+		const float LeftX = Anchor.X;
+
+		for (const FGroup& Group : Groups)
+		{
+			if (!Group.bIsGroup)
+			{
+				FBlock& Block = *Group.Blocks[0];
+				const FBox2D Local = Block.Layout.Bounds();
+				const bool bFrame = S.bGenerateComments || Block.Adopted;
+				const float Top = bFrame ? Pad + TitleH : 0.f;
+				const float Side = bFrame ? Pad : 0.f;
+				ApplyBlock(Block, FVector2D(LeftX + Side - Local.Min.X, CursorY + Top - Local.Min.Y));
+				const FBox2D Frame(FVector2D(LeftX, CursorY),
+					FVector2D(LeftX + Side * 2.f + Local.GetSize().X, CursorY + Top + Local.GetSize().Y + Side));
+				if (bFrame)
+				{
+					MakeOrFitComment(Block.Adopted, Frame, Block.Title, Block.bLoose ? S.LooseColor : S.SingleColor, S.CommentFontSize, -1);
+				}
+				CursorY = Frame.Max.Y + S.BlockGap;
+				continue;
+			}
+
+			const bool bOuter = S.bGenerateComments;
+			const float OuterTop = bOuter ? Pad + TitleH : 0.f;
+			const float OuterSide = bOuter ? Pad : 0.f;
+			float Y = CursorY + OuterTop;
+			float MaxRight = LeftX;
+			for (FBlock* Block : Group.Blocks)
+			{
+				const FBox2D Local = Block->Layout.Bounds();
+				const bool bInner = (S.bGenerateComments && S.bInnerGroupComments && !Group.bLoose) || Block->Adopted;
+				const float InnerTop = bInner ? Pad + InnerTitleH : 0.f;
+				const float InnerSide = bInner ? Pad * 0.75f : 0.f;
+				const float X0 = LeftX + OuterSide;
+				ApplyBlock(*Block, FVector2D(X0 + InnerSide - Local.Min.X, Y + InnerTop - Local.Min.Y));
+				const FBox2D Frame(FVector2D(X0, Y),
+					FVector2D(X0 + InnerSide * 2.f + Local.GetSize().X, Y + InnerTop + Local.GetSize().Y + InnerSide));
+				if (bInner)
+				{
+					MakeOrFitComment(Block->Adopted, Frame, Block->Title, S.InnerColor, S.InnerCommentFontSize, -1);
+				}
+				MaxRight = FMath::Max(MaxRight, Frame.Max.X);
+				Y = Frame.Max.Y + S.GroupInnerGap;
+			}
+			const float Bottom = Y - S.GroupInnerGap + OuterSide;
+			if (bOuter)
+			{
+				const FString Title = FString::Printf(TEXT("%s (%d)"), *Group.Title, Group.Blocks.Num());
+				MakeOrFitComment(nullptr, FBox2D(FVector2D(LeftX, CursorY), FVector2D(MaxRight + OuterSide, Bottom)),
+					Title, Group.bLoose ? S.LooseColor : S.GroupColor, S.CommentFontSize, -2);
+			}
+			CursorY = Bottom + S.BlockGap;
+		}
+	}
+
+	// User comments that weren't adopted as a block frame get resized around
+	// the same nodes they wrapped before the layout moved them.
+	void FEngine::RefitUserComments()
+	{
+		for (const FUserComment& User : UserComments)
+		{
+			if (User.Contained.Num() == 0)
+			{
+				continue;
+			}
+			FBox2D Bounds(ForceInit);
+			for (UEdGraphNode* Node : User.Contained)
+			{
+				const FVector2D Pos = OrigPos(Node);
+				Bounds += FBox2D(Pos, Pos + M.Size(Node));
+			}
+			const float Pad = S.CommentPadding;
+			const float TitleH = CommentTitleHeight(User.Comment->FontSize);
+			MakeOrFitComment(User.Comment, FBox2D(Bounds.Min - FVector2D(Pad, Pad + TitleH), Bounds.Max + FVector2D(Pad, Pad)),
+				FString(), FLinearColor::White, 0, 0);
+		}
+	}
 }
 
 TSharedPtr<SGraphEditor> FVesperGraphLayout::GetActiveGraphEditor()
@@ -109,11 +1754,8 @@ TSharedPtr<SGraphEditor> FVesperGraphLayout::GetActiveGraphEditor()
 		}
 	}
 
-	// Nothing focused is inside a Graph Editor right now — most commonly
-	// because a toolbar/menu button (e.g. "Clean Graph") just took keyboard
-	// focus for itself when it was clicked. Fall back to the last Graph
-	// Editor we actually saw focused; the node selection made just before
-	// the click is still valid there.
+	// A toolbar/menu button just took keyboard focus for itself. Fall back to
+	// the last Graph Editor we saw focused.
 	return GLastKnownGraphEditor.Pin();
 }
 
@@ -138,580 +1780,56 @@ void FVesperGraphLayout::UnregisterFocusTracking()
 	GLastKnownGraphEditor.Reset();
 }
 
-float FVesperGraphLayout::EstimateNodeHeight(const UEdGraphNode* Node)
+int32 FVesperGraphLayout::FormatNodesInternal(const TArray<UEdGraphNode*>& Nodes, SGraphPanel* Panel)
 {
-	if (!Node)
+	UEdGraph* Graph = nullptr;
+	for (UEdGraphNode* Node : Nodes)
 	{
-		return VesperLayoutSettings::MinNodeHeight;
-	}
-
-	const float PinBasedHeight = Node->Pins.Num() * VesperLayoutSettings::HeightPerPin;
-	return FMath::Max(VesperLayoutSettings::MinNodeHeight, PinBasedHeight);
-}
-
-float FVesperGraphLayout::EstimatePinYOffset(const UEdGraphNode* Node, const UEdGraphPin* Pin)
-{
-	if (!Node || !Pin)
-	{
-		return Node ? EstimateNodeHeight(Node) * 0.5f : 0.f;
-	}
-
-	// Input and output pins are each rendered in their own top-to-bottom
-	// column, so only same-direction pins that come before this one push it
-	// further down.
-	float Offset = VesperLayoutSettings::HeightPerPin * 0.5f;
-	for (const UEdGraphPin* OtherPin : Node->Pins)
-	{
-		if (!OtherPin || OtherPin->bHidden || OtherPin->Direction != Pin->Direction)
+		if (Node && Node->GetGraph())
 		{
-			continue;
-		}
-		if (OtherPin == Pin)
-		{
+			Graph = Node->GetGraph();
 			break;
 		}
-		Offset += VesperLayoutSettings::HeightPerPin;
 	}
-	return Offset;
-}
-
-void FVesperGraphLayout::ComputeLayers(const TArray<UEdGraphNode*>& Nodes, TMap<UEdGraphNode*, int32>& OutLayers)
-{
-	const TSet<UEdGraphNode*> NodeSet(Nodes);
-	TMap<UEdGraphNode*, TArray<UEdGraphNode*>> Predecessors;
-
-	// Only edges between two nodes that are BOTH part of the current
-	// selection count — this keeps formatting scoped to what the user
-	// selected instead of pulling in the whole graph.
-	for (UEdGraphNode* Node : Nodes)
+	if (!Graph || Nodes.Num() < 2)
 	{
-		OutLayers.Add(Node, 0);
-		TArray<UEdGraphNode*>& NodePredecessors = Predecessors.Add(Node);
-
-		for (const UEdGraphPin* Pin : Node->Pins)
-		{
-			if (!Pin || Pin->Direction != EGPD_Input)
-			{
-				continue;
-			}
-
-			for (const UEdGraphPin* LinkedPin : Pin->LinkedTo)
-			{
-				UEdGraphNode* SourceNode = LinkedPin ? LinkedPin->GetOwningNode() : nullptr;
-				if (SourceNode && SourceNode != Node && NodeSet.Contains(SourceNode))
-				{
-					NodePredecessors.AddUnique(SourceNode);
-				}
-			}
-		}
+		return 0;
 	}
-
-	// Longest-path layering: relax layers until stable. Bounded by node
-	// count so a cyclic subgraph (e.g. two nodes feeding each other through
-	// a delay/event chain) can never cause an infinite loop.
-	bool bChanged = true;
-	int32 SafetyIterations = Nodes.Num() + 1;
-
-	while (bChanged && SafetyIterations-- > 0)
-	{
-		bChanged = false;
-
-		for (UEdGraphNode* Node : Nodes)
-		{
-			int32 MaxPredecessorLayer = -1;
-			for (UEdGraphNode* Pred : Predecessors[Node])
-			{
-				MaxPredecessorLayer = FMath::Max(MaxPredecessorLayer, OutLayers[Pred]);
-			}
-
-			const int32 DesiredLayer = MaxPredecessorLayer + 1;
-			if (DesiredLayer > OutLayers[Node])
-			{
-				OutLayers[Node] = DesiredLayer;
-				bChanged = true;
-			}
-		}
-	}
-}
-
-void FVesperGraphLayout::ApplyLayout(const TArray<UEdGraphNode*>& Nodes, const TMap<UEdGraphNode*, int32>& Layers,
-	TMap<int32, TArray<TPair<float, float>>>& OutOccupiedRanges, float& OutOriginX, int32& OutMinLayer)
-{
-	OutOccupiedRanges.Reset();
-	OutOriginX = 0.f;
-	OutMinLayer = 0;
-
-	if (Nodes.Num() == 0)
-	{
-		return;
-	}
-
-	TMap<int32, TArray<UEdGraphNode*>> NodesByLayer;
-	int32 MinLayer = TNumericLimits<int32>::Max();
-	float OriginX = TNumericLimits<float>::Max();
-	float OriginY = TNumericLimits<float>::Max();
-
-	for (UEdGraphNode* Node : Nodes)
-	{
-		const int32 Layer = Layers[Node];
-		NodesByLayer.FindOrAdd(Layer).Add(Node);
-		MinLayer = FMath::Min(MinLayer, Layer);
-
-		// Anchor the new layout to the top-left of the original selection so
-		// the whole graph doesn't jump to the origin every time it's used.
-		OriginX = FMath::Min(OriginX, static_cast<float>(Node->NodePosX));
-		OriginY = FMath::Min(OriginY, static_cast<float>(Node->NodePosY));
-	}
-
-	NodesByLayer.KeySort([](int32 A, int32 B) { return A < B; });
-
-	for (TPair<int32, TArray<UEdGraphNode*>>& Pair : NodesByLayer)
-	{
-		TArray<UEdGraphNode*>& LayerNodes = Pair.Value;
-
-		// Keep nodes within a layer roughly in their original top-to-bottom
-		// order. This is a simple but effective heuristic for reducing wire
-		// crossings without a full barycenter-crossing-minimization pass.
-		LayerNodes.Sort([](const UEdGraphNode& A, const UEdGraphNode& B)
-		{
-			return A.NodePosY < B.NodePosY;
-		});
-
-		const float ColumnX = OriginX + static_cast<float>(Pair.Key - MinLayer) * VesperLayoutSettings::ColumnSpacing;
-		float RunningY = OriginY;
-		TArray<TPair<float, float>>& OccupiedInLayer = OutOccupiedRanges.FindOrAdd(Pair.Key);
-
-		for (UEdGraphNode* Node : LayerNodes)
-		{
-			const float Height = EstimateNodeHeight(Node);
-
-			Node->NodePosX = FMath::RoundToInt(ColumnX);
-			Node->NodePosY = FMath::RoundToInt(RunningY);
-			OccupiedInLayer.Add(TPair<float, float>(RunningY, RunningY + Height));
-
-			RunningY += Height + VesperLayoutSettings::RowSpacing;
-		}
-	}
-
-	OutOriginX = OriginX;
-	OutMinLayer = MinLayer;
-}
-
-bool FVesperGraphLayout::TryGetSingleVariableConsumer(UEdGraphNode* Node, const TSet<UEdGraphNode*>& CandidateConsumers, UEdGraphNode*& OutConsumer, UEdGraphPin*& OutConsumerPin)
-{
-	OutConsumer = nullptr;
-	OutConsumerPin = nullptr;
-
-	// Only pure data taps (variable getters and BlueprintPure function
-	// calls) are re-attached to their reader; anything else stays in the
-	// normal exec-flow layering since it has exec pins and belongs wherever
-	// the flow actually places it.
-	if (!IsSplittableFanOutNode(Node))
-	{
-		return false;
-	}
-
-	for (UEdGraphPin* Pin : Node->Pins)
-	{
-		if (!Pin || Pin->Direction != EGPD_Output)
-		{
-			continue;
-		}
-
-		for (UEdGraphPin* LinkedPin : Pin->LinkedTo)
-		{
-			UEdGraphNode* TargetNode = LinkedPin ? LinkedPin->GetOwningNode() : nullptr;
-			if (!TargetNode || !CandidateConsumers.Contains(TargetNode))
-			{
-				continue;
-			}
-
-			// A getter feeding more than one distinct node doesn't have a
-			// single obvious "above/below" spot, so leave it in the normal
-			// column layering rather than guessing.
-			if (OutConsumer && OutConsumer != TargetNode)
-			{
-				OutConsumer = nullptr;
-				OutConsumerPin = nullptr;
-				return false;
-			}
-			OutConsumer = TargetNode;
-			OutConsumerPin = LinkedPin;
-		}
-	}
-
-	return OutConsumer != nullptr;
-}
-
-void FVesperGraphLayout::PlaceAttachedVariableNodes(const TMap<UEdGraphNode*, TArray<TPair<UEdGraphNode*, UEdGraphPin*>>>& AttachedByConsumer,
-	const TMap<UEdGraphNode*, int32>& ConsumerLayers, TMap<int32, TArray<TPair<float, float>>>& OccupiedRanges,
-	float OriginX, int32 MinLayer)
-{
-	// Finds the Y closest to DesiredTop where a node of the given Height can
-	// sit without overlapping (within Spacing) anything already recorded for
-	// that column, searching outward alternately above and below.
-	auto FindFreeSlot = [](TArray<TPair<float, float>>& Occupied, float DesiredTop, float Height, float Spacing) -> float
-	{
-		auto Overlaps = [&](float Top)
-		{
-			const float Bottom = Top + Height;
-			for (const TPair<float, float>& Range : Occupied)
-			{
-				if (Top < Range.Value + Spacing && Bottom + Spacing > Range.Key)
-				{
-					return true;
-				}
-			}
-			return false;
-		};
-
-		if (!Overlaps(DesiredTop))
-		{
-			return DesiredTop;
-		}
-
-		const float Step = Height + Spacing;
-		for (int32 i = 1; i <= 50; ++i)
-		{
-			const float Up = DesiredTop - Step * static_cast<float>(i);
-			if (!Overlaps(Up))
-			{
-				return Up;
-			}
-
-			const float Down = DesiredTop + Step * static_cast<float>(i);
-			if (!Overlaps(Down))
-			{
-				return Down;
-			}
-		}
-		return DesiredTop;
-	};
-
-	for (const TPair<UEdGraphNode*, TArray<TPair<UEdGraphNode*, UEdGraphPin*>>>& Entry : AttachedByConsumer)
-	{
-		UEdGraphNode* Consumer = Entry.Key;
-		const int32* ConsumerLayerPtr = ConsumerLayers.Find(Consumer);
-		if (!ConsumerLayerPtr)
-		{
-			continue;
-		}
-
-		// One layer to the left of the consumer, same as where a genuine
-		// data-flow predecessor would land, but instead of stacking every
-		// variable node from every consumer into that shared column one
-		// after another, each is pinned to sit right beside the specific
-		// node it feeds.
-		const int32 VarLayer = *ConsumerLayerPtr - 1;
-		const float ColumnX = OriginX + static_cast<float>(VarLayer - MinLayer) * VesperLayoutSettings::ColumnSpacing;
-		TArray<TPair<float, float>>& OccupiedInLayer = OccupiedRanges.FindOrAdd(VarLayer);
-
-		const float ConsumerY = static_cast<float>(Consumer->NodePosY);
-
-		for (const TPair<UEdGraphNode*, UEdGraphPin*>& VarEntry : Entry.Value)
-		{
-			UEdGraphNode* VarNode = VarEntry.Key;
-			UEdGraphPin* ConsumerPin = VarEntry.Value;
-			const float VarHeight = EstimateNodeHeight(VarNode);
-
-			// Center the variable node on the exact row of the pin it feeds
-			// rather than the consumer's overall vertical center, so it reads
-			// as sitting right next to the connection point instead of just
-			// floating somewhere near the node.
-			const float PinCenterY = ConsumerY + EstimatePinYOffset(Consumer, ConsumerPin);
-			const float DesiredTop = PinCenterY - VarHeight * 0.5f;
-
-			const float FinalTop = FindFreeSlot(OccupiedInLayer, DesiredTop, VarHeight, VesperLayoutSettings::RowSpacing);
-
-			VarNode->NodePosX = FMath::RoundToInt(ColumnX);
-			VarNode->NodePosY = FMath::RoundToInt(FinalTop);
-			OccupiedInLayer.Add(TPair<float, float>(FinalTop, FinalTop + VarHeight));
-		}
-	}
-}
-
-bool FVesperGraphLayout::IsSplittableFanOutNode(UEdGraphNode* Node)
-{
-	if (!Node)
-	{
-		return false;
-	}
-
-	// Only two classes of node are treated as safe, behavior-neutral taps to
-	// duplicate: a plain variable read, and a pure (BlueprintPure) function
-	// call. Both only ever expose data pins, so re-running the call through
-	// a duplicate can never reorder or skip anything the exec flow depends
-	// on -- unlike an impure function, which has to stay a single shared
-	// node so it only executes once, in its one real place in the flow.
-	const UK2Node_CallFunction* CallFunction = Cast<UK2Node_CallFunction>(Node);
-	const bool bIsSupportedClass = Node->IsA<UK2Node_VariableGet>() || (CallFunction && CallFunction->IsNodePure());
-	if (!bIsSupportedClass)
-	{
-		return false;
-	}
-
-	// A pure node should never have an exec pin, but this is checked
-	// explicitly anyway -- duplicating a node with any exec wiring could
-	// change execution order, which must never happen.
-	for (const UEdGraphPin* Pin : Node->Pins)
-	{
-		if (Pin && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-UEdGraphNode* FVesperGraphLayout::DuplicateFanOutNode(UEdGraphNode* Original)
-{
-	if (!Original)
-	{
-		return nullptr;
-	}
-
-	UEdGraph* Graph = Original->GetGraph();
-	if (!Graph)
-	{
-		return nullptr;
-	}
-
-	Graph->Modify();
-
-	UEdGraphNode* NewNode = NewObject<UEdGraphNode>(Graph, Original->GetClass());
-	if (UK2Node_VariableGet* NewGetter = Cast<UK2Node_VariableGet>(NewNode))
-	{
-		NewGetter->VariableReference = CastChecked<UK2Node_VariableGet>(Original)->VariableReference;
-	}
-	else if (UK2Node_CallFunction* NewCall = Cast<UK2Node_CallFunction>(NewNode))
-	{
-		NewCall->FunctionReference = CastChecked<UK2Node_CallFunction>(Original)->FunctionReference;
-	}
-	else
-	{
-		// Unsupported node class -- IsSplittableFanOutNode should have
-		// already filtered this out, but bail rather than add a
-		// half-initialized node to the graph.
-		return nullptr;
-	}
-
-	NewNode->SetFlags(RF_Transactional);
-	NewNode->NodePosX = Original->NodePosX;
-	NewNode->NodePosY = Original->NodePosY;
-	Graph->AddNode(NewNode, /*bFromUI=*/false, /*bSelectNewNode=*/false);
-	NewNode->CreateNewGuid();
-	NewNode->PostPlacedNewNode();
-	NewNode->AllocateDefaultPins();
-
-	// Replicate every input pin's wiring (and, for anything left unlinked,
-	// its literal default) from Original onto the duplicate, matched by pin
-	// name -- otherwise the duplicate would silently fall back to whatever
-	// default the node ships with instead of reading the same upstream
-	// value as Original (e.g. Get Owner's Target, Break Hit Result's
-	// InHitResult), changing what the graph actually computes.
-	for (UEdGraphPin* OriginalPin : Original->Pins)
-	{
-		if (!OriginalPin || OriginalPin->Direction != EGPD_Input)
-		{
-			continue;
-		}
-
-		UEdGraphPin* NewPin = NewNode->FindPin(OriginalPin->PinName, EGPD_Input);
-		if (!NewPin)
-		{
-			continue;
-		}
-
-		if (OriginalPin->LinkedTo.Num() > 0)
-		{
-			for (UEdGraphPin* SourcePin : OriginalPin->LinkedTo)
-			{
-				if (SourcePin)
-				{
-					NewPin->MakeLinkTo(SourcePin);
-				}
-			}
-		}
-		else
-		{
-			NewPin->DefaultValue = OriginalPin->DefaultValue;
-			NewPin->DefaultObject = OriginalPin->DefaultObject;
-			NewPin->DefaultTextValue = OriginalPin->DefaultTextValue;
-		}
-	}
-
-	return NewNode;
-}
-
-void FVesperGraphLayout::SplitFanOutNodes(TArray<UEdGraphNode*>& WorkingNodes)
-{
-	const TSet<UEdGraphNode*> NodeSet(WorkingNodes);
-
-	// Snapshot the starting nodes since WorkingNodes grows as duplicates are
-	// appended below.
-	const TArray<UEdGraphNode*> OriginalNodes = WorkingNodes;
-
-	for (UEdGraphNode* Node : OriginalNodes)
-	{
-		if (!IsSplittableFanOutNode(Node))
-		{
-			continue;
-		}
-
-		// A pure node can expose more than one output pin (e.g. Break Hit
-		// Result), so each one is treated as its own independent fan-out --
-		// a consumer reading pin A doesn't care how far away pin B's
-		// readers are.
-		for (UEdGraphPin* SourcePin : Node->Pins)
-		{
-			if (!SourcePin || SourcePin->Direction != EGPD_Output || SourcePin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
-			{
-				continue;
-			}
-
-			// Distinct consumer pins this output feeds, restricted to nodes
-			// that are actually part of this format pass.
-			TArray<UEdGraphPin*> ConsumerPins;
-			for (UEdGraphPin* LinkedPin : SourcePin->LinkedTo)
-			{
-				UEdGraphNode* ConsumerNode = LinkedPin ? LinkedPin->GetOwningNode() : nullptr;
-				if (ConsumerNode && NodeSet.Contains(ConsumerNode))
-				{
-					ConsumerPins.Add(LinkedPin);
-				}
-			}
-
-			if (ConsumerPins.Num() < 2)
-			{
-				// Nothing to fan out -- either unused, or the single-consumer case
-				// TryGetSingleVariableConsumer already handles.
-				continue;
-			}
-
-			const FVector2D OriginalPos(static_cast<float>(Node->NodePosX), static_cast<float>(Node->NodePosY));
-
-			// Whichever consumer already sits closest to the original node always
-			// keeps sharing it, no matter the distance -- otherwise a node whose
-			// every consumer happens to be far away would end up with all of its
-			// links peeled onto duplicates and nothing left attached to it,
-			// stranding it as inert clutter in the graph.
-			int32 ClosestIndex = 0;
-			float ClosestDistSq = TNumericLimits<float>::Max();
-			for (int32 Index = 0; Index < ConsumerPins.Num(); ++Index)
-			{
-				const UEdGraphNode* ConsumerNode = ConsumerPins[Index]->GetOwningNode();
-				const FVector2D ConsumerPos(static_cast<float>(ConsumerNode->NodePosX), static_cast<float>(ConsumerNode->NodePosY));
-				const float DistSq = FVector2D::DistSquared(OriginalPos, ConsumerPos);
-				if (DistSq < ClosestDistSq)
-				{
-					ClosestDistSq = DistSq;
-					ClosestIndex = Index;
-				}
-			}
-
-			// Every other consumer within VariableSplitMaxDistance of the original
-			// node also keeps sharing it -- splitting only pays off once the line
-			// it would draw is actually long. Each remaining consumer farther away
-			// gets peeled onto its own duplicate reading the same pin, so the
-			// value read never changes and execution behavior is identical.
-			for (int32 Index = 0; Index < ConsumerPins.Num(); ++Index)
-			{
-				if (Index == ClosestIndex)
-				{
-					continue;
-				}
-
-				UEdGraphPin* ConsumerPin = ConsumerPins[Index];
-				UEdGraphNode* ConsumerNode = ConsumerPin->GetOwningNode();
-				const FVector2D ConsumerPos(static_cast<float>(ConsumerNode->NodePosX), static_cast<float>(ConsumerNode->NodePosY));
-				if (FVector2D::DistSquared(OriginalPos, ConsumerPos) <= FMath::Square(VesperLayoutSettings::VariableSplitMaxDistance))
-				{
-					continue;
-				}
-
-				UEdGraphNode* NewNode = DuplicateFanOutNode(Node);
-				if (!NewNode)
-				{
-					continue;
-				}
-
-				UEdGraphPin* NewSourcePin = NewNode->FindPin(SourcePin->PinName, EGPD_Output);
-				if (!NewSourcePin)
-				{
-					continue;
-				}
-
-				ConsumerPin->BreakLinkTo(SourcePin);
-				ConsumerPin->MakeLinkTo(NewSourcePin);
-
-				WorkingNodes.Add(NewNode);
-			}
-		}
-	}
+	VesperLayout::FEngine Engine(Graph, Panel);
+	const int32 Count = Engine.Run(Nodes);
+	UE_LOG(LogVesperLayout, Log, TEXT("[Vesper] Formatted %d nodes in %s (%s sizes)."), Count, *Graph->GetName(),
+		Panel ? TEXT("measured") : TEXT("estimated"));
+	return Count;
 }
 
 int32 FVesperGraphLayout::FormatNodes(const TArray<UEdGraphNode*>& Nodes)
 {
-	if (Nodes.Num() < 2)
+	const UEdGraph* Graph = nullptr;
+	for (const UEdGraphNode* Node : Nodes)
 	{
-		return 0;
-	}
-
-	// Peel off dedicated duplicate pure nodes (variable getters and
-	// BlueprintPure function calls) for consumers that sit far enough apart
-	// that sharing one node would draw a long line across the graph -- see
-	// SplitFanOutNodes for the distance rule and why this never changes
-	// what the graph actually executes.
-	TArray<UEdGraphNode*> WorkingNodes = Nodes;
-	SplitFanOutNodes(WorkingNodes);
-
-	// Split out variable-getter nodes that read into exactly one other
-	// selected node -- those are placed directly beside their reader below
-	// instead of being layered like normal flow nodes, which is what used to
-	// dump every variable node into one shared far-left column.
-	const TSet<UEdGraphNode*> ConsumerCandidates(WorkingNodes);
-	TArray<UEdGraphNode*> PrimaryNodes;
-	TMap<UEdGraphNode*, TArray<TPair<UEdGraphNode*, UEdGraphPin*>>> AttachedByConsumer;
-
-	for (UEdGraphNode* Node : WorkingNodes)
-	{
-		UEdGraphNode* Consumer = nullptr;
-		UEdGraphPin* ConsumerPin = nullptr;
-		if (TryGetSingleVariableConsumer(Node, ConsumerCandidates, Consumer, ConsumerPin))
+		if (Node && Node->GetGraph())
 		{
-			AttachedByConsumer.FindOrAdd(Consumer).Add(TPair<UEdGraphNode*, UEdGraphPin*>(Node, ConsumerPin));
-		}
-		else
-		{
-			PrimaryNodes.Add(Node);
+			Graph = Node->GetGraph();
+			break;
 		}
 	}
-
-	TMap<UEdGraphNode*, int32> Layers;
-	ComputeLayers(PrimaryNodes, Layers);
-
-	TMap<int32, TArray<TPair<float, float>>> OccupiedRanges;
-	float OriginX = 0.f;
-	int32 MinLayer = 0;
-	ApplyLayout(PrimaryNodes, Layers, OccupiedRanges, OriginX, MinLayer);
-	PlaceAttachedVariableNodes(AttachedByConsumer, Layers, OccupiedRanges, OriginX, MinLayer);
-
-	return WorkingNodes.Num();
+	return FormatNodesInternal(Nodes, FindPanelForGraph(Graph));
 }
 
 void FVesperGraphLayout::FormatSelectedNodes()
 {
 	const TSharedPtr<SGraphEditor> CurrentGraphEditor = GetActiveGraphEditor();
-
-	FGraphPanelSelectionSet SelectedNodes;
-	if (CurrentGraphEditor.IsValid())
+	UEdGraph* Graph = CurrentGraphEditor.IsValid() ? CurrentGraphEditor->GetCurrentGraph() : nullptr;
+	if (!Graph)
 	{
-		SelectedNodes = CurrentGraphEditor->GetSelectedNodes();
+		FNotificationInfo Info(FText::FromString(TEXT("Vesper: Click inside a Blueprint graph first.")));
+		Info.ExpireDuration = 3.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
 	}
 
 	TArray<UEdGraphNode*> ValidNodes;
-	for (UObject* Obj : SelectedNodes)
+	for (UObject* Obj : CurrentGraphEditor->GetSelectedNodes())
 	{
 		if (UEdGraphNode* GraphNode = Cast<UEdGraphNode>(Obj))
 		{
@@ -719,31 +1837,42 @@ void FVesperGraphLayout::FormatSelectedNodes()
 		}
 	}
 
+	// With (almost) nothing selected, clean the whole graph.
+	const bool bWholeGraph = ValidNodes.Num() < 2;
+	if (bWholeGraph)
+	{
+		ValidNodes.Reset();
+		for (UEdGraphNode* Node : Graph->Nodes)
+		{
+			if (Node)
+			{
+				ValidNodes.Add(Node);
+			}
+		}
+	}
+
 	if (ValidNodes.Num() < 2)
 	{
-		FNotificationInfo Info(FText::FromString(FString::Printf(
-			TEXT("Vesper: Select at least 2 nodes to format. (Detected: %d)"), ValidNodes.Num())));
+		FNotificationInfo Info(FText::FromString(TEXT("Vesper: Nothing to format in this graph.")));
 		Info.ExpireDuration = 3.0f;
 		FSlateNotificationManager::Get().AddNotification(Info);
 		return;
 	}
 
-	const FScopedTransaction Transaction(FText::FromString(TEXT("Vesper: Format Selected Nodes")));
-
+	const FScopedTransaction Transaction(FText::FromString(TEXT("Vesper: Clean Graph")));
+	Graph->Modify();
 	for (UEdGraphNode* Node : ValidNodes)
 	{
 		Node->Modify();
 	}
 
-	const int32 FormattedCount = FormatNodes(ValidNodes);
-
-	if (CurrentGraphEditor.IsValid())
-	{
-		CurrentGraphEditor->NotifyGraphChanged();
-	}
+	// Generated comments may be deleted and recreated; don't leave them selected.
+	CurrentGraphEditor->ClearSelectionSet();
+	const int32 FormattedCount = FormatNodesInternal(ValidNodes, CurrentGraphEditor->GetGraphPanel());
+	CurrentGraphEditor->NotifyGraphChanged();
 
 	FNotificationInfo SuccessInfo(FText::FromString(FString::Printf(
-		TEXT("Vesper: %d nodes formatted successfully!"), FormattedCount)));
+		TEXT("Vesper: %d nodes formatted%s."), FormattedCount, bWholeGraph ? TEXT(" (whole graph)") : TEXT(""))));
 	SuccessInfo.ExpireDuration = 2.5f;
 	FSlateNotificationManager::Get().AddNotification(SuccessInfo);
 }
@@ -776,58 +1905,42 @@ void FVesperGraphLayout::AutoFitSelectedComments()
 	}
 
 	const FScopedTransaction Transaction(FText::FromString(TEXT("Vesper: Auto-Fit Comments")));
+	VesperLayout::FMetrics Metrics;
+	Metrics.Panel = CurrentGraphEditor->GetGraphPanel();
+	const VesperLayout::FSettings Settings = VesperLayout::FSettings::Load();
 	int32 ResizedCount = 0;
 
 	for (UEdGraphNode_Comment* CommentNode : CommentNodes)
 	{
 		// GetNodesUnderComment() returns whatever currently falls inside the
-		// comment's existing bounds, so this fits to what's visually inside
-		// it right now rather than requiring a separate "assign" step.
-		const TArray<UObject*> ContainedNodes = CommentNode->GetNodesUnderComment();
-		if (ContainedNodes.Num() == 0)
-		{
-			continue;
-		}
-
-		float MinX = TNumericLimits<float>::Max();
-		float MinY = TNumericLimits<float>::Max();
-		float MaxX = TNumericLimits<float>::Lowest();
-		float MaxY = TNumericLimits<float>::Lowest();
-		bool bFoundValidBounds = false;
-
-		for (UObject* Obj : ContainedNodes)
+		// comment's bounds, as tracked by its on-screen widget.
+		FBox2D Bounds(ForceInit);
+		for (UObject* Obj : CommentNode->GetNodesUnderComment())
 		{
 			UEdGraphNode* ChildNode = Cast<UEdGraphNode>(Obj);
 			if (!ChildNode || ChildNode == CommentNode)
 			{
 				continue;
 			}
-
-			// Comment nodes track their own resizable width/height; regular
-			// K2 nodes generally don't persist a pixel size in the data
-			// model, so we fall back to the same pin-based estimate used by
-			// the layout pass above.
-			const float ChildWidth = ChildNode->NodeWidth > 0.f ? ChildNode->NodeWidth : 200.f;
-			const float ChildHeight = ChildNode->NodeHeight > 0.f ? ChildNode->NodeHeight : EstimateNodeHeight(ChildNode);
-
-			MinX = FMath::Min(MinX, static_cast<float>(ChildNode->NodePosX));
-			MinY = FMath::Min(MinY, static_cast<float>(ChildNode->NodePosY));
-			MaxX = FMath::Max(MaxX, static_cast<float>(ChildNode->NodePosX) + ChildWidth);
-			MaxY = FMath::Max(MaxY, static_cast<float>(ChildNode->NodePosY) + ChildHeight);
-			bFoundValidBounds = true;
+			const FVector2D Pos(ChildNode->NodePosX, ChildNode->NodePosY);
+			const FVector2D Size = ChildNode->IsA<UEdGraphNode_Comment>()
+				? FVector2D(ChildNode->NodeWidth, ChildNode->NodeHeight)
+				: Metrics.Size(ChildNode);
+			Bounds += FBox2D(Pos, Pos + Size);
 		}
 
-		if (!bFoundValidBounds)
+		if (!Bounds.bIsValid)
 		{
 			continue;
 		}
 
+		const float Pad = Settings.CommentPadding;
+		const float TitleH = VesperLayout::CommentTitleHeight(CommentNode->FontSize);
 		CommentNode->Modify();
-		CommentNode->NodePosX = FMath::RoundToInt(MinX - VesperLayoutSettings::CommentPadding);
-		CommentNode->NodePosY = FMath::RoundToInt(MinY - VesperLayoutSettings::CommentPadding - VesperLayoutSettings::CommentTitleBarHeight);
-		CommentNode->NodeWidth = FMath::RoundToInt((MaxX - MinX) + VesperLayoutSettings::CommentPadding * 2.f);
-		CommentNode->NodeHeight = FMath::RoundToInt((MaxY - MinY) + VesperLayoutSettings::CommentPadding * 2.f + VesperLayoutSettings::CommentTitleBarHeight);
-
+		CommentNode->NodePosX = FMath::RoundToInt(Bounds.Min.X - Pad);
+		CommentNode->NodePosY = FMath::RoundToInt(Bounds.Min.Y - Pad - TitleH);
+		CommentNode->NodeWidth = FMath::RoundToInt(Bounds.GetSize().X + Pad * 2.f);
+		CommentNode->NodeHeight = FMath::RoundToInt(Bounds.GetSize().Y + Pad * 2.f + TitleH);
 		++ResizedCount;
 	}
 

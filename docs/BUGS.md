@@ -1,5 +1,49 @@
 # Known Bugs
 
+## `BP_CustomerSpawner::ActiveCustomers` is not actually replicated
+
+- **Area:** `BP_CustomerSpawner`, found while adding `Server_AutoSellActiveCustomers` (day-end
+  auto-sell of in-store customer carts, overnight session 2026-09-23).
+- **Repro:** `get_variables` on `BP_CustomerSpawner` shows `ActiveCustomers` (array of
+  `BP_Customer` refs) has `replicated: false`, despite doc/summary language elsewhere
+  describing it as replicated.
+- **Actual:** Server-authoritative logic that reads/mutates this array (e.g. the new
+  auto-sell function) works fine since it only ever runs on the server, but clients have no
+  synced view of it if anything ever needs to read `ActiveCustomers` client-side.
+- **Expected:** Either mark it replicated if client-side reads are ever needed, or document
+  that it's intentionally server-only state.
+- **Status:** Open, not investigated further — out of scope for the auto-sell task that found
+  it. No known current caller needs client-side access, so not urgent.
+
+## `blueprint.auto_layout` can't disambiguate duplicate-named anim state-machine subgraphs
+
+- **Area:** VesperNodeCleaner graph layout (`blueprint.auto_layout`), found during the
+  project-wide Vesper cleanup sweep on `ABP_Hero` (AnimBlueprint).
+- **Repro:** `ABP_Hero`'s state machines (Locomotion, HitReacts, Statuses, ...) contain many
+  subgraphs that share the same name across different states — 10 graphs named `Transition`
+  and 4 named `AnimationTransitionGraph_0` in this asset alone. Calling `blueprint.auto_layout`
+  with `graph_name: Transition` twice in a row returns identical `nodes_formatted` counts both
+  times, confirming it always resolves to the same first match rather than iterating instances.
+- **Actual:** Only one instance of each duplicate graph name gets laid out; the rest are
+  unreachable through this API and keep their old layout.
+- **Expected:** Some way to target a specific subgraph instance — e.g. a parent-graph or
+  graph-path parameter — so every state's transition graph can be reached individually.
+- **Status:** Open, low priority — cosmetic only (unreached graphs just keep prior layout, no
+  logic/compile impact). Likely affects other AnimBlueprints with state machines too
+  (`ABP_Zombie`, `ABP_Minion`), not yet confirmed there.
+
+## Vesper auto_layout fails silently ("0 nodes formatted") on `BP_DefenseBase.RefreshDefenseVisual`
+
+- **Area:** VesperNodeCleaner graph layout (`blueprint.auto_layout`, `formatter: 'vesper'`),
+  found during the project-wide Vesper cleanup sweep (folder-by-folder, see run-log).
+- **Repro:** `blueprint.auto_layout` with `asset_path: /Game/Defense/BP_DefenseBase`,
+  `graph_name: RefreshDefenseVisual`, `formatter: vesper`. The graph has 2 nodes.
+- **Actual:** Vesper reports "0 nodes formatted" and leaves the graph's existing layout
+  untouched. Reproduced twice (one retry), same result both times.
+- **Expected:** The graph's 2 nodes should be laid out like any other small function graph.
+- **Status:** Open, low priority — cosmetic only, no logic/compile impact. Only graph seen
+  to hit this in the full-project sweep; other 2-node graphs elsewhere laid out fine.
+
 ## Reload doesn't replenish magazine — GAS tag removal warning (discovered incidentally, uninvestigated)
 
 - **Area:** Weapon reload (`BP_EquipmentComponent` / GAS ability, `docs/PHASE_3_TASKLIST.md`
@@ -90,6 +134,52 @@
 - **Status:** Open, known limitation/gotcha. Needs a manual check/set of `RuntimeGeneration`
   in-editor (or a re-placed Nav Mesh Bounds Volume) per existing level before the
   breach-triggered nav opening will work.
+- Note 2026-09-23: already satisfied for `Map_Startup` and `Test_Level_Zero`. Both have a
+  `RecastNavMesh-Default` actor set to `DYNAMIC`, and `DefaultEngine.ini` sets
+  `RuntimeGeneration=Dynamic`.
+
+## Customers walk to world origin (0,0,0) instead of shopping
+
+- **Area:** Customer AI — `/Game/AI/Customer/BT_Customer`,
+  `/Game/Interactable/BP_CheckoutCounter`.
+- **Repro:** Play `Map_Startup`, start Day phase, watch spawned customers.
+- **Actual:** Customers ignore the shelves and walk toward (0,0,0).
+- **Expected:** Customers browse shelves, queue at the counter, check out, and leave through
+  `BP_CustomerExitPoint`.
+- **Root cause (2026-09-23, ue-architect):**
+  1. `BT_Customer`'s "Queue For Checkout" branch (second child of the root Selector) was
+     gated by two "SelfActor Is Set" decorators, which are always true, so every new
+     customer joined the queue at once instead of shopping first.
+  2. `BP_CheckoutCounter::GetQueueSpotLocation` had its Entry→Return exec wire missing, so
+     it always returned `(0,0,0)`. `BTT_JoinCheckoutQueue` wrote that into
+     `QueueSpotLocation` and `BTT_WaitInCheckoutQueue` moved the customer there. Both
+     `Select` nodes in the function were also reversed (option 0 is the false case), and
+     queue spot 0 was the counter's own center, which is off the navmesh.
+  3. "Browse Shelf" was gated by `ReadyToCheckout` Is Set (should be Is Not Set) and "Leave
+     Empty Handed" by `HasPurchasedItem` Is Set (should be Is Not Set), so shopping could
+     never run at all.
+  4. Minor: `BP_CustomerExitPoint`'s `ExitMarkerMesh` (BlockAllDynamic) and the overlap-only
+     boxes on `BP_ShelfActor`, `BP_CheckoutCounter`, and `BP_DefenseSocket` had
+     `CanEverAffectNavigation` on and cut small holes in the navmesh.
+  - Not the cause: the navmesh itself (`Map_Startup` has a working `NavMeshBoundsVolume`
+    and `Dynamic` `RecastNavMesh`), and the `TargetShelf`/`AssignedCounter` blackboard keys
+    (Object keys — an unset one makes `MoveTo` fail, it does not send the customer to the
+    origin).
+- **Status:** Fixed 2026-09-24. Tasks 1–6 landed (counter function rewire incl. navmesh
+  projection, BT decorator fix, nav flags on the 4 marker/interaction components,
+  `ArchetypeRow` RepNotify) and verified by automation: `Test_CheckoutQueueOrdering` and the
+  new `Test_CheckoutQueueSpotLocation` (added to `BP_TestController`) both pass. Still needs
+  a manual in-game check in `Map_Startup` (Build Paths, PIE with 1 then 2 players — shopping
+  → queue → checkout → exit flow, no walking to (0,0,0), and archetype walk-speed
+  differences visible to a client) before closing this out completely.
+
+## Test_Level_Zero has no checkout counter or customer exit point
+
+- **Area:** Levels — `/Game/Levels/Test_Level_Zero`.
+- **Actual:** The level has shelves and a customer spawner but no `BP_CheckoutCounter` or
+  `BP_CustomerExitPoint`, so customers can't finish the shopping loop there.
+- **Expected:** Use `Map_Startup` for customer loop testing, or add both actors.
+- **Status:** Known limitation.
 
 ## Monolith tooling: `auto_layout(formatter="vesper")` can silently duplicate/corrupt nodes
 
@@ -103,8 +193,15 @@
   subsequent `compile_blueprint` — not on the `auto_layout` call itself.
 - **Expected:** `auto_layout` should not corrupt the graph, or should report the corruption
   if it occurs.
-- **Status:** Open, tooling gotcha (not yet reported upstream). Workaround: always recompile
-  immediately after any vesper `auto_layout` call and inspect the graph if errors appear.
+- **Status:** Fix landed, awaiting confirmation (Vesper layout rewrite, 2026-09). The cause
+  was the old `SplitFanOutNodes` step, which copied pure `K2Node_CallFunction` nodes that fed
+  several consumers and rewired links onto the copies. The rewritten
+  `VesperGraphLayout.cpp` never duplicates function calls. It only duplicates plain
+  self-variable getters (`K2Node_VariableGet` with no linked inputs), verifies the copy's
+  output pin type before moving any link, and can be switched off with
+  `bDuplicateSharedGetters=False` under `[VesperNodeCleaner]` in `Config/DefaultEditor.ini`.
+  Keep recompiling after vesper `auto_layout` calls until this has held up for a while,
+  then close this entry.
 
 ## Shelf UI has no item-placement slots — only upgrade/close buttons and text
 
@@ -552,6 +649,11 @@
   never seeds `LastKnownPhase` before its `Switch(CurrentPhase)` (unlike
   `BP_ZombieSpawnerManager::BeginPlay`, which does), a latent bug if the spawner ever begins
   play outside Day phase.
+  - Update 2026-09-23: `Server_SpawnCustomerBurst` sets `ArchetypeRow` after spawn but never
+    calls `ApplyArchetype`, and `ArchetypeRow` was not replicated, so clients never got the
+    right `MaxWalkSpeed`. Fix: `ArchetypeRow` becomes RepNotify (`OnRep_ArchetypeRow` →
+    `ApplyArchetype`) with a `None` guard on `BeginPlay`. See "Customers walk to world
+    origin (0,0,0) instead of shopping."
 - **Status:** Fixed and verified by automation (`Test_CustomerSpawnerMaxConcurrent`, added to
   `Content/Tests/Automation`, PASSES as of this session's full test-bed run — confirms
   `GetMaxConcurrent()==6` and that `TrySpawnCustomer()` actually grows `ActiveCustomers`).
