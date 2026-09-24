@@ -61,19 +61,33 @@
 - **Status:** Open, low priority — cosmetic only, no logic/compile impact. Only graph seen
   to hit this in the full-project sweep; other 2-node graphs elsewhere laid out fine.
 
-## Reload doesn't replenish magazine — GAS tag removal warning (discovered incidentally, uninvestigated)
+## Reload doesn't replenish magazine — GAS tag removal warning (RESOLVED 2026-09-24)
 
-- **Area:** Weapon reload (`BP_EquipmentComponent` / GAS ability, `docs/PHASE_3_TASKLIST.md`
-  ammo & reload section). Not related to the Build Menu or customer-spawn fixes below — surfaced
-  as a pre-existing failure while running the full automation suite to verify those fixes.
+- **Area:** Weapon reload (`BP_EquipmentComponent`, `docs/PHASE_3_TASKLIST.md` ammo & reload
+  section). No dedicated GAS reload ability exists — all reload logic (tag add/remove,
+  timer-based completion, ammo math) lives in `BP_EquipmentComponent`'s
+  `Server_Reload`/`FinishReload`/`CancelReload` functions.
 - **Repro:** Automation test `Test_Equipment_ReloadReplenishesMagazine` in
   `Content/Tests/Automation` (`BP_TestController`), run via the standard PIE-smoke test-runner flow.
-- **Actual:** Test fails; log shows `[LogAbilitySystem][warning] Attempted to remove tag:
-  State.Weapon.Reloading from tag count container, but it is not explicitly in the container!`
-  during the reload sequence, and the magazine does not replenish.
-- **Expected:** Reloading should replenish the magazine without a GAS tag-container mismatch.
-- **Status:** Open, uninvestigated. Not touched this session — out of scope for the Build
-  Menu/customer-spawn fix work in progress; needs its own diagnostic pass.
+- **Root cause (two unrelated bugs in the same area):**
+  1. `DT_AmmoTypes` rows `RifleAmmo` and `ShotgunShells` had `DefaultStockpile=0`.
+     `EnsureAmmoCategorySeeded` seeds a zero-reserve `AmmoPool` entry from that field, so
+     `GetActiveAmmo().Reserve` was permanently 0 for any Rifle/LongRifle/Shotgun weapon.
+     `CanReload` requires `Reserve>0`, so `Server_Reload`'s inner branch silently never ran for
+     those weapons — no timer, no tag, no ammo replenished, no error logged. `PistolAmmo` (48)
+     was unaffected and always worked.
+  2. `Server_EquipItem` and `Server_SetActiveSlot` both unconditionally called `CancelReload()`
+     on every code path, and `CancelReload` unconditionally called
+     `RemoveLooseGameplayTags(State.Weapon.Reloading)` regardless of whether a reload was ever
+     started — firing the "tag not in container" warning on every weapon equip or slot switch,
+     not just during an actual interrupted reload.
+- **Fix:** Set `RifleAmmo.DefaultStockpile=90` and `ShotgunShells.DefaultStockpile=24` in
+  `DT_AmmoTypes`, matching each weapon's existing `DT_Weapons.DefaultReserveAmmo`. Gated both
+  `CancelReload()` calls behind a `bIsReloading` check (`Branch` node) so the tag-removal path
+  only runs when a reload was actually in progress.
+- **Verified:** Full test-bed run, session-scoped log read: 16/16 tests pass including
+  `Test_Equipment_ReloadReplenishesMagazine`; zero `State.Weapon.Reloading` tag warnings in the
+  session log; no regressions in the rest of the suite.
 
 ## Decorative barrel actor has auto-generated name / no outliner folder
 
