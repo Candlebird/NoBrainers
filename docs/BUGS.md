@@ -370,14 +370,17 @@
   the separate `BPI_Breachable` damage path instead).
 - **Expected:** Zombie melee should not damage other zombies, while still damaging players
   and defense nodes normally.
-- **Status:** Fixed. Added a Branch at the top of the sweep's loop body (before the
-  existing ASC-validity Branch) that tests `NOT ClassIsChildOf(GetObjectClass(HitActor),
+- **Status:** Fixed and verified. Added a Branch at the top of the sweep's loop body (before
+  the existing ASC-validity Branch) that tests `NOT ClassIsChildOf(GetObjectClass(HitActor),
   BP_ZombieBase_C)` (pure `GameplayStatics::GetObjectClass` + `KismetMathLibrary::
   ClassIsChildOf` + `Not_PreBool`, no exec-pin cast-fail branching). False path (hit actor
   is a zombie) skips straight to the next loop iteration; true path falls through into the
   existing ASC-validity chain unchanged. Player-vs-zombie and zombie-vs-defense-node damage
-  paths are untouched. Blueprint compiles with 0 errors/0 warnings. Needs in-PIE
-  verification (see note below).
+  paths are untouched. Blueprint compiles with 0 errors/0 warnings. Verified via automation:
+  `Test_Zombie_NoFriendlyFire` in `BP_TestController` spawns an attacker and victim zombie,
+  calls `PerformMeleeAttack` on the attacker targeting the victim, and asserts the victim's
+  health is unchanged afterward. Confirmed passing in a clean single-session PIE automation
+  run.
 
 ## Dead zombies keep rotating/attacking during their despawn delay
 
