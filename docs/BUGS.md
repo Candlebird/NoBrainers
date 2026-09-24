@@ -311,14 +311,18 @@
 - **Expected:** Customer NPCs should reliably spawn every day phase, up to the concurrent
   cap, for the duration of the day, at valid navmesh-projected spawn point locations.
 - **Status:** All four fixes above are landed and the Blueprint compiles clean (0
-  errors/warnings). **Still unverified in PIE** — someone needs to actually run a day
-  phase in-editor and confirm customer NPCs now appear at real spawn points (not at world
-  origin). Note this project has a separate known bug (tracked elsewhere in this file)
-  where NavMesh `RuntimeGeneration` config overrides don't retroactively apply to already-
-  built navmesh data in existing levels — if `Map_Startup`'s navmesh predates that config
-  change, it may need a manual navmesh rebuild in-editor before spawn-point projection
-  will actually succeed at runtime. This PIE verification (and the possible manual navmesh
-  rebuild) is an open follow-up, not resolved here.
+  errors/warnings). Fix #3 (the inverted `Select`) now has automation coverage:
+  `Test_CustomerSpawner_SpawnsAtValidLocation` in `BP_TestController` calls
+  `TrySpawnCustomer` directly on the test bed's spawner and asserts the spawned
+  customer's location is more than 500 units from world origin — the regression this
+  bug caused was spawning at/near `(0,0,0)`, so this directly guards against that
+  recurring. Confirmed passing in a clean single-session 23/23 PIE automation run
+  (`pie_smoke_43_053000`). This does **not** confirm the location is actually
+  navmesh-valid, only that it isn't the origin-fallback failure mode — full navmesh
+  placement validity in `Map_Startup` (and whether its navmesh predates the
+  `RuntimeGeneration` config change tracked elsewhere in this file) still needs a
+  manual PIE day-phase check to confirm customers visually appear at sensible
+  shelf-adjacent spawn points, not just off-origin ones.
 
 ## Monolith tooling: `add_node` with `MakeStruct` for Vector/Transform can produce uncompilable nodes
 
