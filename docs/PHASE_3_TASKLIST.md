@@ -229,6 +229,24 @@ Zombies path toward unbreached ABreachPoint actors, attack them, and trigger bre
 
 (See combined STATUS NOTE under 5.1 above — 5.1 and 5.2 were built and documented together.)
 
+STATUS NOTE (5.1/5.2 follow-up, overnight session 2026-09-24): root-caused and fixed why
+zombies weren't actually breaching through breach points and moving to the player despite
+the tree/service wiring above being correct on paper. `BP_BreachPoint::GetApproachLocation`
+was `BlueprintPure` and silently returned `(0,0,0)` whenever called cross-actor (as the real
+`BTS_ZombieBreachDecision::WriteBreachApproach` call site does), despite compiling clean —
+see `docs/BUGS.md` — "Monolith/Unreal gotcha: a `BlueprintPure` function with branching
+logic can silently return zeroed output when called cross-actor (RESOLVED)" for the full
+root cause and fix. Fixed by rebuilding the function as `BlueprintCallable` with identical
+logic and rewiring both call sites. Also cleaned up `Map_Startup` (proper store-shaped wall
+layout, breach points placed along the outside wall with real gaps cut in the wall geometry
+at each breach point, navmesh rebuilt) so breach pathing has real geometry to test against.
+Verified via a direct cross-actor function call (correct non-zero approach point) and two
+independent full test-bed runs, both showing `Test_BreachPoint_ApproachLocation` and
+`Test_BreachPoint_DamageBreaches` PASS. Still needs a real in-PIE confirmation (let a zombie
+approach a breach point with the player behind it, confirm it beelines to the breach, breaks
+through, and continues to the player through the wall gap) since the automation tests call
+the functions directly rather than driving full BT execution over real time.
+
 6. Zombie Loot Drop System
 
 [x] 6.1 Loot Table Architecture (FLootTable) & Drop Spawning

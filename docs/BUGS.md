@@ -1,5 +1,22 @@
 # Known Bugs
 
+## Stray `Content/GASDocumentation/Maps/Map_Startup.uasset` alongside `Map_Startup.umap`
+
+- **Area:** `docs/PHASE_3_TASKLIST.md` Map_Startup cleanup pass (breach-point fix session,
+  2026-09-24), flagged by `ue-vision-keeper` during gate-2 review as out-of-scope-but-worth-noting.
+- **Repro:** `git status` shows `Content/GASDocumentation/Maps/Map_Startup.uasset` as untracked,
+  sitting next to the real level file `Map_Startup.umap`. A `.umap`-named level should never have
+  a `.uasset` twin with the same base name — this looks like a leftover from a Monolith save
+  operation during the Map_Startup edit pass, not an intentional asset.
+- **Actual:** An orphaned, likely-empty-or-stale file sits in source control's untracked list.
+  Not referenced by anything (no gameplay code opens `Map_Startup.uasset`).
+- **Expected:** Only `Map_Startup.umap` (plus its `.umap`-adjacent build artifacts, which are
+  gitignored) should exist for this level.
+- **Status:** Open, not deleted yet — left alone rather than removed blind, since it wasn't
+  investigated further this session and deleting an unfamiliar file without confirming it's
+  truly unreferenced isn't safe to automate. Excluded from this session's commit. Safe to delete
+  after a quick check that nothing references it.
+
 ## `BP_CustomerSpawner::ActiveCustomers` is not actually replicated
 
 - **Area:** `BP_CustomerSpawner`, found while adding `Server_AutoSellActiveCustomers` (day-end
@@ -137,6 +154,11 @@
 - Note 2026-09-23: already satisfied for `Map_Startup` and `Test_Level_Zero`. Both have a
   `RecastNavMesh-Default` actor set to `DYNAMIC`, and `DefaultEngine.ini` sets
   `RuntimeGeneration=Dynamic`.
+- **RESOLVED for `Map_Startup` (2026-09-24):** forced a full static navmesh rebuild
+  (`ai_query.rebuild_navigation`, `save_after: true`) after cutting the 3 physical wall
+  gaps for `BP_BreachPoint_Wall8/9/10`. `validate_nav_points` now confirms a full
+  (non-partial) path from a point outside each breach through its gap to the interior
+  checkout area for all three breach points.
 
 ## Customers walk to world origin (0,0,0) instead of shopping
 
@@ -227,6 +249,15 @@
   size) renders all 4 slots at zero size. Fix in progress: change
   `WBP_ShelfSlot`'s root from `CanvasPanel` to a `SizeBox`
   (`WidthOverride=100`/`HeightOverride=30`) wrapping `SlotButton` directly.
+  **RESOLVED (2026-09-24, overnight session):** confirmed via `ui_query` that
+  `WBP_ShelfSlot`'s root is now a `SizeBox` (`WidthOverride=100`/`HeightOverride=30`,
+  both override flags true) wrapping `SlotButton` → `SlotBorder` → `SlotContent`
+  (`VerticalBox` with `IconImage`/`ItemNameText`/`QuantityText`/`MultiplierText`) exactly
+  as planned. The fix was already landed in a prior session; only this status line was
+  stale. The root node's internal variable name is still literally `"CanvasPanel"` (a
+  leftover from before the class swap) — cosmetic only, not worth a rename pass. Still
+  needs a real in-PIE confirmation that stocked slots render at visible (non-zero) size
+  and are clickable for transfer.
 
 ## Customer NPCs never spawn — `BP_CustomerSpawner` cast failure has no retry, and re-spawn timer never re-arms
 
@@ -709,3 +740,116 @@
   Note: the Unreal Editor crashed once during the original (misdiagnosed) investigation
   (process fully exited) after back-to-back `pie_call_function` calls — cause unconfirmed,
   but avoid rapid repeated `pie_call_function` calls against the same function as a precaution.
+
+## Checkout counter stand-location bug — customer permanently loops between claim/queue (RESOLVED)
+
+- **Area:** `BP_CheckoutCounter`, `BT_Customer`/`BB_Customer`, `BTT_MoveToCounter`,
+  `BTT_JoinCheckoutQueue` (overnight session 2026-09-24, customer checkout-loop hardening).
+- **Repro:** Let a customer reach checkout in `Map_Startup`. It claims the counter, then
+  never actually completes checkout.
+- **Root cause:** `BTT_MoveToCounter`'s "Move To Counter" node was keyed on `AssignedCounter`
+  (the counter actor itself), whose origin sits inside its own mesh — not a navigable point —
+  so the move-to call always failed, aborting the "Checkout And Leave" branch and falling
+  through to "Queue For Checkout." There was also no guard stopping a counter's own occupant
+  from rejoining its own queue, so this produced a permanent claim → fail-to-move → re-queue
+  loop with no way out.
+- **Fix:** Added `GetCustomerStandLocation()` on `BP_CheckoutCounter` (same
+  `ProjectPointToNavigation` pattern as the existing `GetQueueSpotLocation`), writing a
+  NavMesh-projected stand point to a new `CounterStandLocation` Blackboard vector key at
+  every claim point; `BTT_MoveToCounter` now targets that vector key instead of the counter
+  actor. Added a guard so a counter's own occupant releases the counter before it can
+  re-enter its own queue.
+- **Status:** Fixed and verified 2026-09-24. `Test_CustomerCheckout_PaysAndDespawns` and
+  `Test_CheckoutCounter_TryClaimReturnsTrue` both PASS in a correctly session-scoped,
+  75-second-held PIE automation run, alongside the other 12 sync tests in
+  `BP_TestController`'s `RunAllTests` chain (only the pre-existing, unrelated
+  `Test_Equipment_ReloadReplenishesMagazine` GAS bug still fails — see its own entry above).
+  Vision-keeper gate 2: ALIGNED. Committed (`40c8a41`).
+
+## Monolith/Unreal gotcha: a `BlueprintPure` function with branching logic can silently return zeroed output when called cross-actor (RESOLVED)
+
+- **Area:** `BP_BreachPoint::GetApproachLocation`, called from
+  `BTS_ZombieBreachDecision::WriteBreachApproach` (`docs/PHASE_3_TASKLIST.md`, zombie
+  breach-point AI).
+- **Repro:** `GetApproachLocation` was `BlueprintPure`, built from `GetActorLocation`,
+  `GetActorForwardVector`, vector math, two `Vector_Distance` calls, a `Less_DoubleDouble`,
+  and a `SelectVector` branch. It compiled clean and returned correct values when inlined
+  in the same Blueprint's graph, but returned `(0,0,0)` whenever invoked cross-actor as a
+  genuine `ProcessEvent`/UFunction call (e.g. from another Blueprint's graph, or via
+  `editor.pie_call_function`).
+- **Actual:** `BTS_ZombieBreachDecision`'s breach-approach-location computation silently
+  came back zeroed at runtime, undermining the zombie breach/approach behavior despite the
+  function compiling with 0 errors and looking correct on inspection.
+- **Expected:** A pure function's output should be identical whether it's inlined or called
+  cross-actor.
+- **Status:** RESOLVED (2026-09-24). There is no Monolith action to flip an existing
+  function's pure/impure flag in place (`UBlueprint::FunctionGraphs`/`UbergraphPages` are
+  Python-reflection-protected — scripting the flag directly throws "is protected and cannot
+  be read"). Fixed by deleting and recreating the function as `BlueprintCallable`
+  (`blueprint.add_function(is_pure=false)`) with identical logic, now exec-driven
+  (`Entry.then -> ... -> Return.execute`), and rewiring both call sites
+  (`BTS_ZombieBreachDecision::WriteBreachApproach` and
+  `BP_TestController::Test_BreachPoint_ApproachLocation`) to the new exec pins. Verified via
+  a direct cross-actor `editor.pie_call_function` call (correct non-zero result) and two
+  independent full test-bed runs, both showing `Test_BreachPoint_ApproachLocation` and
+  `Test_BreachPoint_DamageBreaches` PASS.
+  **Reusable gotcha for future work:** treat any `BlueprintPure` function with
+  branching/`Select` logic as unverified for cross-actor calls until tested that way — a
+  clean compile and correct same-Blueprint behavior are not sufficient evidence. Rebuilding
+  it exec-driven also needed `KismetMathLibrary::MakeVector`/`BreakVector` CallFunction
+  nodes in place of generic `K2Node_MakeStruct`/`K2Node_BreakStruct` for the Vector
+  make/break step — generic Vector struct nodes were rejected as "not a BlueprintType" when
+  created from scratch in this rebuild (same class of issue as the existing
+  `add_node`-with-`MakeStruct` entry above, now confirmed to also affect manually
+  reconstructed graphs, not just that action).
+
+## Test-bed log ambiguity: some tests appear to log a result twice within one `RunAllTests` session (unresolved, noted for future scrutiny)
+
+- **Area:** Test-bed session-scoped log reading (`ue-test-runner`'s `search_logs`
+  procedure), observed while verifying the `GetApproachLocation` fix above.
+- **Repro:** A full test-bed run (`run_pie_smoke` + `poll_pie_smoke`, correctly
+  session-scoped) that also included `Test_CustomerCheckout_PaysAndDespawns` unexpectedly
+  FAILed once, despite that test being previously passing and its underlying checkout code
+  untouched by this session's changes. A dedicated read-only diagnostic re-run showed the
+  test PASSING cleanly with no errors, and reported `RunAllTests` fires only once per
+  session — but that same diagnostic report's own itemized results show several tests
+  (`CheckoutQueueSpotLocation`, `Test_CheckoutQueueOrdering`,
+  `Test_Player_MoveInputChangesLocation`, `Test_ShippingCrate_LiquidatesToStoreCash`,
+  `Test_Equipment_ReloadReplenishesMagazine`) each logging a PASS/FAIL result twice within
+  that single run — once early (~0-2.2s) and again later — with `CheckoutQueueSpotLocation`
+  specifically flipping from FAIL early to PASS late.
+- **Actual:** Not fully explained. Two runs' worth of evidence (checkout logic untouched,
+  test passing on immediate re-run, breach tests independently confirmed PASS twice) point
+  to the original FAIL being transient/timing-dependent rather than a real regression, but
+  the double-logging pattern itself — some tests apparently evaluating and logging twice
+  per session — has not been root-caused.
+- **Expected:** Each test should log exactly one PASS/FAIL result per `RunAllTests`
+  session; if intentional (e.g. a retry-on-fail pattern in the harness), that should be
+  documented rather than looking like accidental duplication.
+- **Status:** Open, low priority — no evidence of an actual functional regression, but the
+  logging behavior itself is unexplained and worth a closer look if test-bed results ever
+  look inconsistent again. Not chased further this session (out of scope; the breach-point
+  fix was the actionable item).
+
+## Tooling gotcha: `run_pie_smoke` defaults to a 5-second session, which silently truncates async test runs
+
+- **Area:** Monolith MCP tooling (`editor_query("run_pie_smoke", ...)`), discovered while
+  verifying the checkout-counter stand-location fix above.
+- **Repro:** Call `run_pie_smoke` without an explicit `duration` against a test bed run that
+  includes any async/delayed test (chained via a `Delay` node or a custom event off
+  `RunAllTests`).
+- **Actual:** `duration` defaults to 5 seconds (clamped 0–120) and PIE tears itself down at
+  that point regardless of what happens afterward. `poll_pie_smoke` only takes `session_id`/
+  `include_samples` — it cannot wait or extend a session past its original `duration`. This
+  produced two false alarms this session: a FAIL for `Test_CustomerCheckout_PaysAndDespawns`
+  and a "missing" result for `Test_CheckoutCounter_TryClaimReturnsTrue` (the latter also had
+  a separate search-pattern typo — searched for `Test_CheckoutCounterTryClaimReturnsTrue`,
+  no underscore after "Checkout"). Both tests were actually passing; the apparent failures
+  were log-session-mixing/premature-teardown artifacts.
+- **Expected:** Test-runner dispatches should always account for real test duration.
+- **Status:** Fixed. `.claude/agents/ue-test-runner.md` now requires an explicit `duration`
+  on every `run_pie_smoke` call (≥75s for any run with async/delayed tests, ≥30s for a purely
+  synchronous run), and warns that a session ending exactly at the requested `duration` before
+  results appear should be re-run with a larger `duration`, not re-polled. `.claude/monolith/SCHEMAS.md`
+  was also stale (missing `poll_pie_smoke`, `stop_pie_smoke`, `list_errored_blueprints`,
+  `capture_pie_movement_clip`) and has been regenerated.
