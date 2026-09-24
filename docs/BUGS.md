@@ -118,12 +118,14 @@
 
 - **Area:** Zombie loot drops (`docs/PHASE_3_TASKLIST.md` Task 6.1)
 - **Repro:** Kill a zombie in PIE and observe the spawned `BP_ItemPickup` drop.
-- **Actual:** `AddImpulse` is applied to the dropped pickup, but `BP_ItemPickup`'s
-  `InteractionMesh` doesn't have `bSimulatePhysics` enabled, so the impulse likely has
-  nothing to act on — no visible scatter-on-drop.
+- **Actual:** `AddImpulse` is applied to the dropped pickup's `InteractionMesh`.
 - **Expected:** Dropped loot should visibly scatter with a slight impulse.
-- **Status:** Open. Likely a one-line fix (enable `bSimulatePhysics` on `BP_ItemPickup`'s
-  `InteractionMesh`) if the scatter feel is wanted.
+- **Status:** Closed. Re-verified `BP_ItemPickup`'s `InteractionMesh` component template
+  directly — `bSimulatePhysics` was already `True` (Mobility `Movable`, `CollisionEnabled`
+  `QueryAndPhysics`, profile `BlockAllDynamic`), so the earlier read that flagged this was
+  stale. `Server_RollAndSpawnLoot` in `BP_ZombieBase` targets `InteractionMesh` correctly
+  with `bVelChange=true`. No graph or property change was needed; confirmed in-game test
+  still recommended to eyeball the scatter feel.
 
 ## Ammo replication is unconditioned (bandwidth concern)
 
@@ -412,7 +414,7 @@
   in Task 1.1/1.2 is built and compiles clean; see `docs/PHASE_5_TASKLIST.md` Status Note
   (1.1/1.2) for what shipped.
 
-## `GatherSessionState` logs a benign "Accessed None" for players with no PlayerState yet
+## `GatherSessionState` logs a benign "Accessed None" for players with no PlayerState yet (RESOLVED)
 
 - **Area:** `BP_GameInstance_NoBrainers::GatherSessionState`
 - **Repro:** Start a run; at day-phase start (`BP_GameMode_ZombieStore::StartDayPhase` →
@@ -424,9 +426,11 @@
   trying to read (real) property PlayerState in Pawn" even though the `IsValid` guard already
   makes the final output correctly fall back to `""`.
 - **Expected:** No error should log when the guard already handles the null case correctly.
-- **Status:** Open, cosmetic/log-noise only — no functional break (saved `PlayerName` for that
-  slot is just `""`). Optional cleanup: replace the `Select` with a `Branch` on
-  `IsValid(PlayerState)` so `GetPlayerName` is only called on the true branch.
+- **Status:** RESOLVED (2026-09-24). Replaced the `Select` node with a `Branch` on
+  `IsValid(PlayerState)`, gating `GetPlayerName(PlayerState)` behind the true branch via a new
+  local string variable `ResolvedPlayerName` (set from `GetPlayerName` on true, set to `""` on
+  false). Compiles clean; behavior unchanged (saved `PlayerName` for an unassigned slot is still
+  `""`), but `GetPlayerName` is no longer called on a None `PlayerState`.
 
 ## `OnEventChanged` dispatcher doesn't reach remote clients (host-only event banner)
 
