@@ -821,33 +821,47 @@
   `add_node`-with-`MakeStruct` entry above, now confirmed to also affect manually
   reconstructed graphs, not just that action).
 
-## Test-bed log ambiguity: some tests appear to log a result twice within one `RunAllTests` session (unresolved, noted for future scrutiny)
+## Test-bed log ambiguity: some tests appear to log a result twice within one `RunAllTests` session (RESOLVED)
 
-- **Area:** Test-bed session-scoped log reading (`ue-test-runner`'s `search_logs`
-  procedure), observed while verifying the `GetApproachLocation` fix above.
-- **Repro:** A full test-bed run (`run_pie_smoke` + `poll_pie_smoke`, correctly
-  session-scoped) that also included `Test_CustomerCheckout_PaysAndDespawns` unexpectedly
-  FAILed once, despite that test being previously passing and its underlying checkout code
-  untouched by this session's changes. A dedicated read-only diagnostic re-run showed the
-  test PASSING cleanly with no errors, and reported `RunAllTests` fires only once per
-  session — but that same diagnostic report's own itemized results show several tests
-  (`CheckoutQueueSpotLocation`, `Test_CheckoutQueueOrdering`,
-  `Test_Player_MoveInputChangesLocation`, `Test_ShippingCrate_LiquidatesToStoreCash`,
-  `Test_Equipment_ReloadReplenishesMagazine`) each logging a PASS/FAIL result twice within
-  that single run — once early (~0-2.2s) and again later — with `CheckoutQueueSpotLocation`
-  specifically flipping from FAIL early to PASS late.
-- **Actual:** Not fully explained. Two runs' worth of evidence (checkout logic untouched,
-  test passing on immediate re-run, breach tests independently confirmed PASS twice) point
-  to the original FAIL being transient/timing-dependent rather than a real regression, but
-  the double-logging pattern itself — some tests apparently evaluating and logging twice
-  per session — has not been root-caused.
-- **Expected:** Each test should log exactly one PASS/FAIL result per `RunAllTests`
-  session; if intentional (e.g. a retry-on-fail pattern in the harness), that should be
-  documented rather than looking like accidental duplication.
-- **Status:** Open, low priority — no evidence of an actual functional regression, but the
-  logging behavior itself is unexplained and worth a closer look if test-bed results ever
-  look inconsistent again. Not chased further this session (out of scope; the breach-point
-  fix was the actionable item).
+- **Area:** `BP_TestController` (`EventGraph` and `RunAllTests` function graph), and
+  `ue-test-runner`'s session-scoping discipline when reading `[AUTOTEST]` lines.
+- **Repro (original):** A full test-bed run that included `Test_CustomerCheckout_PaysAndDespawns`
+  unexpectedly FAILed once; a follow-up diagnostic misread multiple prior PIE sessions' logs
+  as one session and reported several tests (`CheckoutQueueSpotLocation`,
+  `Test_CheckoutQueueOrdering`, etc.) logging twice in "one" run. A later overnight session
+  re-observed a much stronger version of the same symptom: a single 120s session appeared to
+  show `RunAllTests` firing ~45 times, with `Test_DayEndAutoSellCustomerItems` (~17%) and
+  `Test_CustomerCheckout_PaysAndDespawns` (~41%) failing intermittently with bare
+  `[AUTOTEST] FAIL:` lines and no error text.
+- **Actual (root-caused, two parts):**
+  1. The apparent "~45 cycles" was a measurement artifact, not real repeated invocation —
+     confirmed only one `BP_TestController` instance exists in the test map, `Event Tick` and
+     `Event ActorBeginOverlap` are both disabled, and nothing calls `RunAllTests` more than
+     once. The inflated count came from reading accumulated `[AUTOTEST]` lines across many
+     separate `run_pie_smoke` sessions run earlier the same day instead of isolating one
+     session's exact timestamp range.
+  2. `Test_CustomerCheckout_PaysAndDespawns` had a genuine wiring bug: it was chained onto the
+     tail of `Test_DayEndAutoSellCustomerItems`'s own async completion event
+     (`DaySellTest_Delayed` → 1.5s `Delay` → `Server_AutoSellActiveCustomers` → `LogResult`)
+     instead of being called from `RunAllTests`'s own chain, so it only ran when that async
+     path happened to complete inside the session window (~60% of runs) and, when it ran, it
+     called its own `Server_AutoSellActiveCustomers` + destroyed all customer actors
+     concurrently with `Test_DayEndAutoSellCustomerItems`'s in-flight check — corrupting that
+     test's cash math and causing both to log a bare FAIL back-to-back. A first fix attempt
+     (calling it directly from `RunAllTests`'s synchronous chain) made invocation deterministic
+     but made the race worse, since it then ran ~1.5s *before* the day-sell test's async tail
+     had finished.
+- **Expected:** Each test logs exactly one PASS/FAIL result per session, and
+  `Test_CustomerCheckout_PaysAndDespawns` runs only after `Test_DayEndAutoSellCustomerItems`'s
+  own async chain has actually resolved, not merely been called.
+- **Status:** Fixed. `Test_CustomerCheckout_PaysAndDespawns` is now wired in `EventGraph` off
+  the `then` pin of the `LogResult` call that ends `Test_DayEndAutoSellCustomerItems`'s async
+  chain, guaranteeing correct ordering and exactly-once invocation. Verified clean in a
+  properly single-session-scoped 100s run (`pie_smoke_36_041456`): 21/21 tests PASS, no
+  duplicate log lines, `Test_DayEndAutoSellCustomerItems` and `Test_CustomerCheckout_PaysAndDespawns`
+  each logged exactly once. Root cause of the original "log ambiguity" symptom was therefore a
+  mix of test-runner session-scoping error and a real test-harness ordering bug, not an engine
+  or Monolith issue.
 
 ## Tooling gotcha: `run_pie_smoke` defaults to a 5-second session, which silently truncates async test runs
 
