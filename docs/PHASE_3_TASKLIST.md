@@ -247,6 +247,18 @@ approach a breach point with the player behind it, confirm it beelines to the br
 through, and continues to the player through the wall gap) since the automation tests call
 the functions directly rather than driving full BT execution over real time.
 
+STATUS NOTE (zombie AI test coverage, overnight session 2026-09-24): added
+`Test_Zombie_ChasesPlayerWhenTargetSet` to `BP_TestController` — the first automation test to
+drive a live `BT_Zombie` over real time rather than calling a function directly. It spawns a
+`BP_ZombieBase` a fixed distance from a target actor with a clear unobstructed path, waits
+3.5s, and asserts the zombie moved a meaningful distance and got closer to the target,
+covering the Priority-1 chase Sequence (gated only on `TargetActor Is Set`). PASSED in a full
+90s test-bed run alongside all other tests except the pre-existing, unrelated
+`Test_Equipment_ReloadReplenishesMagazine` GAS failure (see `docs/BUGS.md`). This is a first
+step toward the "unit tests for zombies down the road" the breach-point fix session called
+for; a similar live-BT test for the breach branch (zombie blocked from the player, confirm it
+targets and paths to an unbreached `BP_BreachPoint`) is a natural next addition, not yet built.
+
 6. Zombie Loot Drop System
 
 [x] 6.1 Loot Table Architecture (FLootTable) & Drop Spawning
