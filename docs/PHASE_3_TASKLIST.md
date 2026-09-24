@@ -259,6 +259,23 @@ step toward the "unit tests for zombies down the road" the breach-point fix sess
 for; a similar live-BT test for the breach branch (zombie blocked from the player, confirm it
 targets and paths to an unbreached `BP_BreachPoint`) is a natural next addition, not yet built.
 
+STATUS NOTE (zombie breach-branch test coverage, overnight session 2026-09-24): added
+`Test_Zombie_TargetsBreachPointWhenBlocked` to `BP_TestController`, closing the gap flagged
+above. Spawns a `BP_ZombieBase` inside a sealed 4-wall box (new permanent
+`L_AutomationTestBed` fixtures: `Wall_ZombieBreachTest_West/East/North/South` plus a
+dedicated `BP_BreachPoint_ZombieBreachTest` just outside the box) so the zombie's navmesh
+island is disconnected from the player regardless of the player's live position at test time,
+guaranteeing `BTS_ZombieBreachDecision` finds no valid path and writes `BreachTarget`. After a
+3s delay, the test reads the zombie's `BB_Zombie.BreachTarget` Blackboard key and asserts it
+resolves to a valid `BP_BreachPoint`. No existing breach-logic asset was modified — test-only
+addition. Verified PASS in a clean, single-session-scoped 150s full test-bed run (19 tests,
+18 PASS, only the pre-existing unrelated `Test_Equipment_ReloadReplenishesMagazine` GAS
+failure) — a first, 90s/mixed-session run produced an unreliable report due to session-log
+mixing and insufficient duration for the now-longer `RunAllTests` chain; the retry with
+explicit session-id scoping and 150s duration confirmed the true result. Item 5 (zombie AI
+unit tests) from the overnight directive is now covered for both the chase and breach
+branches.
+
 6. Zombie Loot Drop System
 
 [x] 6.1 Loot Table Architecture (FLootTable) & Drop Spawning

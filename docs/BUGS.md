@@ -1,21 +1,21 @@
 # Known Bugs
 
-## Stray `Content/GASDocumentation/Maps/Map_Startup.uasset` alongside `Map_Startup.umap`
+## Stray `Content/GASDocumentation/Maps/Map_Startup.uasset` alongside `Map_Startup.umap` (RESOLVED)
 
 - **Area:** `docs/PHASE_3_TASKLIST.md` Map_Startup cleanup pass (breach-point fix session,
   2026-09-24), flagged by `ue-vision-keeper` during gate-2 review as out-of-scope-but-worth-noting.
-- **Repro:** `git status` shows `Content/GASDocumentation/Maps/Map_Startup.uasset` as untracked,
+- **Repro:** `git status` showed `Content/GASDocumentation/Maps/Map_Startup.uasset` as untracked,
   sitting next to the real level file `Map_Startup.umap`. A `.umap`-named level should never have
-  a `.uasset` twin with the same base name — this looks like a leftover from a Monolith save
+  a `.uasset` twin with the same base name — this looked like a leftover from a Monolith save
   operation during the Map_Startup edit pass, not an intentional asset.
-- **Actual:** An orphaned, likely-empty-or-stale file sits in source control's untracked list.
-  Not referenced by anything (no gameplay code opens `Map_Startup.uasset`).
+- **Actual:** An orphaned file sat in source control's untracked list.
 - **Expected:** Only `Map_Startup.umap` (plus its `.umap`-adjacent build artifacts, which are
   gitignored) should exist for this level.
-- **Status:** Open, not deleted yet — left alone rather than removed blind, since it wasn't
-  investigated further this session and deleting an unfamiliar file without confirming it's
-  truly unreferenced isn't safe to automate. Excluded from this session's commit. Safe to delete
-  after a quick check that nothing references it.
+- **Status:** RESOLVED (2026-09-24). Confirmed nothing references `Map_Startup.uasset` (a
+  repo-wide grep of `.uasset`/`.umap` files for the name found only `Map_Startup.umap` itself),
+  and it was a valid-but-unrelated Unreal package header, not part of the real level — deleted.
+  `Map_Startup.umap` (the real level, already committed and verified working via the breach-point
+  fix's test-bed runs) is untouched.
 
 ## `BP_CustomerSpawner::ActiveCustomers` is not actually replicated
 
