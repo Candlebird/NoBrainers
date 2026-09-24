@@ -627,15 +627,18 @@
   starting-loadout grant (including the pistol) never fired.
 - **Expected:** Player should always spawn with a starting pistol from
   `GrantStartingLoadoutIfEmpty`.
-- **Status:** Fixed (2026-09-22). Added a `Sequence` node between `Event OnASCReady` and its
+- **Status:** Fixed and verified. Added a `Sequence` node between `Event OnASCReady` and its
   two downstream chains (`then_0` → `Parent: OnASCReady` → loadout grant; `then_1` → the
   `HasAuthority` perk-application branch), so both fire independently instead of one
   overwriting the other's wire. Note for future edits to this event: Monolith's
   `blueprint.connect_pins` **replaces** an existing single connection on an output exec pin
   rather than adding a fan-out wire — always insert an explicit `Sequence` node when a second
   chain needs to run off a pin that already has a connection. Compiled 0 errors/0 warnings,
-  saved. Still needs in-PIE verification (spawn a fresh pawn and confirm the pistol appears
-  alongside perk application still working).
+  saved. Verified via automation: `Test_Player_SpawnsWithStartingPistol` in `BP_TestController`
+  reads the test player's active equipment slot right after spawn (before any other test can
+  re-equip it) and asserts its `ItemID` is `"Pistol"` — `GrantStartingLoadoutIfEmpty` hardcodes
+  the pistol as the starting weapon, so this directly confirms the grant fires. Confirmed
+  passing in a clean single-session 24/24 PIE automation run (`pie_smoke_44_054057`).
 
 
 ## Build Menu: clicking a trap does nothing (root-caused, fix in progress)
