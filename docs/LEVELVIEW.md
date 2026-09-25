@@ -26,6 +26,8 @@ Floor top is at Z = 0. Plots draw +X right, +Y **down**, to match the `top` capt
 | `ue_capture.py` | editor | SceneCapture2D to PNG with no PIE. `top [cx cy width]`, `iso yaw pitch dist` (pitch **negative**), `eye x y yaw [pitch z]`, `cam x y z pitch yaw [fov]`. Flags: `res=WxH name=<stem> roof=1 ev=<bias>`. |
 | `blender_placeholders.py` | Blender 4.5 headless | `blender --background --factory-startup --python blender_placeholders.py -- [only=Gondola,...]`. Builds low-poly placeholder props into `PlaceholderAssets/Blender/*.blend` + `PlaceholderAssets/FBX/*.fbx`. |
 | `ue_import_placeholders.py` | editor | Imports `PlaceholderAssets/FBX/SM_PH_*.fbx` to `/Game/Environment/Placeholder`, maps each material slot to `MI_LV_<slot>`, and adds one box collision. `only=` / `nocollide=` flags. |
+| `blender_gear.py` | Blender 4.5 headless | Builds the weapon models (13, grip at the origin, barrel/blade along UE +Y, a 2-bone Grip→Muzzle/Tip skeleton) and sellable item models (23, bottom-centre pivot, front +X), at real size in cm and **not** normalized. Writes `SK_Wpn_*`/`SM_Wpn_*`/`SM_Item_*` FBX files and `.blend` files to `PlaceholderAssets/`. `only=` flag. |
+| `ue_import_gear.py` | editor | Imports those FBX files to `/Game/Weapons/Meshes` (skeletal + static) and `/Game/Items/Meshes`. Maps MI_LV materials and adds box collision to static meshes. `probe=1` prints SK_FPGun's bounds. |
 | `ue_dump_level.py` | editor | Dumps every actor in the open level to JSON, which `plan.py` can plot. |
 
 ## Iteration loop

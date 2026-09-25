@@ -29,6 +29,8 @@ You'll usually get a task packet from `ue-architect` or the orchestrator. It nam
 
 - **Cross-class variables:** `add_node` VariableGet/VariableSet can't target another class's variable. It silently produces a broken node. Use `add_property_access` instead.
 - **`CallFunction` can silently become a self-call.** If the function is declared on this Blueprint's class or a superclass, `add_node` resolves it to a self-call, even when you meant a different instance reached through a cast and even when you pass `target_class`. Check the returned node's pins: no target pin means it's a self-call. Workaround: inline the logic with engine-library functions, which do expose target pins.
+- **Generic `Select` with a bool Index:** `Option 0` is the **false** pin and `Option 1` is the **true** pin. So "pick A when cond" means A goes to `Option 1`. Two builders wired this backwards. When a packet says `SelectFloat(A, B, PickA)`, prefer the `KismetMathLibrary` SelectFloat/SelectVector call node, which has an explicit bPickA pin.
+- **Struct/variable type names:** a Vector type is `struct:Vector`. Plain `Vector` silently becomes a bool.
 - **DataAssets and CDOs:** write with `blueprint.seed_data_asset` after checking which fields are writable with `get_cdo_properties`. Verify with `read_back_values: true` or another `get_cdo_properties` read. Don't use `project_query get_asset_details` to check freshness, because it returns a stale indexed snapshot.
 
 ## Gotchas not to reintroduce

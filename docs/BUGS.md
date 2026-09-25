@@ -1176,3 +1176,19 @@
   results appear should be re-run with a larger `duration`, not re-polled. `.claude/monolith/SCHEMAS.md`
   was also stale (missing `poll_pie_smoke`, `stop_pie_smoke`, `list_errored_blueprints`,
   `capture_pie_movement_clip`) and has been regenerated.
+
+## BP_ShelfActor::RestoreShelfState resizes StockedItems to empty SlotTransforms
+
+- **Area:** `/Game/Interactable/BP_ShelfActor`, `RestoreShelfState`.
+- **Repro:** Load a save that has stocked shelf slots, and trigger `RestoreShelfState` on a shelf.
+- **Actual:** After appending loaded/rebuilt items into a local array, the function resizes
+  `StockedItems` to `Array_Length(SlotTransforms)` (via `K2Node_CallArrayFunction_4` "Resize"
+  fed by `Array_Length` on `SlotTransforms`) before assigning it with `Set with Notify`.
+  `SlotTransforms` defaults to empty, so on a shelf that never had `SlotTransforms` populated,
+  this truncates `StockedItems` back to zero elements immediately after restore.
+- **Expected:** `StockedItems` should retain the restored items regardless of `SlotTransforms`'
+  length (shelf slot layout is now driven by `GetSlotTransform`'s procedural fallback, not by
+  `SlotTransforms` array length).
+- **Status:** Open, not fixed — found while implementing Task 4 (default shelf slot grid) in
+  `docs/PHASE_5_TASKLIST.md`. Task 4 was scoped to leave `RestoreShelfState`'s `StockedItems`
+  sizing untouched.
