@@ -30,18 +30,18 @@ Status: Done. `IA_ToggleBuildMode` bound to `B` in `IMC_Default`. `BP_PlayerCont
 
 **Dispatcher-binding blocker resolved:** `BP_PlayerController_ZombieStore.HandleBuildMenuBlueprintSelected(BlueprintID: Name)` is now bound to `WBP_BuildMenu`'s `OnBlueprintSelected` event dispatcher via a `K2Node_CreateDelegate`/`K2Node_AddDelegate` pair in `OpenBuildMenu`, wired to an intermediate `OnBuildMenuBlueprintSelected_Handler` Custom Event. Root cause was a Monolith engine-interaction bug, not a hand-editing limitation: `UK2Node_CreateDelegate::HandleAnyChangeWithoutNotifying()` runs automatically the moment the node's `self` pin gets connected, and at that point (before the delegate output pin is wired) it silently wipes `SelectedFunctionName` back to `NAME_None`, permanently breaking the binding. Fixed by adding a new Monolith action, `blueprint.finalize_create_delegate`, which re-applies `SetFunction()` immediately before calling the engine's own resolution logic, run only after both the `self` and delegate pins are fully wired. Verified `is_valid: true`, `selected_function_name` match, `compile_blueprint` 0 errors, saved.
 
-**Confirm-placement input landed:** new `IA_ConfirmPlacement` InputAction (Boolean), mapped to `F` in `IMC_Default` (LMB/RMB/E were already taken by `IA_PrimaryAction`/`IA_SecondaryAction`/`IA_Interact`). Bound in `BP_PlayerController_ZombieStore` (Started event) alongside `IA_ToggleBuildMode`: branches on `bBuildModeActive`, casts the controlled pawn to `BP_HeroCharacter`, reads `BuildModeComponent.GetPlacementRequest()` (`TargetSocket`/`DefenseClass`/`bValid`), and on a valid request with a non-null `DefenseClass` calls `Server_PlaceDefenseOnSocket(TargetSocket, DefenseClass)`. Compiled 0 errors, all touched assets saved. Untested in PIE — needs a playtest pass pressing `F` in Build Mode with a blueprint selected and a valid unoccupied socket targeted (expect spawn + cash deduction), and confirming it no-ops with Build Mode off, no selection, or an invalid/occupied socket.
+**Confirm-placement input landed:** new `IA_ConfirmPlacement` InputAction (Boolean), mapped to `F` in `IMC_Default` (LMB/RMB/E were already taken by `IA_PrimaryAction`/`IA_SecondaryAction`/`IA_Interact`). Bound in `BP_PlayerController_ZombieStore` (Started event) alongside `IA_ToggleBuildMode`: branches on `bBuildModeActive`, casts the controlled pawn to `BP_HeroCharacter`, reads `BuildModeComponent.GetPlacementRequest()` (`TargetSocket`/`DefenseClass`/`bValid`), and on a valid request with a non-null `DefenseClass` calls `Server_PlaceDefenseOnSocket(TargetSocket, DefenseClass)`. Compiled 0 errors, all touched assets saved. Untested in PIE — needs a playtest pass pressing `F` in Build Mode with a blueprint selected and a valid unoccupied socket targeted (expect spawn + cash deduction), and confirming it no-ops with Build Mode off, no selection, or an invalid/occupied socket. **UPDATE (2026-09-25):** `IA_ConfirmPlacement` was retired and F is no longer bound. Confirm-placement now fires from `IA_Interact` (E): in Build Mode E places the selected defense, otherwise it activates `GA_Interact`. LMB (`IA_PrimaryAction`) still places too.
 
 **STATUS NOTE (2026-09-22):** playtest reported clicking a trap in the Build Menu did
 nothing. Root-caused and fixed — see `docs/BUGS.md` ("Build Menu: clicking a trap does
 nothing"). Three separate `BP_BuildModeComponent` bugs, not the one originally suspected:
 `UpdateTargetSocket` only recomputed target validity when the traced socket actor itself
 changed (not on blueprint (re)selection), plus two latent disconnected Entry→Return exec
-pins in `GetPlacementRequest` (the actual `F`-press placement gate) and
+pins in `GetPlacementRequest` (the actual `E`-press placement gate) and
 `GetCurrentTargetSocket` — same exec-pin bug class as the earlier night-phase zombie-spawn
 regression. All three fixed; `BP_BuildModeComponent` now validates with zero disconnected
 nodes. Automation-verified via new `Test_BuildModePlacementRequest`
-(`Content/Tests/Automation`, PASSING), but still needs the real in-PIE `B`→click→aim→`F`
+(`Content/Tests/Automation`, PASSING), but still needs the real in-PIE `B`→click→aim→`E`
 manual confirmation noted above, since the automation drives `GetPlacementRequest()`
 directly rather than simulating actual input.
 
@@ -51,7 +51,7 @@ Status: Implemented as a replicated `UnlockedBlueprintIDs` array + `IsBlueprintU
 
 [x] 2.3 Place-Defense RPC
 
-Status: `Server_PlaceDefenseOnSocket(TargetSocket, DefenseClass)` implemented on `BP_PlayerController_ZombieStore` (Blueprint body behind a C++ `BlueprintImplementableEvent` scaffold from fac8297) — validates DayPhase, unoccupied socket, matching `AllowedSocketType`, looks up `DT_DefenseBlueprints.Cost` by `BlueprintID`, deducts `StoreCash`, spawns/attaches the `BP_DefenseBase` subclass onto the socket, sets `OwningSocket`/`OccupyingDefense`/`bIsOccupied`. Landed commit da31cb4. Now callable from gameplay via the `IA_ConfirmPlacement` (`F`) input added under 2.1 — end-to-end path from build-menu selection to placement is complete, untested in PIE.
+Status: `Server_PlaceDefenseOnSocket(TargetSocket, DefenseClass)` implemented on `BP_PlayerController_ZombieStore` (Blueprint body behind a C++ `BlueprintImplementableEvent` scaffold from fac8297) — validates DayPhase, unoccupied socket, matching `AllowedSocketType`, looks up `DT_DefenseBlueprints.Cost` by `BlueprintID`, deducts `StoreCash`, spawns/attaches the `BP_DefenseBase` subclass onto the socket, sets `OwningSocket`/`OccupyingDefense`/`bIsOccupied`. Landed commit da31cb4. Now callable from gameplay via the `IA_Interact` (`E`) input (originally `IA_ConfirmPlacement` on `F`) added under 2.1 — end-to-end path from build-menu selection to placement is complete, untested in PIE.
 
 [x] 3.1 Defense Base Actor (ADefenseBase)
 
@@ -77,7 +77,7 @@ Status: Done. `Server_RepairDefense`/`Server_SellDefense` implemented on `BP_Pla
 
 Acceptance Criteria
 
-Building restricted pre-defined node locations (Floor, Wall, TurretBase, Other) only activated during Day Phase by pressing B. Met end-to-end: toggle/gating, dispatcher-bound selection, and confirm-placement (`F`) → `Server_PlaceDefenseOnSocket` are all wired and compile clean. Untested in PIE.
+Building restricted pre-defined node locations (Floor, Wall, TurretBase, Other) only activated during Day Phase by pressing B. Met end-to-end: toggle/gating, dispatcher-bound selection, and confirm-placement (`E`) → `Server_PlaceDefenseOnSocket` are all wired and compile clean. Untested in PIE.
 
 Players start each run with basic blueprints (Spike Trap, Swinging Trap) unlocked. Partially met: unlock-registry defaults are correct, but Swinging Trap has no placeable actor class yet (see 3.2).
 
@@ -120,5 +120,5 @@ Status: both root-caused and fixed; automation-verified; unpushed local commit `
 
 - Build Menu: clicking a trap did nothing → fixed. See section 2.1's STATUS NOTE above and `docs/BUGS.md` for the full three-part root cause (`BP_BuildModeComponent::UpdateTargetSocket`/`GetPlacementRequest`/`GetCurrentTargetSocket`). Automation-verified via `Test_BuildModePlacementRequest`.
 - Customers never spawn on Day phase → fixed. Root cause: `BP_CustomerSpawner::GetMaxConcurrent` had its `FunctionEntry.then`→`FunctionResult.execute` exec pin disconnected (same bug class as the earlier night-phase zombie-spawn regression), so it always returned `0`, permanently failing `TrySpawnCustomer`'s `Length(ActiveCustomers) < GetMaxConcurrent` gate. See `docs/BUGS.md` — "Customers still don't spawn on Day phase" for full detail, including two secondary/unconfirmed latent issues logged for follow-up (unset `ArchetypeRow` expose-on-spawn pin; `BeginPlay` not seeding `LastKnownPhase`). Automation-verified via `Test_CustomerSpawnerMaxConcurrent`.
-- Both new tests added to `Content/Tests/Automation` (`BP_TestController`), both PASSING as of the full test-bed run this session. Both fixes still need real in-PIE manual confirmation (actual `B`→click→aim→`F` input; a real Day-phase playthrough over elapsed time) since the automation drives the underlying Blueprint functions directly.
+- Both new tests added to `Content/Tests/Automation` (`BP_TestController`), both PASSING as of the full test-bed run this session. Both fixes still need real in-PIE manual confirmation (actual `B`→click→aim→`E` input; a real Day-phase playthrough over elapsed time) since the automation drives the underlying Blueprint functions directly.
 - Incidental discovery while running the full suite (unrelated, not fixed this session, out of scope): `Test_Equipment_ReloadReplenishesMagazine` fails on a GAS tag-container mismatch (`Attempted to remove tag: State.Weapon.Reloading ... not explicitly in the container!`) during reload. Logged in `docs/BUGS.md`, needs its own diagnostic pass.
