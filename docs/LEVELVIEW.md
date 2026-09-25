@@ -24,6 +24,8 @@ Floor top is at Z = 0. Plots draw +X right, +Y **down**, to match the `top` capt
 | `ue_make_materials.py` | editor | Creates `/Game/Environment/Greybox/M_LV_Flat` + one `MI_LV_<key>` per palette entry. Idempotent. |
 | `ue_apply_layout.py` | editor | Rebuilds the **open** level from a layout JSON: deletes every `LV`-tagged actor, then spawns the layout (primitives, BPs with props and `@id` actor refs, lights, markers, PPV). Add `only=cat1,cat2` to rebuild some categories. Doesn't save. |
 | `ue_capture.py` | editor | SceneCapture2D to PNG with no PIE. `top [cx cy width]`, `iso yaw pitch dist` (pitch **negative**), `eye x y yaw [pitch z]`, `cam x y z pitch yaw [fov]`. Flags: `res=WxH name=<stem> roof=1 ev=<bias>`. |
+| `blender_placeholders.py` | Blender 4.5 headless | `blender --background --factory-startup --python blender_placeholders.py -- [only=Gondola,...]`. Builds low-poly placeholder props into `PlaceholderAssets/Blender/*.blend` + `PlaceholderAssets/FBX/*.fbx`. |
+| `ue_import_placeholders.py` | editor | Imports `PlaceholderAssets/FBX/SM_PH_*.fbx` to `/Game/Environment/Placeholder`, maps each material slot to `MI_LV_<slot>`, and adds one box collision. `only=` / `nocollide=` flags. |
 | `ue_dump_level.py` | editor | Dumps every actor in the open level to JSON, which `plan.py` can plot. |
 
 ## Iteration loop
@@ -34,6 +36,12 @@ Floor top is at Z = 0. Plots draw +X right, +Y **down**, to match the `top` capt
 4. Capture views with `ue_capture.py` and review the PNGs.
 
 Anything you place by hand **without** the `LV` tag survives step 2. Anything tagged `LV` is overwritten.
+
+## Placeholder meshes
+
+Each placeholder model is normalized to a **1 m cube centered on its pivot**, the same as `/Engine/BasicShapes/Cube`. So a layout element swaps to one by adding `mesh=PH + "<Name>"` and keeps its `size`. Author the model at its in-game proportions, or it will look stretched. The long axis is local +X, so a run along Y uses `yaw=90`. Material slot names are `lvlib.MATERIALS` keys. After adding a key, rerun `ue_make_materials.py`.
+
+All 14 models are imported to `/Game/Environment/Placeholder` and placed in `Map_Store_Outdoors`: Gondola (7.0 × 1.2 × 1.8 m), WallShelf, LogColumn, Pine, BoulderA/B (hub mountain), Elk (hub summit), BassBoat, Canoe (non-blocking, on timber stands), Tent, DisplayTable, ApparelRound, Pallet, and Chandelier (no collision, no shadow). The 1.5 m end-cap gondolas reuse the 7 m Gondola mesh scaled down, so their shelving reads squashed. Give them their own model if that matters.
 
 ## Map_Store_Outdoors summary
 

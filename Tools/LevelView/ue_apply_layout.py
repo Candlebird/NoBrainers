@@ -23,8 +23,9 @@ _mesh_cache, _mat_cache, _cls_cache = {}, {}, {}
 
 
 def _mesh(kind):
+    """kind is "box"/"cyl" or a full StaticMesh object path (placeholder meshes)."""
     if kind not in _mesh_cache:
-        _mesh_cache[kind] = unreal.load_asset(MESH[kind])
+        _mesh_cache[kind] = unreal.load_asset(MESH.get(kind, kind))
     return _mesh_cache[kind]
 
 
@@ -59,12 +60,16 @@ def spawn_prim(el):
     a = ess.spawn_actor_from_class(unreal.StaticMeshActor, _v(el["pos"]), rot)
     smc = a.static_mesh_component
     smc.set_editor_property("mobility", unreal.ComponentMobility.STATIC)
-    smc.set_static_mesh(_mesh(el["kind"]))
+    mesh = el.get("mesh")  # placeholder mesh: authored to a centered 1 m cube, so size/100 still applies
+    smc.set_static_mesh(_mesh(mesh or el["kind"]))
     s = el["size"]
     a.set_actor_scale3d(unreal.Vector(s[0] / 100.0, s[1] / 100.0, s[2] / 100.0))
-    m = _mat(el.get("mat"))
-    if m:
-        smc.set_material(0, m)
+    if mesh:
+        pass  # keeps the MI_LV_<slot> materials assigned at import
+    else:
+        m = _mat(el.get("mat"))
+        if m:
+            smc.set_material(0, m)
     if el.get("nocollide"):
         smc.set_collision_profile_name("NoCollision")
     if el.get("noshadow"):

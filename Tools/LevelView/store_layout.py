@@ -61,6 +61,9 @@ def box(id, cat, x0, y0, x1, y1, z0, z1, mat, **kw):
                      size=[abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)], mat=mat, **kw))
 
 
+PH = "/Game/Environment/Placeholder/SM_PH_"  # + name; see Tools/LevelView/blender_placeholders.py
+
+
 def cbox(id, cat, x, y, sx, sy, z0, z1, mat, yaw=0, **kw):
     """Box from center XY + size, optional yaw."""
     return _add(dict(id=id, kind="box", cat=cat, pos=[x, y, (z0 + z1) / 2], size=[sx, sy, z1 - z0], yaw=yaw,
@@ -72,12 +75,10 @@ def cyl(id, cat, x, y, d, z0, z1, mat, **kw):
 
 
 def pine(id, x, y, h, z0=0, block_trunk=True):
-    """Stylized pine: trunk + 4 shrinking foliage tiers."""
+    """Stylized pine: collidable trunk + one non-colliding foliage mesh (SM_PH_Pine)."""
     cyl(f"{id}_Trunk", "display" if block_trunk else "deco", x, y, max(30, h * 0.05), z0, z0 + h * 0.35, "timber")
-    for t in range(4):
-        d = h * (0.42 - t * 0.09)
-        zb = z0 + h * (0.25 + t * 0.18)
-        cyl(f"{id}_Tier{t}", "deco", x, y, d, zb, zb + h * 0.2, "foliage", block=False)
+    cyl(f"{id}_Foliage", "deco", x, y, h * 0.42, z0 + h * 0.25, z0 + h * 0.99, "foliage", block=False,
+        nocollide=True, mesh=PH + "Pine")
 
 
 def bp(id, cat, key, x, y, z=50, yaw=0, props=None, size=(100, 100, 100), **kw):
@@ -171,7 +172,7 @@ def build_shell(doors):
     for i in range(1, n):
         x = i * BAY
         for side, sgn in (("L", -1), ("R", 1)):
-            cyl(f"Col_{side}{i}", "structure", x, sgn * NAVE, 60, 0, CLER, "wall_log")
+            cyl(f"Col_{side}{i}", "structure", x, sgn * NAVE, 60, 0, CLER, "wall_log", mesh=PH + "LogColumn")
         # tie beam + king post truss across the nave
         box(f"Truss_{i}_Tie", "ceiling", x - 20, -NAVE, x + 20, NAVE, CLER - 60, CLER - 20, "timber")
         box(f"Truss_{i}_King", "ceiling", x - 15, -15, x + 15, 15, CLER - 20, RIDGE - 20, "timber")
@@ -228,10 +229,8 @@ def build_entrances():
 
 # ---------------------------------------------------------------- interior pieces
 def gondola(id, x, y, length, along="x", cat="shelf", h=180, depth=120, mat="metal_shelf"):
-    """A double-sided gondola run centered at (x,y)."""
-    if along == "x":
-        return cbox(id, cat, x, y, length, depth, 0, h, mat)
-    return cbox(id, cat, x, y, depth, length, 0, h, mat)
+    """A double-sided gondola run centered at (x,y). Uses the stocked placeholder mesh (long axis local +X)."""
+    return cbox(id, cat, x, y, length, depth, 0, h, mat, yaw=0 if along == "x" else 90, mesh=PH + "Gondola")
 
 
 def shelf_bp(id, x, y, yaw, cat):
@@ -280,11 +279,11 @@ def build_hub():
     _add(dict(id="Hub_Center", kind="marker", cat="zone", cls="Note", pos=[cx, cy, 0], skip_ue=True))
     cyl("Hub_PondWall", "display", cx, cy, 900, 0, 60, "stone")
     cyl("Hub_Water", "display", cx, cy, 820, 60, 62, "water", block=False, nocollide=True)
-    cyl("Hub_RockBase", "display", cx + 60, cy, 460, 0, 250, "stone")
-    cbox("Hub_RockMid", "display", cx + 100, cy + 40, 300, 260, 250, 450, "stone", yaw=25)
-    cbox("Hub_RockTop", "display", cx + 140, cy - 20, 180, 160, 450, 600, "stone", yaw=-15)
+    cbox("Hub_RockBase", "display", cx + 60, cy, 480, 440, 0, 270, "stone", yaw=10, mesh=PH + "BoulderA")
+    cbox("Hub_RockMid", "display", cx + 100, cy + 40, 320, 280, 240, 460, "stone", yaw=25, mesh=PH + "BoulderB")
+    cbox("Hub_RockTop", "display", cx + 140, cy - 20, 200, 180, 440, 610, "stone", yaw=-15, mesh=PH + "BoulderA")
     cyl("Hub_Falls", "deco", cx - 150, cy + 10, 120, 62, 450, "water", block=False, nocollide=True)
-    cbox("Hub_Elk", "deco", cx + 120, cy + 120, 160, 50, 600, 760, "wall_log", yaw=30, block=False)
+    cbox("Hub_Elk", "deco", cx + 120, cy + 100, 160, 60, 590, 790, "wall_log", yaw=30, block=False, mesh=PH + "Elk")
     pine("Hub_Pine", cx + 250, cy - 200, 750, z0=250, block_trunk=True)
     # low plinths around the pond for turrets (the 'rock ledges')
     for i, (dx, dy) in enumerate(((-600, -600), (-600, 600), (600, -600), (600, 600))):
@@ -308,7 +307,7 @@ def build_departments():
     box("Archery_Counter", "counter", 4600, -1600, 4700, -1100, 0, 105, "counter")
 
     # ---- CAMPING (left, back of nave side): tent display + food/medical gondolas
-    cbox("Camp_Tent1", "display", 5200, -800, 350, 350, 0, 220, "canvas", yaw=15)
+    cbox("Camp_Tent1", "display", 5200, -800, 350, 350, 0, 220, "canvas", yaw=15, mesh=PH + "Tent")
     cyl("Camp_Firepit", "display", 5700, -700, 140, 0, 40, "stone")
     gondola("Camp_Gond0", 5000, -2200, 800, along="x")
     shelf_bp("Shelf_Food1", 4500, -2200, 180, "FOOD")
@@ -325,15 +324,13 @@ def build_departments():
     gondola("Fish_Gond2", 2650, 1650, 700, along="y", h=150)
     shelf_bp("Shelf_Hardware3", 2650, 1200, -90, "HARDWARE")
     # boat-accessory wall bay along the right wall behind the boats
-    box("BoatWall_Shelf", "shelf", 4300, 2400, 5900, 2480, 0, 240, "metal_shelf")
+    box("BoatWall_Shelf", "shelf", 4300, 2400, 5900, 2480, 0, 240, "metal_shelf", mesh=PH + "WallShelf")
     # camping wall bay along the left wall
-    box("CampWall_Shelf", "shelf", 4300, -2480, 5800, -2400, 0, 240, "metal_shelf")
+    box("CampWall_Shelf", "shelf", 4300, -2480, 5800, -2400, 0, 240, "metal_shelf", mesh=PH + "WallShelf")
 
     # ---- BOATS (right, back): two boats on trailers, open floor
     for i, x in enumerate((4600, 5700)):
-        cbox(f"Boat_{i}_Hull", "display", x, 1650, 600, 200, 0, 120, "boat_hull")
-        cbox(f"Boat_{i}_Stripe", "display", x, 1650, 610, 210, 90, 105, "boat_accent", block=False)
-        cbox(f"Boat_{i}_Console", "display", x + 80, 1650, 100, 80, 120, 220, "boat_accent")
+        cbox(f"Boat_{i}_Hull", "display", x, 1650, 600, 200, 0, 220, "boat_hull", mesh=PH + "BassBoat")
 
     # ---- AQUARIUM (back center) with rock frame
     box("Aquarium_Tank", "display", 6450, -700, 6990, 700, 0, 300, "glass", label2d="AQUARIUM")
@@ -344,13 +341,15 @@ def build_departments():
 
     # ---- NAVE islands: low display tables / canoe plinths (waist-high cover, shoot over them)
     for i, (x, y, yaw) in enumerate(((2000, -500, 0), (2000, 500, 0), (5000, -450, 20), (5000, 450, -20))):
-        cbox(f"Nave_Table{i}", "display", x, y, 300, 140, 0, 90, "timber", yaw=yaw)
-    cbox("Nave_Canoe", "display", 2000, 0, 500, 90, 90, 150, "boat_hull", block=False)
+        cbox(f"Nave_Table{i}", "display", x, y, 300, 140, 0, 100, "timber", yaw=yaw, mesh=PH + "DisplayTable")
+    for dx in (-150, 150):  # sawhorse stands under the canoe
+        cbox(f"Nave_CanoeStand{'L' if dx < 0 else 'R'}", "display", 2000 + dx, 0, 20, 80, 0, 90, "timber")
+    cbox("Nave_Canoe", "display", 2000, 0, 500, 90, 90, 150, "boat_accent", block=False, mesh=PH + "Canoe")
 
     # ---- APPAREL / gifts (front, flanking the main aisle)
     for i, y in enumerate((-1600, 1600)):
-        cyl(f"Apparel_Round{i}a", "shelf", 1700, y - 200, 140, 0, 130, "shelf_green")
-        cyl(f"Apparel_Round{i}b", "shelf", 1700, y + 250, 140, 0, 130, "shelf_green")
+        cyl(f"Apparel_Round{i}a", "shelf", 1700, y - 200, 140, 0, 130, "shelf_green", mesh=PH + "ApparelRound")
+        cyl(f"Apparel_Round{i}b", "shelf", 1700, y + 250, 140, 0, 130, "shelf_green", mesh=PH + "ApparelRound")
     shelf_bp("Shelf_Trinkets1", 1500, -700, 0, "TRINKETS")
     shelf_bp("Shelf_Trinkets2", 1500, 700, 0, "TRINKETS")
 
@@ -362,7 +361,7 @@ def build_departments():
     box("Stock_WallX2", "wall", 6000, 1100, 6040, 1400, 0, 400, "wall_plaster")    # 1100..1400 ; gap 1400..1800
     bp("ShippingCrate", "gameplay", "crate", 6500, 1300, 50, 90, label2d="CRATE")
     for i, y in enumerate((2200, 2350)):
-        cbox(f"Stock_Pallet{i}", "prop", 6300, y, 120, 100, 0, 140, "canvas")
+        cbox(f"Stock_Pallet{i}", "prop", 6300, y, 120, 100, 0, 140, "canvas", mesh=PH + "Pallet")
 
 
 def build_defense():
@@ -425,7 +424,8 @@ def build_lighting():
     for i in range(1, int(L / BAY)):
         x = i * BAY
         if i % 2 == 0:
-            cyl(f"Chandelier_{i}", "ceiling", x, 0, 220, 760, 800, "light_fixture", noshadow=True)
+            cyl(f"Chandelier_{i}", "ceiling", x, 0, 240, 755, 800, "light_fixture", noshadow=True, nocollide=True,
+                mesh=PH + "Chandelier")
             light(f"L_Nave_{i}", x, 0, 720, 150, radius=3000)
     # side aisle cans
     for x in range(700, L, 1000):

@@ -79,3 +79,6 @@ DerivedDataCache/*
 # Rider user specific files
 .idea/
 /Plugins/Developer/RiderLink
+
+# Python cache
+__pycache__/
