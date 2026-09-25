@@ -1214,7 +1214,7 @@
 - **Repro:** In PIE (Map_Store_Outdoors), press `B`, pick Spike Trap or Swinging Trap, try to place it.
 - **Actual:** Nothing is ever placed. There's no visual feedback.
 - **Expected:** `B` opens the menu. Picking an entry closes it and shows a ghost of the defense. The ghost snaps to valid sockets and is green there, red elsewhere. LMB places, RMB cancels.
-- **Status:** Open (reported 2026-09-25, user test).
+- **Status:** Fixed 2026-09-25 (commit ba8fa09), needs PIE confirmation. Causes: the server gate allowed only DayPhase (client allows Day/Morning/Dusk); placement was bound only to F; there was no visual feedback. Now: picking a defense spawns a local `BP_BuildGhost` (M_BuildGhost) that snaps to compatible sockets within 150uu (green/red, incl. cash check). LMB/F place and stay in ghost mode, RMB exits. Loose tag `State.BuildMode` blocks fire/ADS/melee. The server gate is now `!= Night AND != RunOver`, and it prints the rejection reason.
 
 ## Zombies don't damage breachable entrances
 
@@ -1222,7 +1222,7 @@
 - **Repro:** Night phase in Map_Store_Outdoors. Let zombies reach a breach entry.
 - **Actual:** Zombies walk up to the entrance and may play attacks, but the entrance takes no damage.
 - **Expected:** Zombies damage the breach point until it breaks, then go through.
-- **Status:** Open (reported 2026-09-25). Possibly related to "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
+- **Status:** Fixed 2026-09-25 (commit ba8fa09), needs PIE confirmation. Cause: `GetApproachLocation` put zombies 250uu from panel center, but the melee sweep reaches ~190uu. Now: the offset is half the panel thickness (scale aware) plus `ApproachDistance` 60; the breach MoveTo AcceptableRadius is 25; `PerformMeleeAttack` casts HitActor straight to BPI_Breachable (the DoesImplementInterface hop is removed). Fallback if still failing: a dedicated `PerformBreachAttack` using the closest point on BreachMesh. Was possibly related to "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
 
 ## Shelf panel slots don't refresh after upgrading the shelf
 
