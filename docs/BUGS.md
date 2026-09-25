@@ -1,6 +1,14 @@
 # Known Bugs
 
 
+## Zombie BPs still use the old `ZombieTest` mesh; new `SK_Zombie` rig not wired in yet
+
+- **Area:** `/Game/Characters/Zombie/` (`SK_Zombie`, `IK_Zombie`, `RTG_Mannequin_To_Zombie`, `Animations/*_Zombie`), `ABP_Zombie`, zombie character BPs.
+- **Repro:** Spawn a zombie in PIE.
+- **Actual:** The zombies render `ZombieTest` driven by `ABP_Zombie`. The re-rigged `SK_Zombie` (built by `Tools/Characters/blender_rig_zombie.py`) and its retargeted clips aren't used by any gameplay BP. `SK_Zombie` also has no physics asset.
+- **Expected:** Zombie BPs use `SK_Zombie` with an AnimBP on `SK_Zombie_Skeleton` that plays the retargeted `*_Zombie` clips. The mesh needs a physics asset if ragdoll or hit reactions need one.
+- **Status:** Open (known limitation). The swap was left out on purpose so nothing breaks until the new rig has been previewed.
+
 ## Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE
 
 - **Area:** `/Game/Levels/Map_Store_Outdoors`, `BP_BreachPoint`
