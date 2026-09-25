@@ -9,35 +9,6 @@
 - **Expected:** Zombies path to the panel, damage it, and pass through once it breaks. Players can repair it.
 - **Status:** Open. Needs in-PIE confirmation. If scaling breaks it, split each gap into several unit-scale panels in `Tools/LevelView/store_layout.py` (`breach_panel`).
 
-## Automation test bed: 5 customer/shipping tests fail because Day-1 gate blocks all spawning
-
-- **Area:** `BP_CustomerSpawner::TrySpawnCustomer`, discovered while verifying the day/night
-  cycle redesign's automation coverage (`docs/PHASE_5_TASKLIST.md`'s 2026-09-24 update), but
-  the root cause predates that redesign.
-- **Repro:** Run the full automation suite (`Content/Tests/Automation`, `BP_TestController.RunAllTests`)
-  fresh from `L_AutomationTestBed`, which always starts at Day 1.
-- **Actual:** `TrySpawnCustomer` has a hard gate, `Branch(bShippingCrateOnly OR CurrentDayNumber <= 1)`,
-  that no-ops the function (no spawn, no re-arm timer) whenever `CurrentDayNumber <= 1`. This
-  gate was added by commit `e3882fe` ("Delay customer spawning until after the first night"),
-  landed before the day/night redesign, and was never paired with a test-bed bypass or a
-  `CurrentDayNumber` bump in the affected tests. Since the test bed always starts at Day 1, every
-  test that depends on an actual customer spawning gets zero customers and fails:
-  `Test_CustomerSpawnerMaxConcurrent`, `Test_CustomerSpawner_SpawnsAtValidLocation`,
-  `Test_ShippingCrate_LiquidateAll_HandlesMultipleCrates`, `Test_DayEndAutoSellCustomerItems`,
-  `Test_CustomerCheckout_PaysAndDespawns`. Confirmed 100% reproducible across two independent
-  100s `run_pie_smoke` runs (ruling out the documented duration-truncation/log-mixing false-alarm
-  modes elsewhere in this file) and confirmed unrelated to the day/night redesign's new
-  Morning/Dusk phases (the gate checks `CurrentDayNumber`, not `CurrentPhase`).
-- **Expected:** The full automation suite should pass from a fresh Day-1 test-bed start. Either
-  the affected tests should bump `CurrentDayNumber` past 1 before exercising customer spawning,
-  or `TrySpawnCustomer` should expose a test-bypass for the Day-1 gate.
-- **Status:** Open, not fixed this session — out of scope for the day/night redesign that
-  surfaced it. All 4 newly-added phase-redesign tests
-  (`Test_GameMode_PhaseCycleOrder`/`Test_GameMode_CloseShopEarlyGoesToDusk`/
-  `Test_ZombieSpawner_SpawnsOnlyAtNight`/`Test_CustomerSpawner_StopsAtDuskAndMorning`) and the
-  pre-existing `Test_GameState_DayNightPhaseTransition` all pass; only these 5 pre-existing,
-  customer-spawn-dependent tests are affected.
-
 ## Customers never move from spawn after shelves are stocked (RESOLVED — needs in-PIE confirmation)
 
 - **Area:** Customer AI shopping loop, `BT_Customer` / `BP_ShelfActor` / `BTT_FindBestShelfSlot`
