@@ -1192,3 +1192,18 @@
 - **Status:** Open, not fixed — found while implementing Task 4 (default shelf slot grid) in
   `docs/PHASE_5_TASKLIST.md`. Task 4 was scoped to leave `RestoreShelfState`'s `StockedItems`
   sizing untouched.
+
+## Phase 6 UI pass: known limitations
+
+- **Area:** `/Game/UI/WBP_HUD` and related widgets, `docs/PHASE_6_TASKLIST.md` §2.1–2.4.
+- **Repro:** Play any session after the 2026-09-25 UI restyle.
+- **Actual:**
+  - No hit-marker animation on the reticle (§2.2).
+  - Teammates show only "DOWN". There's no separate Down vs Dead state, because the game has no downed state yet (§2.1).
+  - The interact prompt always says "Interact" rather than a per-actor verb such as "Stock Shelf" (§2.2).
+  - The build menu is a grid, not a carousel or radial (§2.4).
+  - The phase panel's sun/moon image uses no real icon art, and the UI uses the stock Roboto font.
+  - UMG pops fade in with RenderOpacity only. `ui.create_animation_v2` can't animate RenderTransform scale.
+  - Build entry cost text isn't green (Cash color). `SetEntryData` drives its color white/grey at runtime.
+- **Expected:** everything listed in §2.1–2.4.
+- **Status:** Open. These were deferred from the overnight restyle as out of scope.

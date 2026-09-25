@@ -50,6 +50,34 @@
 * Node interaction UI: Repair/Dismantle options when targeting occupied sockets in Build Mode.
 * Employee Discount Kiosk menu: Store upgrades, raycast/melee weapons, and advertisement level controls.
 
+> **STATUS NOTE (2026-09-25, overnight UI restyle pass):**
+>
+> All 16 UI widgets now use one shared style: dark rounded panels, an Ink outline, gold/red hover states, and outlined Roboto Bold text. That covers WBP_HUD plus the kiosk, inventory, build, event banner, shelf, main menu, and meta shop widgets.
+>
+> The HUD restructure added:
+> - Health/armor/stamina rows in the bottom-left.
+> - A phase panel with an M:SS timer (top-center).
+> - A cash panel with a pulse animation (top-right).
+> - A weapon panel with Primary/Secondary/Melee pips and a red empty-mag color (bottom-right).
+> - An `[E] Interact` prompt, driven by a 250 uu trace.
+> - A new `WBP_TeammateEntry` list (name, health, DOWN).
+>
+> Everything compiled clean. The 2.x boxes stay unchecked until PIE confirms the checks below and the gaps are closed.
+>
+> **Manual PIE checks:**
+> - **HUD:**
+>   - Taking damage, gaining armor, and sprinting update their bars. The armor row stays hidden while armor is 0.
+>   - The phase name, color, and M:SS timer change on each phase change.
+>   - Earning cash pulses the cash panel.
+>   - Switching slots moves the active pip and changes the weapon name. An empty magazine turns the ammo red.
+> - **Interact prompt:** within about 2.5 m of an interactable, `[E] Interact` appears, and it hides when you look away.
+> - **Teammates (2-player Listen Server):** a row appears for the other player, its health bar tracks their health, and it shows "DOWN" at reduced opacity on death.
+> - **Kiosk, Build (B), Inventory, Shelf:** buttons turn gold on hover. The Sell and Drop buttons turn red on hover. Locked or unaffordable entries still grey out. Shelf slots still tint on drag-over and select. The combo bonus text reads clearly.
+> - **Event banner:** it fades in below the phase panel, keeps its event tint, and auto-hides.
+> - **Main menu / meta shop:** the "NO BRAINERS" title reads well, Quit turns red on hover, and meta shop entries have good contrast.
+>
+> **Gaps:** see docs/BUGS.md — "Phase 6 UI pass: known limitations."
+
 ---
 
 ### 3. Audio Architecture & Dynamic Music Engine

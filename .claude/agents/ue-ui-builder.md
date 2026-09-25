@@ -35,6 +35,12 @@ Real gameplay logic (state machines, RPCs, event wiring beyond "collect this wid
 - **`MakeArray` can't be resized in place.** To add an input, remove and recreate the node at the new pin count. Then rewire every input and the output, and verify with `get_graph_data`.
 - **Cross-class variables:** use `add_property_access`. `add_node` VariableGet/VariableSet on a foreign class silently produces a broken 0-pin node.
 
+- **Engine macros (ForEachLoop etc.):** pass `macro_blueprint: "/Engine/EditorBlueprintResources/StandardMacros"` with `macro_name`. `macro_name` alone fails.
+- **Hit results:** break `FHitResult` with a `GameplayStatics.BreakHitResult` CallFunction node. Generic `BreakStruct` silently yields no output pins.
+- **Array input pins** (e.g. `ObjectTypes`, `ActorsToIgnore`) take no literal defaults. Wire a `MakeArray` in and `set_pin_default` its `[0]` pin once it specializes.
+- **UMG animations:** `ui.create_animation_v2` only animates plain float properties (e.g. `RenderOpacity`). It can't animate `RenderTransform` scale, so use opacity.
+- **SizeBoxSlot rejects `v_align`** on its child. Center through the parent `HorizontalBoxSlot` instead.
+
 ## Gotchas not to reintroduce
 
 - `WBP_KioskCatalog.RebuildCatalog` lists every row of its `CatalogTable` with no category filter. To give a kiosk its own catalog, give it its own DataTable. Don't add filter logic to the widget.
