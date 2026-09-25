@@ -1,13 +1,13 @@
 # Known Bugs
 
 
-## Zombie BPs still use the old `ZombieTest` mesh; new `SK_Zombie` rig not wired in yet
+## Old `ZombieTest` walk/idle clips are corrupt; `SK_Zombie` has no physics asset
 
-- **Area:** `/Game/Characters/Zombie/` (`SK_Zombie`, `IK_Zombie`, `RTG_Mannequin_To_Zombie`, `Animations/*_Zombie`), `ABP_Zombie`, zombie character BPs.
-- **Repro:** Spawn a zombie in PIE.
-- **Actual:** The zombies render `ZombieTest` driven by `ABP_Zombie`. The re-rigged `SK_Zombie` (built by `Tools/Characters/blender_rig_zombie.py`) and its retargeted clips aren't used by any gameplay BP. `SK_Zombie` also has no physics asset.
-- **Expected:** Zombie BPs use `SK_Zombie` with an AnimBP on `SK_Zombie_Skeleton` that plays the retargeted `*_Zombie` clips. The mesh needs a physics asset if ragdoll or hit reactions need one.
-- **Status:** Open (known limitation). The swap was left out on purpose so nothing breaks until the new rig has been previewed.
+- **Area:** `/Game/GASDocumentation/Characters/Minions/Zombie/Animations/` (`Enemy_Walk`, `Enemy_Idle` on `ZombieTest_Skeleton`), `/Game/Characters/Zombie/SK_Zombie`.
+- **Repro:** Play `Enemy_Walk` on `ZombieTest`. Its pelvis evaluates about 110 m up. `Enemy_Idle` collapses every bone to one point.
+- **Actual:** Those two clips are unusable, and anything retargeted from them is too. The zombie BPs (`BP_Zombie_Base`, `BP_ZombieBase`) now use `SK_Zombie` with `ABP_SK_Zombie`, which plays `Enemy_Walk_ZM` and `Enemy_Idle_ZM`. Those are retargeted from the clean `/Game/AnimStarterPack` originals via `RTG_Mannequin_To_Zombie`. `SK_Zombie` still has no physics asset.
+- **Expected:** Old corrupt clips are deleted or ignored. `SK_Zombie` gets a physics asset if ragdoll or hit reactions need one.
+- **Status:** Open (known limitation). Gameplay no longer uses the corrupt clips.
 
 ## Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE
 
