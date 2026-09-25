@@ -27,9 +27,13 @@ No Brainers is our first dip into the multiplayer genre. It's a test of how well
 ## 2. Core Gameplay: Experience
 
 **Session Structure:**
-Wave-based rounds separated by breaks, driven by a day/night cycle:
-- **Night (Wave):** Zombies swarm into the store itself. Players fight to survive using weapons and placed defenses (turrets, spike traps, etc.) inside the store, and collect item drops from kills.
-- **Day (Break):** A menu pops up between waves where players place looted items on shelves to stock the store. Customers come and buy the stocked items, generating money.
+A four-phase, time-based day/night cycle (updated 2026-09-24 — user-confirmed; previously wave-based, ending Night on a zombie-kill count rather than a timer):
+- **Night:** Zombies spawn continuously at random intervals from outside the store for the phase's full duration. Players fight to survive using weapons and placed defenses (turrets, spike traps, etc.) inside the store, and collect item drops from kills. Night ends on its timer regardless of how many zombies are still alive — surviving zombies are never forcibly despawned and can carry over into later phases.
+- **Morning:** A quiet buffer phase. Neither zombies nor customers spawn; players can regroup, repair, and build.
+- **Day:** Customers come and shop for stocked items, generating money; players place looted items on shelves to stock the store.
+- **Dusk:** Customers stop spawning as the store closes; zombies still don't spawn. Another buffer for last-minute building/repair before Night returns.
+
+The cycle repeats Night → Morning → Day → Dusk → Night indefinitely. Because zombies can persist across phases, defeat (all players dead) can now trigger in any phase, not just Night.
 
 **Core Loop:**
 Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy weapons/ammo/defenses with employee discount -> Repeat
