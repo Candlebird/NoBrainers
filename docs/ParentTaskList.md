@@ -6,6 +6,8 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-09-24):** A new game level, `/Game/Levels/Map_Store_Outdoors`, now exists. It's a Bass Pro-style hunting and outdoor superstore greybox of about 70×50 m. It has a vaulted clerestory nave, 3 checkouts, a central hub display, 6 breach entries, and defense sockets. The layout is authored in Python with the new LevelView toolkit (`Tools/LevelView/`, documented in `docs/LEVELVIEW.md`), then pushed into the editor and reviewed over 3 in-editor passes. The Main Menu's Start Run now opens it. `Test_Level_Zero` is untouched. **Needs in-PIE confirmation.** See the manual test list in `docs/LEVELVIEW.md` and the BUGS.md entry "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
+
 **UPDATE (2026-09-22):** Phase 5 work is active alongside Phase 4 (see below) — Tasks
 1.1/1.2, 2.1/2.2, 3.x (save/load, meta-unlock gating), and the perk data model/application
 pipeline (4.3's mechanical half) are built. **Two regressions surfaced from the user's own

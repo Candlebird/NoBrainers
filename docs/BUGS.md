@@ -1,5 +1,14 @@
 # Known Bugs
 
+
+## Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE
+
+- **Area:** `/Game/Levels/Map_Store_Outdoors`, `BP_BreachPoint`
+- **Repro:** Enter night in the new map and let zombies reach a breach entry.
+- **Actual:** Unknown. Each entry gap is filled by one `BP_BreachPoint` scaled non-uniformly (for example 0.3 × 7.2 × 3.0 on the front doors) so it seals the wall. The BP was authored as a 1 m cube. Its attack range, repair interaction, and navmesh obstacle and dynamic-update behavior haven't been tested at this scale.
+- **Expected:** Zombies path to the panel, damage it, and pass through once it breaks. Players can repair it.
+- **Status:** Open. Needs in-PIE confirmation. If scaling breaks it, split each gap into several unit-scale panels in `Tools/LevelView/store_layout.py` (`breach_panel`).
+
 ## Automation test bed: 5 customer/shipping tests fail because Day-1 gate blocks all spawning
 
 - **Area:** `BP_CustomerSpawner::TrySpawnCustomer`, discovered while verifying the day/night
