@@ -52,13 +52,15 @@ All 14 models are imported to `/Game/Environment/Placeholder` and placed in `Map
 - 3 checkouts front-right, with queues running +X. There's a fireplace lodge front-left and a service desk with discount and shop kiosks.
 - A central hub with a pond, rock mountain, waterfall, and pine, plus 4 turret ledges.
 - Departments: hunting, archery, and ammo (left front). Camping, food, and medical (left rear). Fishing and hardware (right). Boats, apparel, and the aquarium (back). There's also a stock room with the shipping crate.
+- Customers spawn on the entry mats behind the left and center front doors and leave through the right door, next to the checkouts. The front floor sockets sit in the door openings, so barricades go between the doors and the customers.
+- Stockable shelves (`BP_ShelfActor`) have a glowing green header with their category name and a green floor pad. Gondolas and wall racks without them are decoration.
 - Defense sockets at every entry, the hub, and the checkout. Nine zombie spawn points outside feed `ZombieSpawnerManager`.
 - 2D metrics: about 2,780 m² walkable inside, 640 m² of open-fight area, no pockets, and 78% interior turret cover.
 
 ## Manual PIE tests (pending)
 
 1. Start Run from the Main Menu and confirm you spawn in `Map_Store_Outdoors` at the front of the nave with the starting pistol.
-2. Stock the shelves. After the first night, customers should spawn at the front, shop, queue at the 3 checkouts (queues form along +X), and leave through the front.
+2. Stock the shelves. After the first night, customers should appear on the entry mats behind the left and center doors, shop, queue at the 3 checkouts (queues form along +X), and leave through the right front door.
 3. At night, zombies should spawn outside and attack the 6 breach panels (3 front, 2 side, 1 dock). Check that a broken panel lets them in and that repair works.
 4. Build mode: place defenses on the entry, hub, and checkout sockets.
 5. General: check that the lighting reads, that there are no invisible walls or stuck spots around the hub rocks, pond, and gondolas, and that the stock room crate is reachable.

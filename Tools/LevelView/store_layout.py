@@ -264,10 +264,14 @@ def build_front():
     bp("Kiosk_Discount", "gameplay", "kiosk_discount", 1250, -2000, 50, 90, label2d="DISC")
     bp("ShopStation", "gameplay", "shop_station", 1650, -2000, 50, 90, label2d="SHOP")
 
-    # ---- customer flow: spawn inside the doors, exit just inside the doors
-    for i, y in enumerate((-400, 0, 400)):
-        bp(f"CustSpawn_{i + 1}", "spawn", "cust_spawn", 300, y, 90, 0, size=(0, 0, 0), block=False)
-    bp("CustomerExit", "gameplay", "exit", 250, 700, 50, 180, block=False, label2d="EXIT")
+    # ---- customer flow: walk in through the left/center doors, leave through the right door (by the checkouts).
+    # Spawns/exit sit on entry mats in line with the door openings (doors span Y -360..360), just behind the
+    # front barricade sockets, so customers read as coming in from outside.
+    for i, y in enumerate((-240, 0, 240)):
+        cbox(f"Entry_Mat{i + 1}", "floor", 190, y, 220, 200, 1, 2, "floor_rug", nocollide=True)
+    for i, y in enumerate((-240, 0)):
+        bp(f"CustSpawn_{i + 1}", "spawn", "cust_spawn", 260, y, 90, 0, size=(0, 0, 0), block=False)
+    bp("CustomerExit", "gameplay", "exit", 200, 240, 50, 180, block=False, label2d="EXIT")
     bp("CustomerSpawner", "spawn", "cust_spawner", 150, -900, 100, 0, size=(0, 0, 0), block=False)
     marker("PlayerStart_1", "spawn", "PlayerStart", 1200, -300, 100, 0)
     marker("PlayerStart_2", "spawn", "PlayerStart", 1200, 300, 100, 0)
@@ -367,8 +371,8 @@ def build_departments():
 def build_defense():
     """Defense sockets: FLOOR (traps/barricades), WALL (wall traps), TURRET_BASE, OTHER."""
     # front vestibule: barricade line + wall traps flanking the doors
-    for i, y in enumerate((-450, 0, 450)):
-        socket(f"Sock_FrontFloor{i + 1}", "FLOOR", 450, y)
+    for i, y in enumerate((-240, 0, 240)):  # one barricade per door opening, between the doors and the entry mats
+        socket(f"Sock_FrontFloor{i + 1}", "FLOOR", 110, y)
     for s, y in (("L", -520), ("R", 520)):
         socket(f"Sock_FrontWall{s}", "WALL", 40, y, 150, 0)
     socket("Sock_FrontTurret", "TURRET_BASE", 1300, 0)
