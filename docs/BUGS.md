@@ -1207,3 +1207,35 @@
   - Build entry cost text isn't green (Cash color). `SetEntryData` drives its color white/grey at runtime.
 - **Expected:** everything listed in §2.1–2.4.
 - **Status:** Open. These were deferred from the overnight restyle as out of scope.
+
+## Build mode: no trap can be placed (spike, swinging), placement flow needs ghost preview
+
+- **Area:** `BP_BuildModeComponent`, `BP_PlayerController_ZombieStore`, `WBP_BuildMenu`, `BP_DefenseSocket`, `Content/Defense/BP_Trap_*`
+- **Repro:** In PIE (Map_Store_Outdoors), press `B`, pick Spike Trap or Swinging Trap, try to place it.
+- **Actual:** Nothing is ever placed. There's no visual feedback.
+- **Expected:** `B` opens the menu. Picking an entry closes it and shows a ghost of the defense. The ghost snaps to valid sockets and is green there, red elsewhere. LMB places, RMB cancels.
+- **Status:** Open (reported 2026-09-25, user test).
+
+## Zombies don't damage breachable entrances
+
+- **Area:** `BT_Zombie`, `BTT_ZombieMeleeAttack`, `BP_ZombieAttackComponent`, `BP_BreachPoint` / `BPI_Breachable`
+- **Repro:** Night phase in Map_Store_Outdoors. Let zombies reach a breach entry.
+- **Actual:** Zombies walk up to the entrance and may play attacks, but the entrance takes no damage.
+- **Expected:** Zombies damage the breach point until it breaks, then go through.
+- **Status:** Open (reported 2026-09-25). Possibly related to "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
+
+## Shelf panel slots don't refresh after upgrading the shelf
+
+- **Area:** `WBP_ShelfPanel`, `BP_ShelfActor` upgrade
+- **Repro:** Open a shelf's panel and press Upgrade.
+- **Actual:** The slot count stays the same until the panel is closed and reopened.
+- **Expected:** The slots rebuild right after the upgrade.
+- **Status:** Fixed 2026-09-25, needs PIE confirmation. `BP_ShelfActor` fires a new `OnShelfSlotsChanged` dispatcher from `OnRep_StockedItems` and `ApplyShelfTier`. `WBP_ShelfPanel.SetShelf` binds it (unbinds old/duplicate first; Destruct unbinds) to `HandleShelfSlotsChanged`, which re-runs `SetShelf` when the slot count changed, else `RefreshAllSlots`, then `RefreshUpgradeButton`. Side note: `SetShelf` has a pre-existing disconnected `SetText` node (`K2Node_CallFunction_0`), left untouched.
+
+## BP_ShelfActor has no shelf mesh
+
+- **Area:** `/Game/Interactable/BP_ShelfActor`
+- **Repro:** Look at any shelf actor in the level.
+- **Actual:** No shelf mesh is visible.
+- **Expected:** A shelf mesh is visible (placeholder `SM_PH_WallShelf` exists in `/Game/Environment/Placeholder/`).
+- **Status:** Fixed 2026-09-25, needs PIE confirmation. Added `ShelfMesh` (SM_PH_WallShelf, BlockAll, loc (0,0,50), scale 0.5 to match the 1 m footprint `GetShelfFaceOffset` assumes). `InteractionMesh` is now hidden in game (collision untouched). Slot alignment depends on each placed instance's `SlotTransforms`.
