@@ -1239,3 +1239,11 @@
 - **Actual:** No shelf mesh is visible.
 - **Expected:** A shelf mesh is visible (placeholder `SM_PH_WallShelf` exists in `/Game/Environment/Placeholder/`).
 - **Status:** Fixed 2026-09-25, needs PIE confirmation. Added `ShelfMesh` (SM_PH_WallShelf, BlockAll, loc (0,0,50), scale 0.5 to match the 1 m footprint `GetShelfFaceOffset` assumes). `InteractionMesh` is now hidden in game (collision untouched). Slot alignment depends on each placed instance's `SlotTransforms`.
+
+## Sock_SideL_Wall sits inside the gun rack and may face the wrong way
+
+- **Area:** `Map_Store_Outdoors`, `BP_DefenseSocket` actor `Sock_SideL_Wall` at (3900, -2460, 150), yaw 0.
+- **Repro:** Place the swinging trap (WALL) on `Sock_SideL_Wall`.
+- **Actual:** The socket overlaps `GunRack_Wall`. With yaw 0 its +X may not point away from the wall, so `SM_Def_SwingMount` (backplate at local x = -40) may not sit flush on the wall.
+- **Expected:** Wall sockets sit 40 cm off the wall face with +X pointing into the room, clear of other props.
+- **Status:** Open, not yet checked in PIE. Move or rotate the socket if the trap floats or clips.
