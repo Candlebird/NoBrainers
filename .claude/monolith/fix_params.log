@@ -814,3 +814,4 @@ blueprint.get_graph_data: blueprint_path->asset_path
 blueprint.connect_pins_bulk: connect_pins->connect_pins_bulk, blueprint_path->asset_path, [0].from_node->source_node, [0].from_pin->source_pin, [0].to_node->target_node, [0].to_pin->target_pin
 blueprint.compile_blueprint: blueprint_path->asset_path
 blueprint.get_graph_data: blueprint_path->asset_path
+blueprint.get_graph_data: blueprint_path->asset_path
