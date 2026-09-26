@@ -1243,7 +1243,7 @@
 - **Repro:** Interact with a shelf to open the shelf UI, then press Tab.
 - **Actual:** Only the inventory closes; the shelf panel stays open.
 - **Expected:** Tab, Escape, and E each close the whole interaction window the player is in (shelf, kiosks, and any other interaction UI).
-- **Status:** Fixed, pending user verification in PIE. Tab, Escape and E now route through `CloseActiveInteractionUI` on `BP_PlayerController_ZombieStore`, which closes the shelf and inventory together. Covered by `Test_InteractionUI_CloseActive`.
+- **Status:** Fixed and confirmed by the user in PIE on 2026-09-25 (Tab, Escape and E). Tab, Escape and E now route through `CloseActiveInteractionUI` on `BP_PlayerController_ZombieStore`, which closes the shelf and inventory together. Covered by `Test_InteractionUI_CloseActive`.
 
 ## UI open/close functions have empty MappingContext pins
 
