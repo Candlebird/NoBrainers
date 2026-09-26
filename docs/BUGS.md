@@ -1291,3 +1291,11 @@
 - **Actual:** The old Locomotion state machine node is still in the graph, disconnected (Monolith has no anim-node delete action). The live chain is BlendListByInt → Slot → ApplyAdditive → Output.
 - **Expected:** The unused node is removed.
 - **Status:** Open, cosmetic. Delete it by hand in the editor.
+
+## Test_Weapon_CooldownBlocksRefire never logs a result
+
+- **Area:** Automation test bed (`BP_TestController`, weapon tests).
+- **Repro:** Run the full suite on `L_AutomationTestBed` (RunAllTests).
+- **Actual:** No `[AUTOTEST]` PASS/FAIL line for `Test_Weapon_CooldownBlocksRefire` in any Phase 7 run (suite reports 53/53 without it). It's likely an async test whose completion event never fires, or it isn't reached in RunAllTests.
+- **Expected:** One PASS/FAIL line per registered test.
+- **Status:** Open. Found during Phase 7 overnight run; not investigated.

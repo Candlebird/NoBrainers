@@ -30,6 +30,12 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 - **Death:** per-type death anim, then ragdoll thrown along the killing hit. If the body freezes instead, the physics asset (`PA_SK_Zombie`) isn't assigned. ≤8 bodies stay.
 - **Loot/cash:** specials drop and pay more (Brute/Bloater most).
 - **Two clients:** anims, climb, deaths and puddles look the same on both.
+- **D.1:** At Night, zombies claw up at several points outside the store near each breach point; the climb sits on the ground (not floating/sunk — spawn Z is nav ground + 92).
+- **D.2:** ~8% into Night, red "SURGE INCOMING" banner + groan; ~3 s later spawning speeds up for 20–30 s; 3 times per Night. Last ~63 s: "FINAL SURGE" banner and a heavy wave until dawn. **Co-op:** banner + groan on the client too.
+- **D.3:** Chasing zombies approach from spread angles and curve in, going straight once within ~7 m. Breach behavior unchanged.
+- **D.4:** Solo alive count never > 30; 2 players cap 35. Queued surge zombies trickle in after the surge ends. Screamer summons near the cap don't exceed it.
+- **D.4 (design call):** queued surge spawns are **discarded when Night ends** — OK, or should they carry over / flush before dawn?
+- **B.10:** One elite per surge with a colored light: blue Armored (~2× tanky), amber Swift (faster — confirm the speed actually applies), green Regenerating (heals after ~4 s without damage). Check the light sits at chest height, not at the feet. Elite drops at least 2 items; glow visible on host and client.
 
 ---
 
@@ -74,7 +80,7 @@ its own animation set (group C). **Wrecker was cut by the user; see Proposals.**
   Screamers on 5, Brutes and Bloaters on 6+. Spawn weights shift toward special types with night
   number and Store Advertisement level.
 - [x] **B.9 Headshots.** **DONE:** `BP_ZombieBase.GetHeadshotMultiplier` (head bone only, 1.5×), applied per pellet in `GA_BP_FireWeapon` (`bLastShotHeadshot` kept for F.1). 1.5× damage on head hits, all types. No per-type weak spots.
-- [ ] **B.10 Elites: one per surge.** Each horde surge (D.2) includes exactly one elite: a random type
+- [x] **B.10 Elites: one per surge.** **DONE:** `BP_ZombieBase.MakeElite(Modifier)` (1 Armored / 2 Swift / 3 Regenerating) + `EliteRegenTick`, replicated `EliteModifier` → `OnRep_EliteModifier` lights `EliteGlowLight` (PointLight). Spawner makes the first zombie spawned after `BeginSurge` elite (`bSurgeElitePending`). `DT_ZombieLoot` row `Elite` (2 guaranteed drops). Test: `Test_Zombie_EliteModifierApplies`. Each horde surge (D.2) includes exactly one elite: a random type
   plus one modifier (Armored +100% HP / Swift +35% speed / Regenerating out of combat), a colored
   glow, and a guaranteed better loot roll.
 - [x] **B.11 Per-type loot/cash.** **DONE:** `LootRowName` per type row feeds `Server_RollAndSpawnLoot`; `CashReward` per type. Special types and elites pay more than Shamblers (`DT_ZombieLoot`).
@@ -103,14 +109,17 @@ Spitter sits in between.
 
 ## D. Horde AI & spawning
 
-- [ ] **D.1 Ground spawn zones.** New spawn-zone actors outside the store in `Map_Store_Outdoors`,
+- [x] **D.1 Ground spawn zones.** **DONE:** new `BP_ZombieSpawnZone` (`ZoneRadius`, `bZoneEnabled`, `GetRandomSpawnTransform`); spawner `CollectSpawnZones` at night start and rotates through zones (`GetNextSpawnTransform`), `ZSpawn_*` TargetPoints kept as fallback. One zone per `BP_BreachPoint` (6 in the store map, 2 in the test map, not the 7/4 first estimated), folder `SpawnZones`, ~12–15 m outward, on navmesh:
+  - `Map_Store_Outdoors`: `ZSpawnZone_Breach_Front1` (-1489, -543, 0), `_Front2` (-1511, -169, 0), `_Front3` (-1520, 210, 0), `_SideL` (4956, -3816, 0), `_SideR` (5054, 3728, 0), `_Dock` (8446, 2216, 8).
+  - `Test_Level_Zero`: `ZSpawnZone_BP_BreachPoint` (-929, 2451, 140), `ZSpawnZone_BP_BreachPoint2` (-1651, -2451, 140).
+  Original spec: New spawn-zone actors outside the store in `Map_Store_Outdoors`,
   **added only; nothing the user hand-placed is moved or regenerated** (list every addition here).
   Mirror them in `Test_Level_Zero`.
-- [ ] **D.2 Horde surges.** About 3 surges per Night (3× spawn rate for 20–30 s) with calmer lulls
+- [x] **D.2 Horde surges.** **DONE:** spawner `ScheduleNextSurge` → `AnnounceSurge` (bumps replicated `GameState.SurgeSerial` / `bSurgeIsFinale`) → +3 s `BeginSurge` (queues `Max(6, HordeCount × 1.5 if finale)` into `PendingSurgeSpawns`, 3× tick rate) → `EndSurge` after 20–30 s (finale 60 s). Surges at 8% / 28% / 48% of night length + finale 63 s before end. `WBP_EventBanner.PollSurgeState` shows red "SURGE INCOMING" / "FINAL SURGE" banner + `SFX_SurgeGroan` when `SurgeSerial` changes. Original spec: About 3 surges per Night (3× spawn rate for 20–30 s) with calmer lulls
   between them, then a big finale wave in the last 60 s. A HUD banner plus groan cue gives ~3 s warning.
-- [ ] **D.3 Flanking / surround.** Zombies are spread across multiple breach points and approach
+- [x] **D.3 Flanking / surround.** **DONE:** `BTS_ZombieBreachDecision.UpdateFlankLocation` gives each zombie a persisted signed angle (15–55°, BB `FlankAngle`) and writes a navmesh flank point (BB `FlankLocation`) while > 7 m from its target; `BT_Zombie` `Sequence_Flank` (between breach and chase) moves there, aborting when the key clears. Original spec: Zombies are spread across multiple breach points and approach
   targets from assigned angles (slot-around-target), instead of forming a single conga line.
-- [ ] **D.4 Alive cap.** 30 alive solo, +5 per extra player, 45 max. Surge spawns queue instead of
+- [x] **D.4 Alive cap.** **DONE:** spawner `ComputeAliveCap` (30 + 5 per extra player, max 45); `SpawnTick` only drains `PendingSurgeSpawns` while alive < cap (`ComputeSpawnAllocation`); Screamer `SpawnSummoned` clamped to the cap. Queued surge spawns are dropped at dawn (see checklist). Tests: `Test_ZombieSpawner_AliveCapFormula`, `Test_ZombieSpawner_SurgeQueueRespectsCap`. Original spec: 30 alive solo, +5 per extra player, 45 max. Surge spawns queue instead of
   overflowing the cap.
 
 ## E. Economy & balance pass
