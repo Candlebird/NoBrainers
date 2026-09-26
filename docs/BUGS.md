@@ -1228,3 +1228,11 @@
 - **Actual:** The socket overlaps `GunRack_Wall`. With yaw 0 its +X may not point away from the wall, so `SM_Def_SwingMount` (backplate at local x = -40) may not sit flush on the wall.
 - **Expected:** Wall sockets sit 40 cm off the wall face with +X pointing into the room, clear of other props.
 - **Status:** Open, not yet checked in PIE. Move or rotate the socket if the trap floats or clips.
+
+## Legacy BP_ShopStation_Base grants a projectile gun on left-click
+
+- **Area:** `/Game/Interactable/BP_ShopStation_Base` (EventGraph, `Event OnInteract`), `/Game/GASDocumentation/Characters/Hero/Abilities/FireGun/GA_FireGun`.
+- **Repro:** In PIE, interact with a `BP_ShopStation_Base` instance while you have enough gold, then equip any weapon (e.g. the Pipe Wrench) and left-click.
+- **Actual:** The station is GASDocumentation sample code. It deducts gold, then `ClearAbility(GunAbilityReference)` → `GiveAbility(PurchasableClass = GA_FireGun)` on the hero. `GA_FireGun` is bound to `Ability1` (LMB, InputID 3), the same input as the equipped weapon ability, so every click also spawns a `BP_GunProjectile`. Melee weapons appear to "shoot projectiles."
+- **Expected:** Only the equipped weapon's `DT_Weapons.GrantedAbility` responds to fire input. The station should restock or sell No Brainers items, or be removed from the maps.
+- **Status:** Fixed (disabled). The Authority → purchase-Branch exec link in `BP_ShopStation_Base` is cut, so interacting runs only `Parent: OnInteract`. The purchase chain is kept but unreachable, under a "DISABLED" comment box. No subclasses exist. The green orb is replaced by the cosmetic `/Game/Weapons/BP_FauxProjectile`, spawned from `BP_EquipmentComponent.Multicast_FireTracer`.

@@ -1234,3 +1234,89 @@ monolith_discover.None: top-level->params
 editor.run_python: code->command
 monolith_discover.None: top-level->params
 editor.run_python: script->command
+blueprint.get_components: blueprint_path->asset_path
+blueprint.get_graph_summary: blueprint_path->asset_path
+blueprint.get_component_details: blueprint_path->asset_path
+blueprint.get_component_details: blueprint_path->asset_path
+blueprint.get_component_details: blueprint_path->asset_path
+blueprint.get_component_details: blueprint_path->asset_path
+blueprint.add_component: blueprint_path->asset_path
+blueprint.reparent_component: blueprint_path->asset_path
+blueprint.compile_blueprint: blueprint_path->asset_path
+blueprint.get_component_details: blueprint_path->asset_path
+blueprint.get_graph_data: blueprint_path->asset_path
+monolith_guide.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_functions: blueprint_path->asset_path
+blueprint.get_blueprint_info: blueprint_path->asset_path
+blueprint.get_graph_summary: blueprint_path->asset_path
+blueprint.get_graph_summary: blueprint_path->asset_path
+blueprint.get_cdo_properties: blueprint_path->asset_path
+blueprint.get_graph_data: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.add_variable: variable_name->name
+blueprint.add_variable: variable_name->name
+blueprint.add_variable: variable_name->name
+blueprint.add_variable: variable_name->name
+blueprint.add_variable: variable_name->name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: event_name->entry_point
+blueprint.get_execution_flow: event_name->entry_point
+blueprint.set_pin_defaults_bulk: pins->defaults
+blueprint.set_pin_defaults_bulk: pins->defaults
+blueprint.connect_pins_bulk: [0].src_node->source_node, [0].src_pin->source_pin, [0].dst_node->target_node, [0].dst_pin->target_pin, [1].src_node->source_node, [1].src_pin->source_pin, [1].dst_node->target_node, [1].dst_pin->target_pin, [2].src_node->source_node, [2].src_pin->source_pin, [2].dst_node->target_node, [2].dst_pin->target_pin, [3].src_node->source_node, [3].src_pin->source_pin, [3].dst_node->target_node, [3].dst_pin->target_pin, [4].src_node->source_node, [4].src_pin->source_pin, [4].dst_node->target_node, [4].dst_pin->target_pin, [5].src_node->source_node, [5].src_pin->source_pin, [5].dst_node->target_node, [5].dst_pin->target_pin, [6].src_node->source_node, [6].src_pin->source_pin, [6].dst_node->target_node, [6].dst_pin->target_pin, [7].src_node->source_node, [7].src_pin->source_pin, [7].dst_node->target_node, [7].dst_pin->target_pin, [8].src_node->source_node, [8].src_pin->source_pin, [8].dst_node->target_node, [8].dst_pin->target_pin, [9].src_node->source_node, [9].src_pin->source_pin, [9].dst_node->target_node, [9].dst_pin->target_pin
+blueprint.connect_pins_bulk: [0].src_node->source_node, [0].src_pin->source_pin, [0].dst_node->target_node, [0].dst_pin->target_pin, [1].src_node->source_node, [1].src_pin->source_pin, [1].dst_node->target_node, [1].dst_pin->target_pin, [2].src_node->source_node, [2].src_pin->source_pin, [2].dst_node->target_node, [2].dst_pin->target_pin, [3].src_node->source_node, [3].src_pin->source_pin, [3].dst_node->target_node, [3].dst_pin->target_pin, [4].src_node->source_node, [4].src_pin->source_pin, [4].dst_node->target_node, [4].dst_pin->target_pin, [5].src_node->source_node, [5].src_pin->source_pin, [5].dst_node->target_node, [5].dst_pin->target_pin, [6].src_node->source_node, [6].src_pin->source_pin, [6].dst_node->target_node, [6].dst_pin->target_pin
+blueprint.connect_pins_bulk: [0].src_node->source_node, [0].src_pin->source_pin, [0].dst_node->target_node, [0].dst_pin->target_pin, [1].src_node->source_node, [1].src_pin->source_pin, [1].dst_node->target_node, [1].dst_pin->target_pin, [2].src_node->source_node, [2].src_pin->source_pin, [2].dst_node->target_node, [2].dst_pin->target_pin, [3].src_node->source_node, [3].src_pin->source_pin, [3].dst_node->target_node, [3].dst_pin->target_pin, [4].src_node->source_node, [4].src_pin->source_pin, [4].dst_node->target_node, [4].dst_pin->target_pin, [5].src_node->source_node, [5].src_pin->source_pin, [5].dst_node->target_node, [5].dst_pin->target_pin, [6].src_node->source_node, [6].src_pin->source_pin, [6].dst_node->target_node, [6].dst_pin->target_pin, [7].src_node->source_node, [7].src_pin->source_pin, [7].dst_node->target_node, [7].dst_pin->target_pin, [8].src_node->source_node, [8].src_pin->source_pin, [8].dst_node->target_node, [8].dst_pin->target_pin, [9].src_node->source_node, [9].src_pin->source_pin, [9].dst_node->target_node, [9].dst_pin->target_pin
+blueprint.connect_pins: src_node->source_node, src_pin->source_pin, dst_node->target_node, dst_pin->target_pin
+blueprint.connect_pins_bulk: [0].src_node->source_node, [0].src_pin->source_pin, [0].dst_node->target_node, [0].dst_pin->target_pin, [1].src_node->source_node, [1].src_pin->source_pin, [1].dst_node->target_node, [1].dst_pin->target_pin, [2].src_node->source_node, [2].src_pin->source_pin, [2].dst_node->target_node, [2].dst_pin->target_pin, [3].src_node->source_node, [3].src_pin->source_pin, [3].dst_node->target_node, [3].dst_pin->target_pin, [4].src_node->source_node, [4].src_pin->source_pin, [4].dst_node->target_node, [4].dst_pin->target_pin, [5].src_node->source_node, [5].src_pin->source_pin, [5].dst_node->target_node, [5].dst_pin->target_pin, [6].src_node->source_node, [6].src_pin->source_pin, [6].dst_node->target_node, [6].dst_pin->target_pin, [7].src_node->source_node, [7].src_pin->source_pin, [7].dst_node->target_node, [7].dst_pin->target_pin, [8].src_node->source_node, [8].src_pin->source_pin, [8].dst_node->target_node, [8].dst_pin->target_pin, [9].src_node->source_node, [9].src_pin->source_pin, [9].dst_node->target_node, [9].dst_pin->target_pin
+blueprint.connect_pins: src_node->source_node, src_pin->source_pin, dst_node->target_node, dst_pin->target_pin
+blueprint.connect_pins_bulk: [0].src_node->source_node, [0].src_pin->source_pin, [0].dst_node->target_node, [0].dst_pin->target_pin, [1].src_node->source_node, [1].src_pin->source_pin, [1].dst_node->target_node, [1].dst_pin->target_pin, [2].src_node->source_node, [2].src_pin->source_pin, [2].dst_node->target_node, [2].dst_pin->target_pin, [3].src_node->source_node, [3].src_pin->source_pin, [3].dst_node->target_node, [3].dst_pin->target_pin, [4].src_node->source_node, [4].src_pin->source_pin, [4].dst_node->target_node, [4].dst_pin->target_pin, [5].src_node->source_node, [5].src_pin->source_pin, [5].dst_node->target_node, [5].dst_pin->target_pin, [6].src_node->source_node, [6].src_pin->source_pin, [6].dst_node->target_node, [6].dst_pin->target_pin, [7].src_node->source_node, [7].src_pin->source_pin, [7].dst_node->target_node, [7].dst_pin->target_pin
+blueprint.connect_pins: src_node->source_node, src_pin->source_pin, dst_node->target_node, dst_pin->target_pin
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.connect_pins_bulk: [0].from_node->source_node, [0].from_pin->source_pin, [0].to_node->target_node, [0].to_pin->target_pin, [1].from_node->source_node, [1].from_pin->source_pin, [1].to_node->target_node, [1].to_pin->target_pin, [2].from_node->source_node, [2].from_pin->source_pin, [2].to_node->target_node, [2].to_pin->target_pin, [3].from_node->source_node, [3].from_pin->source_pin, [3].to_node->target_node, [3].to_pin->target_pin, [4].from_node->source_node, [4].from_pin->source_pin, [4].to_node->target_node, [4].to_pin->target_pin, [5].from_node->source_node, [5].from_pin->source_pin, [5].to_node->target_node, [5].to_pin->target_pin, [6].from_node->source_node, [6].from_pin->source_pin, [6].to_node->target_node, [6].to_pin->target_pin, [7].from_node->source_node, [7].from_pin->source_pin, [7].to_node->target_node, [7].to_pin->target_pin, [8].from_node->source_node, [8].from_pin->source_pin, [8].to_node->target_node, [8].to_pin->target_pin, [9].from_node->source_node, [9].from_pin->source_pin, [9].to_node->target_node, [9].to_pin->target_pin, [10].from_node->source_node, [10].from_pin->source_pin, [10].to_node->target_node, [10].to_pin->target_pin, [11].from_node->source_node, [11].from_pin->source_pin, [11].to_node->target_node, [11].to_pin->target_pin
+blueprint.connect_pins_bulk: [0].from_node->source_node, [0].from_pin->source_pin, [0].to_node->target_node, [0].to_pin->target_pin, [1].from_node->source_node, [1].from_pin->source_pin, [1].to_node->target_node, [1].to_pin->target_pin, [2].from_node->source_node, [2].from_pin->source_pin, [2].to_node->target_node, [2].to_pin->target_pin, [3].from_node->source_node, [3].from_pin->source_pin, [3].to_node->target_node, [3].to_pin->target_pin, [4].from_node->source_node, [4].from_pin->source_pin, [4].to_node->target_node, [4].to_pin->target_pin, [5].from_node->source_node, [5].from_pin->source_pin, [5].to_node->target_node, [5].to_pin->target_pin, [6].from_node->source_node, [6].from_pin->source_pin, [6].to_node->target_node, [6].to_pin->target_pin, [7].from_node->source_node, [7].from_pin->source_pin, [7].to_node->target_node, [7].to_pin->target_pin, [8].from_node->source_node, [8].from_pin->source_pin, [8].to_node->target_node, [8].to_pin->target_pin, [9].from_node->source_node, [9].from_pin->source_pin, [9].to_node->target_node, [9].to_pin->target_pin, [10].from_node->source_node, [10].from_pin->source_pin, [10].to_node->target_node, [10].to_pin->target_pin, [11].from_node->source_node, [11].from_pin->source_pin, [11].to_node->target_node, [11].to_pin->target_pin, [12].from_node->source_node, [12].from_pin->source_pin, [12].to_node->target_node, [12].to_pin->target_pin, [13].from_node->source_node, [13].from_pin->source_pin, [13].to_node->target_node, [13].to_pin->target_pin, [14].from_node->source_node, [14].from_pin->source_pin, [14].to_node->target_node, [14].to_pin->target_pin, [15].from_node->source_node, [15].from_pin->source_pin, [15].to_node->target_node, [15].to_pin->target_pin, [16].from_node->source_node, [16].from_pin->source_pin, [16].to_node->target_node, [16].to_pin->target_pin, [17].from_node->source_node, [17].from_pin->source_pin, [17].to_node->target_node, [17].to_pin->target_pin, [18].from_node->source_node, [18].from_pin->source_pin, [18].to_node->target_node, [18].to_pin->target_pin, [19].from_node->source_node, [19].from_pin->source_pin, [19].to_node->target_node, [19].to_pin->target_pin, [20].from_node->source_node, [20].from_pin->source_pin, [20].to_node->target_node, [20].to_pin->target_pin, [21].from_node->source_node, [21].from_pin->source_pin, [21].to_node->target_node, [21].to_pin->target_pin, [22].from_node->source_node, [22].from_pin->source_pin, [22].to_node->target_node, [22].to_pin->target_pin, [23].from_node->source_node, [23].from_pin->source_pin, [23].to_node->target_node, [23].to_pin->target_pin, [24].from_node->source_node, [24].from_pin->source_pin, [24].to_node->target_node, [24].to_pin->target_pin, [25].from_node->source_node, [25].from_pin->source_pin, [25].to_node->target_node, [25].to_pin->target_pin
+blueprint.connect_pins_bulk: [0].from_node->source_node, [0].from_pin->source_pin, [0].to_node->target_node, [0].to_pin->target_pin
+blueprint.connect_pins_bulk: [0].from_node->source_node, [0].from_pin->source_pin, [0].to_node->target_node, [0].to_pin->target_pin
+blueprint.get_variables: blueprint_path->asset_path
+blueprint.get_cdo_properties: blueprint_path->asset_path
+blueprint.get_cdo_properties: blueprint_path->asset_path
+blueprint.get_cdo_properties: blueprint_path->asset_path
+blueprint.get_functions: blueprint_path->asset_path
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.connect_pins_bulk: connect_pins->connect_pins_bulk
+blueprint.get_node_details: node_name->node_id
+blueprint.search_nodes: search_term->query
+blueprint.search_nodes: search_term->query
+blueprint.search_nodes: search_term->query
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.list_graphs: blueprint_path->asset_path
+blueprint.get_graph_data: blueprint_path->asset_path
+blueprint.disconnect_pins: blueprint_path->asset_path, target_node_id->target_node, target_pin_name->target_pin
+blueprint.get_execution_flow: blueprint_path->asset_path
+blueprint.get_graph_data: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_variables: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_execution_flow: blueprint_path->asset_path
+blueprint.search_nodes: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_graph_summary: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_graph_summary: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_node_details: blueprint_path->asset_path
+blueprint.get_graph_data: blueprint_path->asset_path
+blueprint.get_execution_flow: blueprint_path->asset_path
+blueprint.search_nodes: blueprint_path->asset_path
