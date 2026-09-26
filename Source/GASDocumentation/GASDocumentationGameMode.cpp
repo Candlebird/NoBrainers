@@ -14,11 +14,9 @@ AGASDocumentationGameMode::AGASDocumentationGameMode()
 {
 	RespawnDelay = 5.0f;
 
-	HeroClass = StaticLoadClass(UObject::StaticClass(), nullptr, TEXT("/Game/GASDocumentation/Characters/Hero/BP_HeroCharacter.BP_HeroCharacter_C"));
-	if (!HeroClass)
-	{
-		UE_LOG(LogTemp, Error, TEXT("%s() Failed to find HeroClass. If it was moved, please update the reference location in C++."), *FString(__FUNCTION__));
-	}
+	// HeroClass is loaded in BeginPlay, not here: sync-loading BP_HeroCharacter while the CDO is
+	// built at module startup recurses through asset cycles (Hero -> PC -> ... -> BP_ZombieBase ->
+	// BP_AmmoRefillPickup -> Hero) and trips the AsyncLoading2 NeedLoad assert on editor launch.
 }
 
 void AGASDocumentationGameMode::HeroDied(AController* Controller)
@@ -47,6 +45,15 @@ void AGASDocumentationGameMode::HeroDied(AController* Controller)
 void AGASDocumentationGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!HeroClass)
+	{
+		HeroClass = StaticLoadClass(UObject::StaticClass(), nullptr, TEXT("/Game/GASDocumentation/Characters/Hero/BP_HeroCharacter.BP_HeroCharacter_C"));
+		if (!HeroClass)
+		{
+			UE_LOG(LogTemp, Error, TEXT("%s() Failed to find HeroClass. If it was moved, please update the reference location in C++."), *FString(__FUNCTION__));
+		}
+	}
 
 	// Get the enemy hero spawn point
 	TArray<AActor*> Actors;

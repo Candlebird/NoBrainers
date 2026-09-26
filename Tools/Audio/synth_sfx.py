@@ -131,6 +131,79 @@ def main():
     # Player hurt thump (for damage vignette).
     write('SFX_PlayerHurt', sweep(160, 60, .25) * env(int(SR * .25), .002, .07), 0.7)
 
+    # --- Weapons (Phase 7 H) ---
+    def gunshot(dur, f0, f1, crack_k, boom_decay, tail_k, crack=1.0, boom=1.0, tail=0.6):
+        n = int(SR * dur)
+        c = lowpass(noise(dur), crack_k) * env(n, 0.0005, 0.012)
+        b = sweep(f0, f1, dur) * env(n, 0.001, boom_decay)
+        tl = lowpass(noise(dur), tail_k) * env(n, 0.003, boom_decay * 2.5)
+        return crack * c + boom * b + tail * tl
+
+    guns = {
+        'Pistol':      gunshot(0.35, 260, 70, 2, 0.05, 20),
+        'Rifle':       gunshot(0.55, 200, 55, 1, 0.07, 30, crack=1.3),
+        'Shotgun':     gunshot(0.8, 140, 40, 4, 0.12, 50, boom=1.4, tail=0.9),
+        'SMG':         gunshot(0.18, 380, 120, 2, 0.025, 12, crack=0.9, tail=0.3),
+        'LongRifle':   gunshot(1.0, 170, 40, 1, 0.1, 60, crack=1.5, tail=1.0),
+        'Magnum':      gunshot(0.7, 180, 45, 2, 0.1, 40, boom=1.3),
+        'LeverAction': gunshot(0.6, 210, 50, 1, 0.08, 35),
+        'SawedOff':    gunshot(0.7, 110, 35, 6, 0.1, 70, boom=1.5, tail=1.1),
+    }
+    for g, x in guns.items():
+        write('SFX_Fire_' + g, x, 0.95)
+
+    def click(f, dur=0.05, k=2, d=0.008):
+        n = int(SR * dur)
+        return lowpass(noise(dur), k) * env(n, 0.0005, d) + 0.4 * np.sin(2 * np.pi * f * t(dur)) * env(n, 0.0005, d)
+
+    def seq(total, events):
+        x = np.zeros(int(SR * total))
+        for at, seg in events:
+            i = int(SR * at); x[i:i + len(seg)] += seg[:len(x) - i]
+        return x
+
+    slide = lambda d: lowpass(noise(d), 3) * env(int(SR * d), 0.02, d * 0.6) * 0.5
+    reloads = {  # mag out, mag in, rack/slide
+        'Pistol':      seq(0.9, [(0.0, click(1800)), (0.45, click(1400, k=3)), (0.7, slide(0.12)), (0.8, click(2200))]),
+        'Rifle':       seq(1.4, [(0.0, click(1500, k=3)), (0.6, click(1200, k=4)), (1.0, slide(0.15)), (1.15, click(2000, 0.08))]),
+        'SMG':         seq(1.1, [(0.0, click(1900)), (0.5, click(1600, k=3)), (0.85, click(2400))]),
+        'LongRifle':   seq(1.6, [(0.0, click(1100, k=4)), (0.3, slide(0.2)), (0.8, click(1300, k=4)), (1.2, slide(0.2)), (1.4, click(1700, 0.08))]),
+        'Magnum':      seq(1.5, [(0.0, click(900, k=5)), (0.25, slide(0.25)),
+                                  (0.7, click(2600, 0.03)), (0.8, click(2500, 0.03)), (0.9, click(2700, 0.03)), (1.2, click(1000, k=5))]),
+        'LeverAction': seq(1.3, [(0.0, click(2100, 0.04)), (0.3, click(2000, 0.04)), (0.6, click(2200, 0.04)),
+                                  (0.95, slide(0.1)), (1.08, click(1300, 0.07, k=4))]),
+        'Shotgun':     seq(1.5, [(0.0, click(1700, 0.05, k=3)), (0.35, click(1650, 0.05, k=3)), (0.7, click(1750, 0.05, k=3)),
+                                  (1.1, slide(0.12)), (1.25, click(900, 0.1, k=6, d=0.03))]),
+        'SawedOff':    seq(1.2, [(0.0, click(800, 0.1, k=6, d=0.03)), (0.4, click(1600, k=3)), (0.6, click(1600, k=3)),
+                                  (0.95, click(700, 0.12, k=8, d=0.04))]),
+    }
+    for g, x in reloads.items():
+        write('SFX_Reload_' + g, x, 0.7)
+
+    # Melee whoosh: band-passed noise swelling then fading.
+    tt = t(0.35)
+    w = (lowpass(noise(0.35), 6) - lowpass(noise(0.35), 40)) * np.sin(np.pi * np.linspace(0, 1, len(tt))) ** 2
+    write('SFX_MeleeWhoosh', w, 0.55)
+    # Generic melee clang: inharmonic metallic partials + thud.
+    tt = t(0.7)
+    x = sum(a * np.sin(2 * np.pi * f * tt) for f, a in [(523, 1), (1187, .7), (1893, .5), (2741, .35), (3911, .2)])
+    x = x * env(len(tt), 0.001, 0.12) + 0.8 * sweep(150, 60, 0.7) * env(len(tt), 0.001, 0.04) + 0.5 * lowpass(noise(0.7), 3) * env(len(tt), 0.0005, 0.01)
+    write('SFX_MeleeClang', x, 0.85)
+
+    # --- Zombies (Phase 7 H) ---
+    def groan(dur, f0, f1, rough=0.5, jit=10, att=0.03, dec=None):
+        tt = t(dur)
+        f = np.linspace(f0, f1, len(tt)) + jit * lowpass(rng.uniform(-1, 1, len(tt)), 800) * 15
+        ph = 2 * np.pi * np.cumsum(f) / SR
+        v = np.sign(np.sin(ph)) * rough + np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.3 * np.sin(3 * ph)
+        v = v * (0.6 + 0.4 * np.sin(2 * np.pi * 23 * tt))  # vocal-fry flutter
+        v = v + 0.35 * lowpass(noise(dur), 10)
+        return lowpass(v, 10) * env(len(tt), att, dec or dur * 0.5)
+
+    write('SFX_ZombieHurt', groan(0.4, 190, 120, rough=0.8, att=0.01, dec=0.15), 0.75)
+    write('SFX_ZombieDeath', groan(1.4, 150, 55, rough=0.6, att=0.05, dec=0.6), 0.8)
+    write('SFX_ZombieAttack', groan(0.7, 110, 170, rough=0.9, jit=14, att=0.06, dec=0.3), 0.8)
+
 
 if __name__ == '__main__':
     main()

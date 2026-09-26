@@ -24,6 +24,7 @@ public:
 protected:
 	float RespawnDelay;
 
+	UPROPERTY(Transient)
 	TSubclassOf<class AGDHeroCharacter> HeroClass;
 
 	AActor* EnemySpawnPoint;

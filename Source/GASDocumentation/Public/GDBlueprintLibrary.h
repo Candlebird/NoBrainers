@@ -7,8 +7,11 @@
 #include "GameplayEffect.h"
 #include "GDBlueprintLibrary.generated.h"
 
+class UDragDropOperation;
+class UImage;
+
 /**
- * 
+ *
  */
 UCLASS()
 class GASDOCUMENTATION_API UGDBlueprintLibrary : public UBlueprintFunctionLibrary
@@ -16,5 +19,11 @@ class GASDOCUMENTATION_API UGDBlueprintLibrary : public UBlueprintFunctionLibrar
 	GENERATED_BODY()
 
 public:
+
+	UFUNCTION(BlueprintCallable, Category = "NoBrainers|DragDrop")
+	static UDragDropOperation* MakeItemDragOp(UImage* SourceIcon, const FString& Tag, UObject* Payload);
+
+	UFUNCTION(BlueprintPure, Category = "NoBrainers|DragDrop")
+	static void GetItemDragOpInfo(UDragDropOperation* Operation, FString& Tag, UObject*& Payload);
 
 };

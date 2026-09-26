@@ -46,4 +46,8 @@ protected:
 
 	// Tag change callbacks
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+public:
+	UFUNCTION(BlueprintImplementableEvent, Category = "NoBrainers|Zombie")
+	void OnHealthChangedBP(float NewHealth, float OldHealth);
 };

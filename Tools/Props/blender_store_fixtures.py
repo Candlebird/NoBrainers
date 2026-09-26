@@ -41,9 +41,13 @@ Y_AXIS = (-math.pi / 2, 0.0, 0.0)  # tube local +Z -> +Y
 REPORT = []  # extra lines printed per model (slot / sign positions, UE space)
 
 
+UE_K = [(1.0, 1.0, 1.0)]  # current model's SCALE, applied to reported coordinates
+
+
 def ue(p):
-    """Blender cm -> UE local cm (flip Y)."""
-    return (round(p[0], 1), round(-p[1], 1) + 0.0, round(p[2], 1))
+    """Blender cm -> UE local cm (flip Y), scaled by the model's SCALE."""
+    k = UE_K[0]
+    return (round(p[0] * k[0], 1), round(-p[1] * k[1], 1) + 0.0, round(p[2] * k[2], 1))
 
 
 def obox(material, center, size, rot=(0.0, 0.0, 0.0)):
@@ -143,7 +147,7 @@ def stock_shelf():
     REPORT.append("  slots (UE local, x,y,z = centre of item footprint on the board top):")
     for i, zt in enumerate(SHELF_LEVELS):
         REPORT.append("    level %d: %s" % (i + 1, "  ".join(str(ue((SHELF_SLOT_X, yy, zt))) for yy in SHELF_SLOTS_Y)))
-    REPORT.append("  header sign face: centre %s, facing +X, size 228 W (Y) x 22 H (Z)" % (ue((-28, 0, 152)),))
+    REPORT.append("  header sign face: centre %s, facing +X, size %g W (Y) x %g H (Z)" % (ue((-28, 0, 152)), 228 * UE_K[0][1], 22 * UE_K[0][2]))
 
 
 # ---------------------------------------------------------------- 2. checkout counter
@@ -340,6 +344,11 @@ MODELS = {
     "CloseShopStation": close_shop_station,
     "AmmoPickup": ammo_pickup,
 }
+# per-axis (X depth, Y width, Z height) size multiplier baked into the mesh at join time (UE import stays
+# 1x1x1). The stock shelf is authored at the 240 W base; after playtest feedback it is ~2x (432 W x 332 H)
+# but keeps its 70 cm depth so it still fits against the gondolas it backs onto in Map_Store_Outdoors, and
+# 432 W fits the 450 cm spacing of the Hardware shelves. Slots/sign scale with it.
+SCALE = {"StockShelf": (1.0, 1.8, 2.0)}
 
 
 # ---------------------------------------------------------------- preview / verify
@@ -401,9 +410,10 @@ def main():
             continue
         reset()
         REPORT.clear()
+        UE_K[0] = SCALE.get(name, (1.0, 1.0, 1.0))
         fn()
         full = f"SM_{name}"
-        ob, slots, lo, hi = join_all(full)
+        ob, slots, lo, hi = join_all(full, Vector(SCALE.get(name, (1.0, 1.0, 1.0))))
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bdir, full + ".blend"))
         fp = os.path.join(fdir, full + ".fbx")
         fbx(fp, {"MESH"})

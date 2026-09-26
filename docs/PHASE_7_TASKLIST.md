@@ -257,6 +257,35 @@ From the user's first playtest of A–E.
   the floor facing into the store, the cashier side of the checkout is reachable, and every
   interact prompt still triggers.
 
+## H. Playtest fixes, round 2 (2026-09-26)
+
+From the user's playtest of G.
+
+- [x] **H.1 Floating shelves, 2× size.** In game the shelves floated, although the BP viewport looked right. The placed shelves' component transforms didn't match the class defaults. **DONE:**
+  - `SM_StockShelf` was rebuilt at about 2× size, fitting 4 items per row.
+  - The `BP_ShelfActor` InteractionBox is now extent 38×218×170. The label moved up and was scaled.
+  - Every placed shelf's components were reset to the class defaults. Three shelves moved slightly to clear walls or other fixtures.
+  - **USER TEST:** shelves sit on the floor, 4 items per row, and interact works.
+- [x] **H.2 Drops ignore pawns.** `BP_ItemPickup` and `BP_AmmoPickup` InteractionMesh and InteractionBox ignore the Pawn channel. **USER TEST:** stand on a dropped item; no spinning or launching.
+- [x] **H.3 Weapon sounds.** Every sound is a synthesized placeholder (`Tools/Audio/synth_sfx.py`).
+  - Each gun has a unique fire and reload sound: `BP_EquipmentComponent` WeaponFireSounds and WeaponReloadSounds maps, played via `Multicast_PlaySoundAtLocation`, with the fire sound played from `GA_BP_FireWeapon`.
+  - `GA_BP_MeleeAttack` plays a whoosh on the swing and a clang on hit.
+  - **USER TEST:** each gun sounds different when it fires and reloads; melee whooshes and clangs. The shooter on a remote client hears their own shot about one round trip late (multicast from the server).
+- [x] **H.4 Zombie sounds.**
+  - `BP_ZombieBase` HurtSound / DeathSound / AttackSound.
+  - Hurt fires via the new C++ `OnHealthChangedBP` event and is throttled to once per 0.4 s. Death plays in HandleZombieDied, attack in Server_PlayAttackAnim.
+  - The Bloater has no DeathSound, since it keeps its pop.
+  - The defaults are set on each child CDO, because the parent defaults didn't propagate.
+  - **USER TEST:** hurt, death and attack sounds play, and the hurt sound doesn't spam.
+- [x] **H.5 Drag-and-drop stocking.**
+  - C++ `UGDBlueprintLibrary::MakeItemDragOp` / `GetItemDragOpInfo`.
+  - `WBP_InventorySlot` is a drag source (tag "Inventory"). `WBP_ShelfSlot` accepts drops onto empty slots and is a drag source (tag "Shelf"). `WBP_Inventory` accepts shelf drops, which take the item back.
+  - In every case the SlotButton is HitTestInvisible, and clicks are routed through `HandleSlotClicked` on mouse-up, so click-to-trade still works. Slots show an amber hover tint.
+  - See docs/BUGS.md — "Server_StockItemToSlot doesn't check slot occupancy."
+  - **USER TEST:** drag inventory → empty shelf slot to stock it, drag shelf slot → inventory panel to take it back, and check that click, right-click and hover still work.
+- [x] **H.6 Editor startup crash.** An AsyncLoading2 NeedLoad assert fired on the `BP_PlayerController_ZombieStore` CDO. **DONE:** the GameMode constructor loaded `BP_HeroCharacter` synchronously, which recursed through asset cycles added in G. The load now happens in `BeginPlay`. See docs/BUGS.md — "Hard class references form asset load cycles." **USER TEST:** the editor opens cleanly, and respawn still works.
+- [x] **H.7 Tests.** Added `Test_Pickups_IgnorePawnCollision`, `Test_Audio_WeaponSoundMapsComplete` and `Test_DragDrop_ItemDragOpRoundTrip`.
+
 ## F. Game feel
 
 - [ ] **F.1 Hitmarker + headshot ding.** The crosshair hitmarker flashes on every hit; distinct color

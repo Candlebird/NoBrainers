@@ -92,6 +92,8 @@ void AGDMinionCharacter::HealthChanged(const FOnAttributeChangeData & Data)
 		UIFloatingStatusBar->SetHealthPercentage(Health / GetMaxHealth());
 	}
 
+	OnHealthChangedBP(Data.NewValue, Data.OldValue);
+
 	// If the minion died, handle death
 	if (!IsAlive() && !AbilitySystemComponent->HasMatchingGameplayTag(DeadTag))
 	{

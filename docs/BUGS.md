@@ -1315,3 +1315,19 @@
 - **Actual:** The banner panel pops up with no text.
 - **Expected:** "HORDE SURGE INCOMING!" / "FINAL SURGE INCOMING!".
 - **Status:** Open. A static check found nothing wrong: the SetText targets, the hardcoded literals, opacity, font size, anim (a 0→1 fade-in), the single widget instance, and replication are all fine. The literals were changed anyway. If it still reproduces, capture a screenshot and note host vs client and whether the customer-event banner (`ShowBanner`) also shows blank. The blank banner may not be the surge banner at all.
+
+## Server_StockItemToSlot doesn't check slot occupancy
+
+- **Area:** `BP_PlayerController_ZombieStore` stocking (`Server_StockItemToSlot`), invoked from `WBP_ShelfSlot`'s click-to-stock flow and its new `OnDrop` drag-and-drop handler.
+- **Repro:** Two clients drop/click-stock onto the same empty shelf slot at the same time.
+- **Actual:** The server RPC overwrites/merges the slot's stocked item without checking that the slot is still empty when it executes.
+- **Expected:** The server should reject (or otherwise safely resolve) a stock request when the target slot is already occupied by the time the RPC runs.
+- **Status:** Open. `WBP_ShelfSlot.OnDrop` only guards this client-side (checks `StockedItems[SlotIndex].Quantity == 0` before sending the RPC), which doesn't close the race for two near-simultaneous clients.
+
+## Hard class references form asset load cycles
+
+- **Area:** `BP_ZombieBase` → `BP_AmmoRefillPickup` → `BP_EquipmentComponent` → `BP_HeroCharacter` ↔ `BP_PlayerController_ZombieStore`; `DT_ZombieTypes` ↔ `BP_Zombie_Spitter`.
+- **Repro:** Launch the editor and check the log for circular-dependency load warnings.
+- **Actual:** The cycles load with warnings. Before the fix below, they crashed the editor at startup (`AsyncLoading2.cpp:11167`, `!Object->HasAnyFlags(RF_NeedLoad | RF_NeedInitialization)` on the `BP_PlayerController_ZombieStore` CDO).
+- **Expected:** No cycles. Use soft class refs (`TSoftClassPtr` / soft class variables) for the pickup drop class and the DataTable's zombie class columns.
+- **Status:** Crash fixed. `AGASDocumentationGameMode` loaded `BP_HeroCharacter` with `StaticLoadClass` in its constructor, which recursed through the cycle while the CDO was built. The load now happens in `BeginPlay`. The cycles remain. They're harmless for now, but any new constructor-time sync load of these assets could trip the same assert.
