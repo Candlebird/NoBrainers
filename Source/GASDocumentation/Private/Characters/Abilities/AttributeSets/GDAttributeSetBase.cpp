@@ -37,8 +37,8 @@ void UGDAttributeSetBase::PreAttributeChange(const FGameplayAttribute& Attribute
 	}
 	else if (Attribute == GetMoveSpeedAttribute())
 	{
-		// Cannot slow less than 150 units/s and cannot boost more than 1000 units/s
-		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
+		// Cannot slow less than 25 units/s (so a trap slow can halve a Shambler's ~150 speed) and cannot boost more than 1000 units/s
+		NewValue = FMath::Clamp<float>(NewValue, 25, 1000);
 	}
 }
 

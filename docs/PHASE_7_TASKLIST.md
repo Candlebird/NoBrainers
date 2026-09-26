@@ -34,8 +34,18 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 - **D.2:** ~8% into Night, red "SURGE INCOMING" banner + groan; ~3 s later spawning speeds up for 20–30 s; 3 times per Night. Last ~63 s: "FINAL SURGE" banner and a heavy wave until dawn. **Co-op:** banner + groan on the client too.
 - **D.3:** Chasing zombies approach from spread angles and curve in, going straight once within ~7 m. Breach behavior unchanged.
 - **D.4:** Solo alive count never > 30; 2 players cap 35. Queued surge zombies trickle in after the surge ends. Screamer summons near the cap don't exceed it.
-- **D.4 (design call):** queued surge spawns are **discarded when Night ends** — OK, or should they carry over / flush before dawn?
+- **D.4:** queued surge spawns are **discarded when Night ends** (user confirmed 2026-09-26).
 - **B.10:** One elite per surge with a colored light: blue Armored (~2× tanky), amber Swift (faster — confirm the speed actually applies), green Regenerating (heals after ~4 s without damage). Check the light sits at chest height, not at the feet. Elite drops at least 2 items; glow visible on host and client.
+
+- **E.3 Spike:** zombies on a Spike lose HP every ~0.5 s; a Runner crossing Spike + Slow Strip dies or nearly dies.
+- **E.3 Slow Strip:** zombies on/near the strip move at **half speed**, and it does not compound over repeated pulses; normal speed ~1 s after leaving. Shamblers too (C++ MoveSpeed floor lowered 150 → 25).
+- **E.3 Gas:** packs inside the ~3 m radius lose HP steadily; surges thin out.
+- **E.3 Swinging:** a Shambler/Runner in range dies in one hit (~every 1.5 s); a Brute at a barricade next to it dies in ~4 hits.
+- **E.3:** traps never hurt players; no double loot from trap kills. **Co-op:** trap kills/slows show on a client. If traps hit nothing, check the zombie capsule object type is Pawn.
+- **E.5:** damage a defense at night, reach Day → full HP (Build Menu HP text). A defense destroyed at night stays gone. Client sees the repaired HP. Build Menu has no Repair button; the text says "(auto-repairs at Day start)"; Sell still works.
+- **Defense HP fix:** a hit for more than half a defense's current HP (e.g. Brute on a 100 HP barricade) no longer destroys it; it survives with the right HP and breaks only at 0. (Was a pure-node double-subtract in `BP_DefenseBase.ApplyBreachDamage`, found by `Test_Defense_AutoRepairAtDayStart`.)
+- **E.6:** an elite pays ~3× its type cash; Shamblers pay 2.
+- **E.1/E.2:** Nights 1–2 afford 1–2 defenses (Spike 60, Slow Strip 50, Barricade 50) and ammo bites (Pistol ammo 12). By Day 5–7 SMG/Long Rifle (250/350) and shelf Tier 3 are reachable. Pricier trinkets (Gold Watch 75, Antler Trophy 70, Vintage Coin 50) still sell.
 
 ---
 
@@ -128,15 +138,21 @@ Target feel: **tight early, snowball late.** The first nights are scrappy (1–2
 by day ~5–7 a well-run store affords top-tier gear and upgrades. Edit the data directly and record
 every change in the before/after table below with reasoning, so any line can be reverted.
 
-- [ ] **E.1 Prices of goods** (`DT_Items` sell prices, customer tolerance interplay).
-- [ ] **E.2 Weapons, ammo, defense blueprint prices** (`DT_Weapons`, `DT_AmmoCatalog`, `DT_KioskCatalog`,
+- [x] **E.1 Prices of goods** (`DT_Items` sell prices, customer tolerance interplay).
+  **DONE — DT_Items sell/discount prices rebalanced (table below).**
+- [x] **E.2 Weapons, ammo, defense blueprint prices** (`DT_Weapons`, `DT_AmmoCatalog`, `DT_KioskCatalog`,
   `DT_DefenseBlueprints`).
-- [ ] **E.3 Trap usefulness.** The user found every trap (spike, slow strip, gas, swinging) near-pointless.
+  **DONE — weapon damage, ammo, kiosk and defense prices rebalanced (table below).**
+- [x] **E.3 Trap usefulness.** The user found every trap (spike, slow strip, gas, swinging) near-pointless.
   Buff damage/uptime/area so each trap has a clear job against the new types.
-- [ ] **E.4 Shelf tier upgrade curve** (`DT_ShelfTiers`) against the revenue each tier adds.
-- [ ] **E.5 Free auto-repair at Day start.** Every surviving defense restores to full HP for free when
+  **DONE — root cause: every trap applied an empty GE once on overlap. Traps now pulse via a timer in BP_DefenseBase (ApplyTrapHit/TrapPulse) with per-trap interval/radius/damage/wear; Slow Strip halves MoveSpeed (GE_Slow ×0.5, 1 s, non-stacking; C++ floor 150→25).**
+- [x] **E.4 Shelf tier upgrade curve** (`DT_ShelfTiers`) against the revenue each tier adds.
+  **DONE — Tier1 150→140, Tier2 250→280.**
+- [x] **E.5 Free auto-repair at Day start.** Every surviving defense restores to full HP for free when
   Day begins. Destroyed defenses stay destroyed (rebuy). Remove manual paid repair.
-- [ ] **E.6 Per-type loot/cash values** (with B.11).
+  **DONE — BP_GameMode_ZombieStore.AutoRepairDefenses at the end of StartDayPhase → BP_DefenseBase.RestoreFullHealth; Repair button, BP OnServerRepairDefense and C++ Server_RepairDefense removed; RepairCostPerHP set to 0.**
+- [x] **E.6 Per-type loot/cash values** (with B.11).
+  **DONE — cash rewards and loot chances (table below); elites pay 3× cash (BP_ZombieBase.EliteCashMult).**
 
 Player movement is **out of scope** (user: leave the player alone).
 
@@ -144,6 +160,61 @@ Player movement is **out of scope** (user: leave the player alone).
 
 | Asset | Row / field | Before | After | Why |
 |---|---|---|---|---|
+| DT_Items | Pistol BaseSellPrice / DiscountCost | 80 / 35 | 30 / 13 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | Bat BaseSellPrice / DiscountCost | 30 / 12 | 15 / 6 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | PipeWrench BaseSellPrice / DiscountCost | 25 / 10 | 20 / 8 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | CanoePaddle BaseSellPrice / DiscountCost | 20 / 8 | 15 / 6 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | Rifle BaseSellPrice / DiscountCost | 120 / 55 | 90 / 40 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | Shotgun BaseSellPrice / DiscountCost | 150 / 65 | 120 / 52 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | FireAxe BaseSellPrice / DiscountCost | 70 / 30 | 60 / 26 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | LeverAction BaseSellPrice / DiscountCost | 160 / 70 | 135 / 58 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | SawedOff BaseSellPrice / DiscountCost | 110 / 50 | 105 / 45 | Selling found/starter weapons was an early cash exploit; tighten early income |
+| DT_Items | GoldWatch BaseSellPrice / DiscountCost | 60 / 30 | 75 / 34 | Rare trinkets reward risky kills (snowball late) |
+| DT_Items | AntlerTrophy BaseSellPrice / DiscountCost | 55 / 25 | 70 / 32 | Rare trinkets reward risky kills (snowball late) |
+| DT_Items | VintageCoin BaseSellPrice / DiscountCost | 40 / 18 | 50 / 22 | Rare trinkets reward risky kills (snowball late) |
+| DT_Weapons | LongRifle BaseDamage | 45 | 90 | Top-tier price needs a top-tier hit |
+| DT_Weapons | LeverAction BaseDamage | 28 | 40 | Was weaker than cheaper guns |
+| DT_KioskCatalog | PipeWrench Cost | 40 | 35 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | CanoePaddle Cost | 35 | 25 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | Machete Cost | 60 | 90 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | FireAxe Cost | 110 | 100 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | Magnum Cost | 250 | 150 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | LeverAction Cost | 275 | 225 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | SMG Cost | 175 | 250 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | LongRifle Cost | 300 | 350 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | SpikeTrap Cost | 75 | 60 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | SlowStrip Cost | 60 | 50 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | GasTrap Cost | 90 | 120 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_KioskCatalog | SwingingTrap Cost | 75 | 110 | Cheap early options, pricier late power; trap prices track their new usefulness |
+| DT_AmmoCatalog | PistolAmmo Cost | 8 | 12 | Ammo should bite early |
+| DT_AmmoCatalog | RifleAmmo Cost | 10 | 15 | Ammo should bite early |
+| DT_AmmoCatalog | ShotgunShells Cost | 12 | 15 | Ammo should bite early |
+| DT_DefenseBlueprints | SpikeTrap Cost | 75 | 60 | Kept in sync with the kiosk |
+| DT_DefenseBlueprints | SwingingTrap Cost | 75 | 110 | Kept in sync with the kiosk |
+| DT_DefenseBlueprints | SlowStrip Cost | 60 | 50 | Kept in sync with the kiosk |
+| DT_DefenseBlueprints | GasTrap Cost | 90 | 120 | Kept in sync with the kiosk |
+| DT_DefenseBlueprints | RepairCostPerHP (all 6 rows) | 1.0 (Turret 2.0) | 0 | Paid repair removed (E.5) |
+| DT_ShelfTiers | Tier1 UpgradeCost | 150 | 140 | First upgrade reachable by ~Day 2 |
+| DT_ShelfTiers | Tier2 UpgradeCost | 250 | 280 | Mid-game sink |
+| DT_ZombieTypes | Shambler CashReward | 0 | 2 | Specials worth hunting; Shamblers pay a trickle |
+| DT_ZombieTypes | Spitter CashReward | 10 | 12 | Specials worth hunting; Shamblers pay a trickle |
+| DT_ZombieTypes | Screamer CashReward | 15 | 20 | Specials worth hunting; Shamblers pay a trickle |
+| DT_ZombieTypes | Bloater CashReward | 15 | 20 | Specials worth hunting; Shamblers pay a trickle |
+| DT_ZombieTypes | Brute CashReward | 25 | 40 | Specials worth hunting; Shamblers pay a trickle |
+| BP_ZombieBase | EliteCashMult (new) | — | 3 | An elite kill pays 3× type cash |
+| DT_ZombieLoot | Runner MaxDrops | 3 | 2 | Each special drops loot that fits its theme |
+| DT_ZombieLoot | Screamer GuaranteedDropCount | 0 | 1 | Each special drops loot that fits its theme |
+| DT_ZombieLoot | Screamer GoldWatch / VintageCoin / LuckyCharm / BigfootFigurine / AntlerTrophy | .015 / .0225 / .03 / .0225 / .015 | ×2 | Each special drops loot that fits its theme |
+| DT_ZombieLoot | Spitter Bandage / MedKit / Painkillers | .0675 / .0225 / .0525 | ×2 | Each special drops loot that fits its theme |
+| DT_ZombieLoot | Brute Nails / ScrapMetal / DuctTape | .09 / .11 / .12 | ×1.5 | Each special drops loot that fits its theme |
+| DT_ZombieLoot | Bloater CannedBeans / SpoiledMeat / BeefJerky | .09 / .13 / .09 | ×1.5 | Each special drops loot that fits its theme |
+| DT_ZombieLoot | Elite GoldWatch / VintageCoin / AntlerTrophy | .02 / .03 / .02 | ×2 | Each special drops loot that fits its theme |
+| BP_Trap_Spike | Pulse interval / radius / damage / wear | one hit on overlap, empty GE | 0.5 s / 125 / 25 / 0.25 | Traps were near-useless (E.3) |
+| BP_Trap_Swinging | Pulse interval / radius / damage / wear | one hit on overlap, empty GE | 1.5 s / 175 / 100 / 1.0 | Traps were near-useless (E.3) |
+| BP_Trap_Gas | Pulse interval / radius / damage / wear | one hit on overlap, empty GE | 0.5 s / 300 / 8 / 0 | Traps were near-useless (E.3) |
+| BP_Trap_SlowStrip | Pulse interval / radius / damage / wear | one hit on overlap, empty GE | 0.5 s / 200 / 0 / 0 + GE_Slow | Traps were near-useless (E.3) |
+| GE_Slow | Duration / stacking | 3 s / by source | 1 s / by target, limit 1 | Halve speed while standing in the strip, no compounding |
+| GDAttributeSetBase.cpp | MoveSpeed clamp floor | 150 | 25 | Let slows affect 150-speed walkers |
 
 ## F. Game feel
 

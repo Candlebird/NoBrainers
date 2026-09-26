@@ -100,16 +100,6 @@ bool AGDPlayerController::Server_PlaceDefenseOnSocket_Validate(AActor* TargetSoc
 	return true;
 }
 
-void AGDPlayerController::Server_RepairDefense_Implementation(AActor* TargetSocket)
-{
-	OnServerRepairDefense(TargetSocket);
-}
-
-bool AGDPlayerController::Server_RepairDefense_Validate(AActor* TargetSocket)
-{
-	return true;
-}
-
 void AGDPlayerController::Server_SellDefense_Implementation(AActor* TargetSocket)
 {
 	OnServerSellDefense(TargetSocket);

@@ -40,11 +40,6 @@ public:
 	bool Server_PlaceDefenseOnSocket_Validate(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
 
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void Server_RepairDefense(AActor* TargetSocket);
-	void Server_RepairDefense_Implementation(AActor* TargetSocket);
-	bool Server_RepairDefense_Validate(AActor* TargetSocket);
-
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void Server_SellDefense(AActor* TargetSocket);
 	void Server_SellDefense_Implementation(AActor* TargetSocket);
 	bool Server_SellDefense_Validate(AActor* TargetSocket);
@@ -56,9 +51,6 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
 	void OnServerPlaceDefenseOnSocket(AActor* TargetSocket, TSubclassOf<AActor> DefenseClass);
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
-	void OnServerRepairDefense(AActor* TargetSocket);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "GASDocumentation|Defense")
 	void OnServerSellDefense(AActor* TargetSocket);
