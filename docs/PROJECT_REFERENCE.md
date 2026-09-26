@@ -60,8 +60,8 @@ Content/
     UI/                          HUD/menu textures
   FPWeapon/                      First-person gun mesh/materials/textures
                                   (added for the FPS conversion)
-  Interactable/                  BP_Interaction_Base, BP_ShopStation_Base
-                                  (the store-sim shop interaction system)
+  Interactable/                  BP_Interaction_Base, kiosks, pickups, shelves
+                                  (the store-sim interaction actors)
   AnimStarterPack/                UE4 mannequin anims + zombie skeletal mesh
                                   assets (Zombie_Standard, ZombieTest, etc.)
   ParagonMinions/                 FX assets carried over from the sample
@@ -152,27 +152,20 @@ all under `Content/GASDocumentation/Characters/Hero/Abilities/<AbilityName>/`:
 
 - `Content/Interactable/BP_Interaction_Base` — generic interactable base,
   driven by `GA_Interact`.
-- **Interaction input already works via legacy input, not Enhanced Input —
-  check this before building anything new.** `GA_Interact` is activated by
-  the classic Action Mapping `"Interact"` (key **F**, defined in
-  `Config/DefaultInput.ini`), routed through `EGDAbilityInputID::Interact`
-  (`Source/GASDocumentation/GASDocumentation.h`) and
-  `AGDHeroCharacter::BindASCInput()`'s `BindAbilityActivationToInputComponent`
-  call (`Source/GASDocumentation/Private/Characters/Heroes/GDHeroCharacter.cpp`).
-  This is the mechanism the player already uses today to pick up items /
-  interact with the world — it predates and has nothing to do with Enhanced
-  Input. An `IA_Interact` Enhanced Input action asset exists but, as of this
-  writing, nothing consumes it — don't assume interaction is unbuilt just
-  because `IA_Interact`/`IMC_Default` isn't wired to anything. Before adding
-  new interaction (or any ability-trigger) input, check
-  `Config/DefaultInput.ini` ActionMappings, `EGDAbilityInputID`
-  (`GASDocumentation.h`), and `AGDCharacterBase`/`AGDHeroCharacter`'s
-  GAS input-binding first — it's likely already wired via the legacy path.
-- `Content/Interactable/BP_ShopStation_Base` — the shop/restock interaction
-  from the GDD's day-loop ("Customers buy items → money → buy weapons/ammo/
-  defenses"). This is the only shop-specific Blueprint that exists so far;
-  no separate customer AI, shelf, or economy Blueprints were found as of
-  this writing — check `project_query search "Shop"` for anything newer.
+- **Interaction input is Enhanced Input, key E only.** `IA_Interact` (E, in
+  `IMC_Default`) is handled in `BP_PlayerController_ZombieStore`: if an
+  interaction window is open it closes it (`CloseActiveInteractionUI`), in
+  Build Mode it places the selected defense, otherwise it activates
+  `GA_Interact`. The legacy `"Interact"` (F) and `"Ability4"` (E) Action
+  Mappings were removed from `Config/DefaultInput.ini` (commit 9847de3). Don't
+  re-add them or any other hard-coded key: new input goes through an
+  InputAction + `IMC_Default`. `EGDAbilityInputID::Interact` and
+  `AGDHeroCharacter::BindASCInput()` still exist but are inert with no
+  matching Action Mapping. Note that an editor started before an ini change
+  keeps the old mappings in memory until restarted.
+- `Content/Interactable/BP_DiscountKiosk` — the purchase kiosks (Weapon /
+  Upgrades / Advertising, via `WBP_KioskCatalog` + `DT_KioskCatalog`). The
+  legacy GASDocumentation `BP_ShopStation_Base` was deleted 2026-09-25.
 
 ## Maps
 
@@ -211,7 +204,7 @@ all under `Content/GASDocumentation/Characters/Hero/Abilities/<AbilityName>/`:
   `Content/AnimStarterPack/.../Zombie_Standard*`). Building it should likely
   subclass `AGDMinionCharacter` alongside `BP_RedMinion`/`BP_BlueMinion`.
 - **"Where's the shop/store-sim logic?"** → `Content/Interactable/`
-  (`BP_Interaction_Base`, `BP_ShopStation_Base`) + `GA_Interact`.
+  (`BP_Interaction_Base`, `BP_DiscountKiosk`) + `GA_Interact`.
 - **Stats/asset counts, dependency lookups, etc.** → use Monolith's
   `project_query` (`get_stats`, `search`, `find_by_type`, `find_references`)
   instead of manual file globbing — it's indexed and faster (287 assets, 57

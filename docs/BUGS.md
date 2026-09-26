@@ -1235,4 +1235,28 @@
 - **Repro:** In PIE, interact with a `BP_ShopStation_Base` instance while you have enough gold, then equip any weapon (e.g. the Pipe Wrench) and left-click.
 - **Actual:** The station is GASDocumentation sample code. It deducts gold, then `ClearAbility(GunAbilityReference)` → `GiveAbility(PurchasableClass = GA_FireGun)` on the hero. `GA_FireGun` is bound to `Ability1` (LMB, InputID 3), the same input as the equipped weapon ability, so every click also spawns a `BP_GunProjectile`. Melee weapons appear to "shoot projectiles."
 - **Expected:** Only the equipped weapon's `DT_Weapons.GrantedAbility` responds to fire input. The station should restock or sell No Brainers items, or be removed from the maps.
-- **Status:** Fixed (disabled). The Authority → purchase-Branch exec link in `BP_ShopStation_Base` is cut, so interacting runs only `Parent: OnInteract`. The purchase chain is kept but unreachable, under a "DISABLED" comment box. No subclasses exist. The green orb is replaced by the cosmetic `/Game/Weapons/BP_FauxProjectile`, spawned from `BP_EquipmentComponent.Multicast_FireTracer`.
+- **Status:** Fixed (disabled). The Authority → purchase-Branch exec link in `BP_ShopStation_Base` is cut, so interacting runs only `Parent: OnInteract`. The purchase chain is kept but unreachable, under a "DISABLED" comment box. No subclasses exist. The green orb is replaced by the cosmetic `/Game/Weapons/BP_FauxProjectile`, spawned from `BP_EquipmentComponent.Multicast_FireTracer`. 2026-09-25: resolved by removal. The asset was deleted, its instance was removed from `Test_Level_Zero` (`Map_Store_Outdoors` no longer had one), and it was dropped from `Tools/LevelView/store_layout.py`.
+
+## Tab in the shelf UI closes only the inventory
+
+- **Area:** `WBP_ShelfPanel` / `BP_ShelfActor`, inventory toggle input; generally all interaction windows.
+- **Repro:** Interact with a shelf to open the shelf UI, then press Tab.
+- **Actual:** Only the inventory closes; the shelf panel stays open.
+- **Expected:** Tab, Escape, and E each close the whole interaction window the player is in (shelf, kiosks, and any other interaction UI).
+- **Status:** Fixed, pending user verification in PIE. Tab, Escape and E now route through `CloseActiveInteractionUI` on `BP_PlayerController_ZombieStore`, which closes the shelf and inventory together. Covered by `Test_InteractionUI_CloseActive`.
+
+## UI open/close functions have empty MappingContext pins
+
+- **Area:** `BP_PlayerController_ZombieStore` — Add/RemoveMappingContext nodes in `OpenShelfTradeUI`, `OpenInventoryUI` and their Close functions.
+- **Repro:** Inspect those nodes' `MappingContext` pin.
+- **Actual:** The pin shows None, so the intended IMC swap (e.g. `IMC_Inventory`) likely never happens.
+- **Expected:** Each node references the intended mapping context, or the nodes are removed if unused.
+- **Status:** Open. Found during the unified UI-close planning; not yet verified in-editor (the compact-output hook can hide object pin defaults).
+
+## Monolith animation.add_notify can't create a new notify track
+
+- **Area:** Monolith `animation` namespace — `add_notify`, `add_notify_state`, `set_notify_track`, and any other action that takes a `track_name`/`track_index`.
+- **Repro:** Call `animation.add_notify` on an AnimSequence/AnimMontage with a `track_name` that doesn't already exist on the asset (e.g. a fresh `create_montage_from_sections` output, which only has the default track `"1"`).
+- **Actual:** The call either returns `index: -1` (silent failure, no notify added) or, if a notify already exists on another track, returns a spurious `index: 0` "success" without actually adding anything (verified via `get_sequence_notifies`/`get_montage_info.notify_count` before/after). `set_notify_track` also refuses any `track_index` beyond the current count ("Invalid track index: N (total: N)") — it cannot append a track either. No Monolith action exists to add or rename a notify track; the underlying `AnimNotifyTracks` UPROPERTY is reflection-protected (`get_editor_property`/`set_editor_property` both fail with "protected and cannot be read/set"), so there's no Python workaround.
+- **Expected:** `add_notify`/`add_notify_state` create a new named track on demand when `track_name` doesn't exist yet (matching the Persona "+" track button), or a dedicated `add_notify_track`/`rename_notify_track` action is added.
+- **Status:** Open, tool gap (not a project asset bug). Worked around in `AM_MeleeSwing` by adding the `Event.Montage.MeleeHit` notify to the existing default track `"1"` instead of a track named `"Hit"`.

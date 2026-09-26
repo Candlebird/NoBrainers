@@ -82,3 +82,6 @@ DerivedDataCache/*
 
 # Python cache
 __pycache__/
+
+# Blender auto-backup files
+*.blend1

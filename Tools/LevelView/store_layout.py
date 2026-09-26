@@ -37,7 +37,6 @@ BP = {
     "kiosk_discount": "/Game/Interactable/BP_DiscountKiosk",
     "kiosk_ammo": "/Game/Interactable/BP_AmmoKiosk",
     "close_shop": "/Game/Interactable/BP_CloseShopStation",
-    "shop_station": "/Game/Interactable/BP_ShopStation_Base",
     "pickup": "/Game/Interactable/BP_ItemPickup",
     "cust_spawner": "/Game/AI/Customer/BP_CustomerSpawner",
     "cust_spawn": "/Game/AI/Customer/BP_CustomerSpawnPoint",
@@ -259,10 +258,9 @@ def build_front():
     for i, y in enumerate((-2000, -1100)):
         cbox(f"Lodge_Bench{i}", "prop", 700, y, 60, 220, 0, 45, "timber", yaw=90 - 60 * (i * 2 - 1))
     cbox("Lodge_Rug", "floor", 650, -1550, 500, 700, 1, 2, "floor_rug", nocollide=True)
-    # service desk: kiosks + legacy shop station
+    # service desk: kiosks
     box("ServiceDesk", "counter", 1100, -2450, 1800, -2150, 0, 105, "counter")
     bp("Kiosk_Discount", "gameplay", "kiosk_discount", 1250, -2000, 50, 90, label2d="DISC")
-    bp("ShopStation", "gameplay", "shop_station", 1650, -2000, 50, 90, label2d="SHOP")
 
     # ---- customer flow: walk in through the left/center doors, leave through the right door (by the checkouts).
     # Spawns/exit sit on entry mats in line with the door openings (doors span Y -360..360), just behind the

@@ -8,7 +8,7 @@ Writes to <project>/PlaceholderAssets:
 Unlike blender_placeholders.py, nothing is normalized: models are authored in cm at real size.
   Weapons: pivot = grip, barrel/blade along UE +Y (axis=y, default) or UE +X (axis=x), up +Z.
            Note Blender->UE FBX import flips Y, so UE +Y is authored along Blender -Y.
-  Items:   pivot = bottom centre, front faces +X.
+  Items:   pivot = bottom centre, front faces +X; scaled by ITEM_SCALE (2x) at export for pickup readability.
 Material slot names are lvlib.MATERIALS keys; ue_import_gear.py maps them to MI_LV_<key>.
 """
 import math
@@ -26,6 +26,9 @@ from blender_placeholders import mat, new_obj, reset  # noqa: E402
 PROJ = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(PROJ, "PlaceholderAssets")
 AXIS = "y"
+# Items are only used as world pickups (zombie drops), so they're authored 2x real size to be easy to see and grab.
+# Size is baked into the mesh here; the mesh is imported and placed at 1x scale in UE.
+ITEM_SCALE = 2.0
 
 
 # ---------------------------------------------------------------- primitives (cm, final UE-ish frame)
@@ -96,7 +99,7 @@ def wtube(material, L0, L1, z, r0, r1=None, off=0.0, segs=12):
 
 
 # ---------------------------------------------------------------- join / export
-def join_all(name):
+def join_all(name, scale=1.0):
     obs = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     bpy.ops.object.select_all(action="DESELECT")
     for o in obs:
@@ -108,7 +111,7 @@ def join_all(name):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     me = ob.data
     for v in me.vertices:  # authored in cm, Blender units are m
-        v.co *= 0.01
+        v.co *= 0.01 * scale
     uniq, remap = [], {}
     for i, m in enumerate(me.materials):
         if m.name not in uniq:
@@ -142,7 +145,7 @@ def dirs():
 
 
 def finish_item(item_id):
-    ob, slots, lo, hi = join_all(f"SM_Item_{item_id}")
+    ob, slots, lo, hi = join_all(f"SM_Item_{item_id}", ITEM_SCALE)
     bdir, fdir = dirs()
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bdir, f"SM_Item_{item_id}.blend"))
     fbx(os.path.join(fdir, f"SM_Item_{item_id}.fbx"), {"MESH"})
