@@ -1275,3 +1275,19 @@
 - **Actual:** A different connection from the same source pin was removed (seen in Phase 7 A.5 on `GA_BP_FireWeapon`).
 - **Expected:** Only the named link is removed.
 - **Status:** Open. Workaround: verify with `get_node_details` after every disconnect.
+
+## C.4 uses ragdoll fallback, not PhysicalAnimationComponent blend
+
+- **Area:** `/Game/Characters/BP_ZombieBase` — `Multicast_PlayDeath` / `StartRagdoll` (Phase 7 C.4).
+- **Repro:** Kill any zombie.
+- **Actual:** Death anim plays ~0.5 s, then an instant full ragdoll with an impulse along the killing hit. No gradual physics-weight blend via `PhysicalAnimationComponent`.
+- **Expected (original design):** Death anim blended into physics with ramping physics weight.
+- **Status:** Known limitation — the planned fallback was used for the overnight run. Revisit if the snap to ragdoll looks bad in playtest.
+
+## ABP_SK_Zombie has an orphaned old Locomotion state machine
+
+- **Area:** `/Game/Characters/Zombie/ABP_SK_Zombie` AnimGraph.
+- **Repro:** Open the AnimGraph.
+- **Actual:** The old Locomotion state machine node is still in the graph, disconnected (Monolith has no anim-node delete action). The live chain is BlendListByInt → Slot → ApplyAdditive → Output.
+- **Expected:** The unused node is removed.
+- **Status:** Open, cosmetic. Delete it by hand in the editor.

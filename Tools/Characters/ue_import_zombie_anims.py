@@ -68,8 +68,8 @@ def import_one(skeleton, filename, type_name, clip_name):
 
     if clip_name == "HitReact":
         try:
-            seq.set_editor_property("additive_anim_type", unreal.AdditiveAnimationType.AAT_LOCAL_SPACE)
-            seq.set_editor_property("ref_pose_type", unreal.AdditiveBasePoseType.ABPT_ANIM_SCALED)
+            seq.set_editor_property("additive_anim_type", unreal.AdditiveAnimationType.AAT_LOCAL_SPACE_BASE)
+            seq.set_editor_property("ref_pose_type", unreal.AdditiveBasePoseType.ABPT_ANIM_FRAME)
             seq.set_editor_property("ref_pose_seq", seq)
             seq.set_editor_property("ref_frame_index", 0)
         except Exception as e:

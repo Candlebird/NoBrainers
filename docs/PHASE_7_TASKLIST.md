@@ -17,6 +17,19 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 - **A.4:** Fire to ≤25% of the mag → ammo text red + pulsing; reload/swap to melee → white, steady.
 - **A.5:** Each shot kicks the view up and eases back; sustained SMG fire doesn't drift permanently; shotgun/sawed-off/magnum also shake. Check kick direction is UP.
 - **A.1:** Fire until reserve < what the magazine needs, reload → magazine gains exactly the leftover reserve; reserve hits 0; nothing vanishes.
+- **B/C (types, spawn, anims):** Night zombies claw out of the ground and can't be damaged during the climb, then chase. Placed/test zombies (no climb) act immediately.
+- **B.8:** Night 1 = Shamblers only; Runners from N2, Spitters N4, Screamers N5, Brutes/Bloaters N6+. Specials more common at higher Ad level.
+- **Speed:** Shamblers now jog, then sprint near you. Judge whether it's too hard.
+- **Runner:** 2–3 s sprint bursts, leaping lunge at ~3–4 m, can't be outrun.
+- **Brute:** roar + windup, straight charge, heavy damage + knockback (**check knockback on a remote client**). Smashes barricades. Sidestep → it hits the wall and is stunned ~1.5 s. Other zombies in its path get shoved.
+- **Spitter:** holds 10–18 m, backs off when you close in. Green glob arcs and is dodgeable (and doesn't pop on the Spitter itself). Puddle lasts 5 s, damages + slows you, hurts zombies.
+- **Screamer:** flees within 8 m. Shriek visibly speeds nearby zombies for 6 s and brings 2–4 extras (max 6 per Screamer).
+- **Bloater:** swells 1.5 s near a player/barricade then pops, damaging players, barricades and zombies. Shooting it dead also pops it (once).
+- **Headshots:** head hits do 1.5× (no ding yet — F.1).
+- **Hit-react/stagger:** every hit flinches; shotgun/sawed-off/magnum/melee interrupt attack/movement ~0.4 s.
+- **Death:** per-type death anim, then ragdoll thrown along the killing hit. If the body freezes instead, the physics asset (`PA_SK_Zombie`) isn't assigned. ≤8 bodies stay.
+- **Loot/cash:** specials drop and pay more (Brute/Bloater most).
+- **Two clients:** anims, climb, deaths and puddles look the same on both.
 
 ---
 
@@ -40,31 +53,31 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 GDD §4: every type derives from one shared base class. All types reuse `SK_Zombie`, and each gets
 its own animation set (group C). **Wrecker was cut by the user; see Proposals.**
 
-- [ ] **B.1 Type data model.** A `DT_ZombieTypes` row per type: HP, speed(s), damage, attack range,
+- [x] **B.1 Type data model.** **DONE:** `DT_ZombieTypes` + `S_ZombieTypeData`; `BP_ZombieBase` applies its row on spawn (GE_ZombieTypeHealth / GE_ZombieSetMoveSpeed); children in `/Game/Characters/Zombies/`. A `DT_ZombieTypes` row per type: HP, speed(s), damage, attack range,
   loot table row, cash/loot tier, unlock night, base spawn weight, anim set. `BP_ZombieBase` reads its
   row on spawn. Each type is a thin Blueprint child (`BP_Zombie_<Type>`).
-- [ ] **B.2 Shambler.** The current zombie, re-expressed as the base row.
-- [ ] **B.3 Runner.** It alternates a jog with 2–3 s sprint bursts and finishes with a leaping lunge
+- [x] **B.2 Shambler.** **DONE:** `BP_Zombie_Shambler` (base row). The current zombie, re-expressed as the base row.
+- [x] **B.3 Runner.** **DONE:** `BP_Zombie_Runner`: ToggleBurst sprint bursts + CheckLunge (lunge anim + LaunchCharacter, 3 s cooldown). It alternates a jog with 2–3 s sprint bursts and finishes with a leaping lunge
   attack. About 50% of Shambler HP. The player can't outrun it.
-- [ ] **B.4 Brute.** Tanky and slow. It periodically winds up and charges in a straight line: heavy
+- [x] **B.4 Brute.** **DONE:** `BP_Zombie_Brute`: windup+roar → sweep-moved charge (1100 u/s, ≤1.5 s); player hit = 40 dmg + knockback; barricade = 100 breach dmg; zombies are shoved aside; wall = stun. 8 s cooldown. Tanky and slow. It periodically winds up and charges in a straight line: heavy
   damage plus knockback to players and barricades it hits. If the charge misses, it's briefly
   stunned. Sidestepping is the counter.
-- [ ] **B.5 Spitter.** Keeps a 10–18 m range and lobs a visible, dodgeable arcing glob. The glob
+- [x] **B.5 Spitter.** **DONE:** `BP_Zombie_Spitter` + `BP_SpitterGlob` + `BP_AcidPuddle`: backs off <1000, lobs at 1000–1800 on 4 s cooldown. Glob ignores its owner (Spitter) via GetOwner. Keeps a 10–18 m range and lobs a visible, dodgeable arcing glob. The glob
   leaves a 5 s acid puddle (damage over time plus slow). It backs off when players close in. The
   acid hurts zombies too.
-- [ ] **B.6 Screamer.** Low HP; flees from players. Its shriek (on cooldown) gives zombies within
+- [x] **B.6 Screamer.** **DONE:** `BP_Zombie_Screamer`: flees <800, shriek (15 s cd) buffs zombies in 1200 u (×1.4, 6 s) and calls `SpawnSummoned` (2–4, cap 6). Low HP; flees from players. Its shriek (on cooldown) gives zombies within
   ~12 m +40% move speed for 6 s and summons 2–4 extra Shamblers/Runners from the nearest spawn zone
   (per-Screamer cap).
-- [ ] **B.7 Bloater.** Slow. Explodes on death, or after a visible 1.5 s swell-fuse when it reaches a
+- [x] **B.7 Bloater.** **DONE:** `BP_Zombie_Bloater`: 200 u trigger → 1.5 s swell → 400 u blast (60 dmg, `GE_BloaterBlast`) to anything with an ASC (zombies too) and breachables; also on death (once, `bExploded`). Slow. Explodes on death, or after a visible 1.5 s swell-fuse when it reaches a
   player or defense. The blast damages players, defenses **and zombies**.
-- [ ] **B.8 Staggered unlock.** Night 1: Shamblers only. Runners join on night 2, Spitters on 4,
+- [x] **B.8 Staggered unlock.** **DONE:** `BP_ZombieSpawnerManager.PickZombieClassFor(Night, AdLevel)` / `ComputeSpawnWeight` read unlock night + weight from `DT_ZombieTypes`. Night 1: Shamblers only. Runners join on night 2, Spitters on 4,
   Screamers on 5, Brutes and Bloaters on 6+. Spawn weights shift toward special types with night
   number and Store Advertisement level.
-- [ ] **B.9 Headshots.** 1.5× damage on head hits, all types. No per-type weak spots.
+- [x] **B.9 Headshots.** **DONE:** `BP_ZombieBase.GetHeadshotMultiplier` (head bone only, 1.5×), applied per pellet in `GA_BP_FireWeapon` (`bLastShotHeadshot` kept for F.1). 1.5× damage on head hits, all types. No per-type weak spots.
 - [ ] **B.10 Elites: one per surge.** Each horde surge (D.2) includes exactly one elite: a random type
   plus one modifier (Armored +100% HP / Swift +35% speed / Regenerating out of combat), a colored
   glow, and a guaranteed better loot roll.
-- [ ] **B.11 Per-type loot/cash.** Special types and elites pay more than Shamblers (`DT_ZombieLoot`).
+- [x] **B.11 Per-type loot/cash.** **DONE:** `LootRowName` per type row feeds `Server_RollAndSpawnLoot`; `CashReward` per type. Special types and elites pay more than Shamblers (`DT_ZombieLoot`).
 
 ## C. Zombie animations (Blender)
 
@@ -74,16 +87,16 @@ and imports go under `Content/Characters/Zombie/Animations/<Type>/`. **Tone: mix
 Shambler and Bloater are goofy and floppy. Runner and Screamer are twitchy and unsettling. Brute is heavy.
 Spitter sits in between.
 
-- [ ] **C.1 Per-type set.** **Blender side DONE:** 75 clips in `PlaceholderAssets/FBX/Zombie/` (`Tools/Characters/blender_zombie_anims.py`; fixed a pose-scale accumulation "spike" bug). Attack hit / Lob release ≈ 55% of clip length. UE import via `Tools/Characters/ue_import_zombie_anims.py` pending. Each type gets: idle, walk, run (or type-specific gait), claw-out-of-ground
+- [x] **C.1 Per-type set.** **DONE:** Anim sets wired into `ABP_SK_Zombie` via C.3. **Blender side DONE:** 75 clips in `PlaceholderAssets/FBX/Zombie/` (`Tools/Characters/blender_zombie_anims.py`; fixed a pose-scale accumulation "spike" bug). Attack hit / Lob release ≈ 55% of clip length. **UE import DONE:** 75 AnimSequences under `/Game/Characters/Zombie/Animations/<Type>/` (HitReact = additive local space, frame 0 base). Set in the Anim BP pending (C.3). Each type gets: idle, walk, run (or type-specific gait), claw-out-of-ground
   spawn, 3 attack variations (randomly picked), an additive hit-react, and 3 death variations
   (randomly picked). Plus type-specific clips: Runner sprint + lunge, Brute charge wind-up/charge/stun,
   Spitter lob, Screamer shriek + flee run, Bloater swell.
-- [ ] **C.2 Spawn.** Every type claws up from the ground, each in its own style. The zombie is invulnerable
+- [x] **C.2 Spawn.** **DONE:** Per-type climb anim on spawn; `GE_SpawnInvulnerable` + AI inactive until the climb ends (`OnZombieActivated`). Every type claws up from the ground, each in its own style. The zombie is invulnerable
   and inactive until the climb ends (~1.5–3 s).
-- [ ] **C.3 Anim Blueprint.** Locomotion blendspace per type, montage slots for attacks/spawn/specials,
+- [x] **C.3 Anim Blueprint.** **DONE:** `ABP_SK_Zombie`: BlendListByInt(ZombieAnimIndex) over 6 `BS_Zombie_*_Locomotion` → Slot → ApplyAdditive per-type HitReact (driven by `OnZombieHitReact`). Heavy hits stagger via `RegisterHit`; `BTT_ZombieMeleeAttack` aborts while staggered/action-locked. Locomotion blendspace per type, montage slots for attacks/spawn/specials,
   and an additive hit-react layer (the flinch plays on every hit). Heavy hits (shotgun, sawed-off,
   magnum, melee) also briefly interrupt the zombie's attack or movement.
-- [ ] **C.4 Death → physics.** Death anim blended into physics through `PhysicalAnimationComponent`, with
+- [x] **C.4 Death → physics.** **DONE:** **Fallback used:** `Multicast_PlayDeath` plays a random death anim ~0.5 s then `StartRagdoll` with impulse along the kill direction; spawner keeps ≤8 corpses (`RegisterCorpse`). See docs/BUGS.md — "C.4 uses ragdoll fallback, not PhysicalAnimationComponent blend." Death anim blended into physics through `PhysicalAnimationComponent`, with
   physics weight ramping up and an impulse along the killing hit's direction. **Fallback if the
   physics asset fights it:** play the death anim for ~0.5 s, then full ragdoll with the impulse. The
   body despawns later; oldest ragdolls are cleaned up once there are more than 8.
