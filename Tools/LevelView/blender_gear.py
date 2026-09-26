@@ -449,4 +449,5 @@ def main():
     print("GEAR_DONE")
 
 
-main()
+if __name__ == "__main__":  # guarded: blender_defenses / blender_store_fixtures import helpers from here
+    main()

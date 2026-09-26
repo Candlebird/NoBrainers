@@ -68,6 +68,9 @@ MATERIALS = {
     "product_yellow": ((0.85, 0.75, 0.15), 0.6, 0.0, 0.0),
     "product_white":  ((0.85, 0.85, 0.82), 0.7, 0.0, 0.0),
     "spoiled":        ((0.35, 0.40, 0.20), 0.9, 0.0, 0.0),
+    # interactable-station cues (Tools/Props/blender_store_fixtures.py)
+    "screen_glow":    ((0.20, 0.75, 1.00), 0.3, 0.0, 4.0),   # lit kiosk/register screens
+    "alert_red":      ((0.95, 0.08, 0.05), 0.4, 0.0, 2.0),   # glowing red push button / discount tag
 }
 
 # 2D plot colors by category

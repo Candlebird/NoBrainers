@@ -1299,3 +1299,19 @@
 - **Actual:** No `[AUTOTEST]` PASS/FAIL line for `Test_Weapon_CooldownBlocksRefire` in any Phase 7 run (suite reports 53/53 without it). It's likely an async test whose completion event never fires, or it isn't reached in RunAllTests.
 - **Expected:** One PASS/FAIL line per registered test.
 - **Status:** Open. Found during Phase 7 overnight run; not investigated.
+
+## GA_BP_MeleeAttack has a dead CachedHero/CachedEquipment setup block
+
+- **Area:** `/Game/Characters/Abilities/GA_BP_MeleeAttack`, EventGraph near ActivateAbility.
+- **Repro:** Inspect the graph. The `Cast To GDHeroCharacter` → set `CachedHero`/`CachedEquipment` block has no exec input, and its branch would call `SwingOnce` a second time.
+- **Actual:** `CachedHero` and `CachedEquipment` are always None. Nothing live reads them since the G.8 fix (RegisterHit now uses `PendingHitDirection`).
+- **Expected:** Either wire the block in without the duplicate `SwingOnce`, or delete it.
+- **Status:** Open, harmless. Found during Phase 7 G.8.
+
+## Surge warning banner shows no text (not reproduced statically)
+
+- **Area:** `/Game/UI/WBP_EventBanner` (`ShowSurgeBanner`, `PollSurgeState`); `BP_ZombieSpawnerManager.AnnounceSurge`.
+- **Repro:** Play a Night until a horde surge is announced (user playtest, 2026-09-26).
+- **Actual:** The banner panel pops up with no text.
+- **Expected:** "HORDE SURGE INCOMING!" / "FINAL SURGE INCOMING!".
+- **Status:** Open. A static check found nothing wrong: the SetText targets, the hardcoded literals, opacity, font size, anim (a 0→1 fade-in), the single widget instance, and replication are all fine. The literals were changed anyway. If it still reproduces, capture a screenshot and note host vs client and whether the customer-event banner (`ShowBanner`) also shows blank. The blank banner may not be the surge banner at all.

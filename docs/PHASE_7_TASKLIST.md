@@ -216,6 +216,47 @@ Player movement is **out of scope** (user: leave the player alone).
 | GE_Slow | Duration / stacking | 3 s / by source | 1 s / by target, limit 1 | Halve speed while standing in the strip, no compounding |
 | GDAttributeSetBase.cpp | MoveSpeed clamp floor | 150 | 25 | Let slows affect 150-speed walkers |
 
+## G. Playtest fixes (2026-09-26)
+
+From the user's first playtest of A–E.
+
+- [x] **G.1 Upside-down spawns.** Some zombies spawn upside down at ~45°. **DONE:** zone, spawn-point and fallback spawn transforms used the full actor rotation. They're now yaw-only (`BP_ZombieSpawnZone.GetRandomSpawnTransform`, `BP_ZombieSpawnerManager.GetNextSpawnTransform`). **USER TEST:** no tilted zombies over a few nights.
+- [x] **G.2 Spawn count scales with players.** Night 1 spawns far too many. Scale the horde count by
+  player count; solo = ~60% of the current amount. **DONE:** `CalculateHordeCount` multiplies by `min(1, 0.6 + 0.4×(players−1))`, then ceil, with a floor of 1. Players come from `GameMode.GetLivingPlayerCount`. This covers the night count and surges. **USER TEST:** solo hordes are noticeably smaller.
+- [x] **G.3 Weapon camera shake off.** Set every shake value to 0 for now (recoil kick stays). **DONE:** `DT_Weapons.CameraShakeScale` = 0 on all rows.
+- [ ] **G.4 Blank surge banner.** The horde/surge banner pops up with no text. **PARTIAL:** no defect found statically; the surge literals changed to "HORDE SURGE INCOMING!" / "FINAL SURGE INCOMING!". **USER TEST:** check whether it still shows blank. See docs/BUGS.md — "Surge warning banner shows no text (not reproduced statically)."
+- [ ] **G.5 Door fixation.** Zombies sometimes keep breaking doors after they have a clear path to
+  the player. **DONE:** in `BTS_ZombieBreachDecision.ReceiveTickAI`, the "breach point not yet broken" branch had no exec out, so the path re-check never ran mid-breach. It now re-checks every tick and clears BreachTarget once a full path exists (the BT decorator already aborts on change). **USER TEST:** open a second route mid-breach; the zombie should leave the door within ~1 s.
+- [x] **G.6 Run start.** The run starts at Dawn; starting cash 50; 4× starting pistol ammo. **DONE:** `BP_GameState_ZombieStore.StartingStoreCash` 250 → 50; `DT_AmmoTypes.PistolAmmo.DefaultStockpile` 48 → 192 (Max 500). Every new run already starts in Morning (= Dawn) via `BeginPlay → StartMorningPhase`. If a run didn't start at Dawn, that was most likely a resumed session save (`bResumeSessionOnStart`). **USER TEST:** start a new run with no save present: Morning phase, 50 cash, 192 pistol reserve.
+- [ ] **G.7 Ammo pickup.** A distinct walk-over pickup that zombies drop and that refills part of
+  the ammo pool automatically (separate from the sellable "ammo box" loot item). **DONE:**
+  - New `/Game/Interactable/BP_AmmoRefillPickup`: a spinning, bobbing green can (`SM_AmmoPickup`, Blender) with a 60 cm overlap sphere, server-only.
+  - It calls `BP_EquipmentComponent.Server_AddAmmo` for each ammo type the hero carries (Pistol 12 / Rifle 8 / Shotgun 6, instance-editable) and despawns after 60 s.
+  - `BP_ZombieBase.Server_RollAndSpawnLoot` drops one at 12% (`AmmoDropChance`), or 100% for elites.
+  - It still gets consumed when the carried types are already full, and has no pickup SFX yet (`PickupSound` is unset).
+  - **USER TEST:** kill zombies; cans drop sometimes, always from elites; walking over one adds reserve ammo.
+- [x] **G.8 Melee `CachedHero` Accessed None** in `GA_BP_MeleeAttack.RegisterHit` (spams while meleeing). **DONE:** the cast that set `CachedHero` had no exec input (never ran). A new cast in the live chain writes `PendingHitDirection`, which RegisterHit now reads. See docs/BUGS.md — "GA_BP_MeleeAttack has a dead CachedHero/CachedEquipment setup block."
+- [x] **G.9 Melee range ×1.3.** **DONE:** `DT_Weapons.MeleeRange` ×1.3 (Bat/Shotgun 195, PipeWrench 169, Machete 208, FireAxe 221, CanoePaddle 273); the trace reads the row.
+- [x] **G.10 Stockable shelf model.** A new, distinct shelf mesh that reads as "stock me" (Blender).
+  DONE: `SM_StockShelf` (`PlaceholderAssets/`, `Tools/Props/blender_store_fixtures.py`, imported by
+  `Tools/Props/ue_import_store_fixtures.py` into `/Game/Environment/StoreFixtures/`). It is a
+  240 cm, 4-tier empty gondola with a glowing header. `BP_ShelfActor.ShelfMesh` uses it at z=-50,
+  since actor pivots sit 50 cm above the floor. Slot fallback Z is now -20+28·row, matching the
+  board tops. InteractionBox is (1,0,33) with extent 38×122×85. StockSign and StockFloorPad are hidden.
+  The 12 placed shelves in Map_Store_Outdoors carried stale per-instance overrides of the old mesh.
+  Only those three components were reset to the class defaults. USER TEST: shelves sit on the
+  floor, stocked items rest on the boards, the category label is readable, and interact works
+  from the front.
+- [x] **G.11 Kiosk and checkout counter models.** Distinct meshes for each kiosk type and the
+  checkout counter, so it's obvious they're interactable (Blender).
+  DONE: `SM_CheckoutCounter` (belt, register, card reader, lane light) is on
+  `BP_CheckoutCounter.CounterMesh`, and its old InteractionMesh cube is hidden.
+  `SM_AmmoKiosk`, `SM_DiscountKiosk` and `SM_CloseShopStation` are on each BP's InteractionMesh.
+  All sit at z=-50 (CloseShop at -160, matching its placed height). Discount, Upgrades and
+  Advertising share `BP_DiscountKiosk`, so they share one model. USER TEST: each fixture sits on
+  the floor facing into the store, the cashier side of the checkout is reachable, and every
+  interact prompt still triggers.
+
 ## F. Game feel
 
 - [ ] **F.1 Hitmarker + headshot ding.** The crosshair hitmarker flashes on every hit; distinct color
