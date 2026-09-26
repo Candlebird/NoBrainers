@@ -1260,3 +1260,18 @@
 - **Actual:** The call either returns `index: -1` (silent failure, no notify added) or, if a notify already exists on another track, returns a spurious `index: 0` "success" without actually adding anything (verified via `get_sequence_notifies`/`get_montage_info.notify_count` before/after). `set_notify_track` also refuses any `track_index` beyond the current count ("Invalid track index: N (total: N)") — it cannot append a track either. No Monolith action exists to add or rename a notify track; the underlying `AnimNotifyTracks` UPROPERTY is reflection-protected (`get_editor_property`/`set_editor_property` both fail with "protected and cannot be read/set"), so there's no Python workaround.
 - **Expected:** `add_notify`/`add_notify_state` create a new named track on demand when `track_name` doesn't exist yet (matching the Persona "+" track button), or a dedicated `add_notify_track`/`rename_notify_track` action is added.
 - **Status:** Open, tool gap (not a project asset bug). Worked around in `AM_MeleeSwing` by adding the `Event.Montage.MeleeHit` notify to the existing default track `"1"` instead of a track named `"Hit"`.
+
+## BP_EquipmentComponent reads EquipmentSlots[0] while the array is empty (log spam)
+
+- **Area:** `/Game/Characters/BP_EquipmentComponent` (found during the Phase 7 A.1 test run).
+- **Repro:** Run the automation test bed (`L_AutomationTestBed`) and grep the log.
+- **Actual:** ~90 `Script Msg: Attempted to access index 0 from array 'EquipmentSlots' of length 0` warnings from `BP_HeroCharacter_C_0.EquipmentComponent`, likely a getter (e.g. `GetActiveAmmo`/active-slot lookup) running before any item is equipped.
+- **Expected:** Getters guard with `IsValidIndex` and return defaults when no slot exists.
+- **Status:** Open, low priority. No test failures attributed to it.
+
+### Monolith `blueprint.disconnect_pins` can remove an unrelated link on a fan-out exec pin
+- **Area:** Monolith MCP tooling (Blueprint graph editing).
+- **Repro:** A source exec pin fans out (or a cast's `then` links elsewhere); call `disconnect_pins` with both `target_node` and `target_pin` for one link.
+- **Actual:** A different connection from the same source pin was removed (seen in Phase 7 A.5 on `GA_BP_FireWeapon`).
+- **Expected:** Only the named link is removed.
+- **Status:** Open. Workaround: verify with `get_node_details` after every disconnect.
