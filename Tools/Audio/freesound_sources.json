@@ -378,5 +378,245 @@
     "attribution_required": false,
     "url": "https://freesound.org/s/348834/",
     "duration_seconds": 77.77
+  },
+  {
+    "sfx_name": "SFX_ScanBeep",
+    "freesound_id": 202530,
+    "title": "scanner beep.wav",
+    "author": "kalisemorrison",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/kalisemorrison/sounds/202530/",
+    "duration_seconds": 0.301859
+  },
+  {
+    "sfx_name": "SFX_CashRegister",
+    "freesound_id": 789219,
+    "title": "Dusty Cash Register / Cash Machine II",
+    "author": "modusmogulus",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/modusmogulus/sounds/789219/",
+    "duration_seconds": 1.45714
+  },
+  {
+    "sfx_name": "SFX_SocketSnap",
+    "freesound_id": 108617,
+    "title": "Thud-dry.wav",
+    "author": "juskiddink",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/people/juskiddink/sounds/108617/",
+    "duration_seconds": 0.321497
+  },
+  {
+    "sfx_name": "SFX_Repair",
+    "freesound_id": 495237,
+    "title": "Single_Ratchet-01.wav",
+    "author": "CallFlan",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/CallFlan/sounds/495237/",
+    "duration_seconds": 1.04429
+  },
+  {
+    "sfx_name": "SFX_TrapZap",
+    "freesound_id": 512471,
+    "title": "Electric zap.wav",
+    "author": "michael_grinnell",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/michael_grinnell/sounds/512471/",
+    "duration_seconds": 0.224966
+  },
+  {
+    "sfx_name": "SFX_TrapGasHiss",
+    "freesound_id": 464424,
+    "title": "Spray_Can_Hiss.wav",
+    "author": "michael_grinnell",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/michael_grinnell/sounds/464424/",
+    "duration_seconds": 1.0
+  },
+  {
+    "sfx_name": "SFX_TrapSpringPop",
+    "freesound_id": 540788,
+    "title": "Boing 1",
+    "author": "magnuswaker",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/magnuswaker/sounds/540788/",
+    "duration_seconds": 0.723708
+  },
+  {
+    "sfx_name": "SFX_TrapMalletSwing",
+    "freesound_id": 485073,
+    "title": "Shadoks Swoosh and Hit 3",
+    "author": "Melloja",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/people/Melloja/sounds/485073/",
+    "duration_seconds": 0.498866
+  },
+  {
+    "sfx_name": "SFX_TurretFire",
+    "freesound_id": 854347,
+    "title": "Machine Gun Single Shot",
+    "author": "qubodup",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/qubodup/sounds/854347/",
+    "duration_seconds": 0.0642083
+  },
+  {
+    "sfx_name": "SFX_BreachThud",
+    "freesound_id": 194193,
+    "title": "TankDoorCrashBones.wav",
+    "author": "T.42",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/T.42/sounds/194193/",
+    "duration_seconds": 0.800583
+  },
+  {
+    "sfx_name": "SFX_BreachBreak",
+    "freesound_id": 403645,
+    "title": "Wood_Bones_Break_Quick_Dry - 01.wav",
+    "author": "LamaMakesMusic",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/LamaMakesMusic/sounds/403645/",
+    "duration_seconds": 0.515854
+  },
+  {
+    "sfx_name": "SFX_AmmoPickup",
+    "freesound_id": 19768,
+    "title": "coinshake1.wav",
+    "author": "jmaimarc",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/jmaimarc/sounds/19768/",
+    "duration_seconds": 0.737234
+  },
+  {
+    "sfx_name": "SFX_ArchetypeChime",
+    "freesound_id": 782969,
+    "title": "Good Phone Notification Sound",
+    "author": "qubodup",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/qubodup/sounds/782969/",
+    "duration_seconds": 0.596375
+  },
+  {
+    "sfx_name": "SFX_ZombieGrowl_01",
+    "freesound_id": 504651,
+    "title": "growl",
+    "author": "BloodPixelHero",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/BloodPixelHero/sounds/504651/",
+    "duration_seconds": 1.51227
+  },
+  {
+    "sfx_name": "SFX_ZombieGrowl_02",
+    "freesound_id": 483787,
+    "title": "Expressive Monster Growl 1_2",
+    "author": "Joao_Janz",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/Joao_Janz/sounds/483787/",
+    "duration_seconds": 1.73402
+  },
+  {
+    "sfx_name": "SFX_ZombieGrowl_03",
+    "freesound_id": 483732,
+    "title": "Expressive Monster Growl 3_1",
+    "author": "Joao_Janz",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/Joao_Janz/sounds/483732/",
+    "duration_seconds": 1.33179
+  },
+  {
+    "sfx_name": "SFX_ZombieIdle_Burp",
+    "freesound_id": 570266,
+    "title": "The Best Burp Sample On The Internet",
+    "author": "scooterfort",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/scooterfort/sounds/570266/",
+    "duration_seconds": 0.945488
+  },
+  {
+    "sfx_name": "SFX_ZombieIdle_Gurgle",
+    "freesound_id": 190580,
+    "title": "gurgle.wav",
+    "author": "conradts",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/conradts/sounds/190580/",
+    "duration_seconds": 0.952676
+  },
+  {
+    "sfx_name": "SFX_ZombieIdle_Moan",
+    "freesound_id": 445995,
+    "title": "Zombie moan 3",
+    "author": "Breviceps",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/Breviceps/sounds/445995/",
+    "duration_seconds": 1.41814
+  },
+  {
+    "sfx_name": "SFX_ZombieDeath_Squeak_01",
+    "freesound_id": 672965,
+    "title": "Slide Whistle.wav",
+    "author": "WalliumVA",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/WalliumVA/sounds/672965/",
+    "duration_seconds": 0.798083
+  },
+  {
+    "sfx_name": "SFX_ZombieDeath_Squeak_02",
+    "freesound_id": 468443,
+    "title": "Squeaky Toy #1",
+    "author": "Breviceps",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/Breviceps/sounds/468443/",
+    "duration_seconds": 0.446372
+  },
+  {
+    "sfx_name": "MUS_DayHot",
+    "freesound_id": 567959,
+    "title": "Disco funk loops 001 remix 1 long loop with drums 120 bpm.wav",
+    "author": "josefpres",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/people/josefpres/sounds/567959/",
+    "duration_seconds": 128.0
+  },
+  {
+    "sfx_name": "MUS_NightTense",
+    "freesound_id": 608620,
+    "title": "Retro horror loop",
+    "author": "BloodPixelHero",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/people/BloodPixelHero/sounds/608620/",
+    "duration_seconds": 96.0
+  },
+  {
+    "sfx_name": "MUS_NightIntense",
+    "freesound_id": 578252,
+    "title": "On Adrenaline",
+    "author": "BloodPixelHero",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/people/BloodPixelHero/sounds/578252/",
+    "duration_seconds": 91.2
   }
 ]

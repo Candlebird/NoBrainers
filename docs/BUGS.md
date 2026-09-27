@@ -1431,3 +1431,21 @@
   - Key names use `AutoSettingsInputConfig.KeyFriendlyNames` (`Config/DefaultGame.ini`) for short labels. Keys not in that list fall back to the engine's long display name and may clip.
   - The automation tests cover setting registration, but don't verify that resolution/window mode actually change. PIE can't meaningfully test window mode, so check it in Standalone.
 - **Status:** Open, known limitations.
+
+## K3 audio: synthesized placeholders
+
+- **Area:** Audio, `/Game/Audio/SFX/Customer/`.
+- **Repro:** Play `SCue_CustomerHappy`, `SCue_CustomerAnnoyed`, or `SCue_CustomerHmm` in the editor or in a customer interaction.
+- **Actual:** The nine Simlish blip variants (`SFX_Simlish_Happy_01/02/03`, `SFX_Simlish_Annoyed_01/02/03`, `SFX_Simlish_Hmm_01/02/03`) are synthesized placeholders (formant-filtered saw waves built by `Tools/Audio/synth_k3.py`, no real words), not real voice-over.
+- **Expected:** Real Simlish-style VO recorded/performed for each archetype mood, then reimported over the same SoundWave names via `Tools/Audio/ue_import_k3.py`.
+- **Status:** Open — placeholder synth, replace with real VO later.
+- **Update:** The 8 zombie vocal sounds (`/Game/Audio/SFX/Zombie/` — 3 growls, 3 idles, 2 death squeaks) added for `SCue_ZombieGrowl`, `SCue_ZombieIdle`, and `SCue_ZombieDeathSilly` are all real Freesound CC0 recordings, not synthesized; `synth_k3.py` was not needed for them.
+
+
+## `BP_CheckoutCounter` doesn't replicate.
+
+- **Area:** Retail/Checkout.
+- **Repro:** 2-player listen server; have a customer check out while a client watches.
+- **Actual:** bReplicates=false, so bIsOccupied, CustomerAtCounter, bServed and QueueLine never reach clients. Any client-side counter UI or visuals can't reflect checkout state. K3 sale audio is routed through the replicated BP_Customer multicast as a workaround.
+- **Expected:** the counter replicates its checkout state, or it lives on a replicated actor.
+- **Status:** open.

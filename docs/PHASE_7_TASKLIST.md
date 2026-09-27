@@ -408,7 +408,41 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
     - `GA_BP_FireWeapon` passes the hit actor. `GA_BP_MeleeAttack` plays the goo on zombie hits. `BP_ZombieBase.Multicast_PlayDeath` plays a big goo burst (`DeathGooFX`).
     - New test: `Test_VFX_CombatFXAssigned`. The suite passes 70/70.
     - See docs/BUGS.md — "`Multicast_FireTracer`: the TracerFX Niagara branch never runs." and "`NS_MuzzleFlash` has no velocity module."
-- [ ] **K3 Audio (F.4, Phase 6 §3.1–3.3):** F.4 cue list, retail/build/trap SFX, customer reactions, zombie vocals/breach thuds, intensity music, the G.7 `PickupSound`.
+- [x] **K3 Audio (F.4, Phase 6 §3.1–3.3):** F.4 cue list, retail/build/trap SFX, customer reactions, zombie vocals/breach thuds, intensity music, the G.7 `PickupSound`.
+  - STATUS NOTE (2026-09-26): built, compiles clean, suite passes 73/73, **needs 2-player PIE confirmation**.
+    - **Content:**
+      - 12 retail/build/defense/breach/pickup SFX.
+      - 9 synthesized Simlish blips plus an archetype chime.
+      - 8 zombie vocals, and 3 new music tracks (`MUS_DayHot`, `MUS_NightTense`, `MUS_NightIntense`).
+      - Everything except the Simlish blips comes from Freesound CC0/CC-BY; credits are in `docs/AUDIO_CREDITS.md`.
+      - Attenuation and concurrency settings in `/Game/Audio/Settings/` apply to 69 sounds.
+    - **Music:** `BP_MusicPlayerComponent` was rewritten to pick the track by intensity:
+      - Day uses the calm track, or the hot track while a customer event is active. Morning is always calm.
+      - Night/Dusk goes calm → tense (≥8 zombies) → intense (≥20 zombies, or `bForceIntenseMusic` during a surge).
+      - Changes to a more intense track happen at once; changes back down wait out an 8 s hold.
+      - This also fixes the bug where music never played (FadeIn was never executed).
+    - **Gameplay audio:**
+      - Traps and the turret play a hit sound; repair plays a sound; placing a defense plays a socket snap.
+      - Breach points thud when hit and crash when broken.
+      - The ammo pickup is heard by every player.
+      - Checkout plays a beep, a cha-ching and a blip, routed through `BP_Customer`.
+      - Customers make "hmm" or annoyed blips at empty shelves.
+      - Special archetypes chime once.
+      - Zombies make ambient growl/idle vocals with a per-type pitch and a silly death sound (Bloaters pop instead).
+      - The surge banner groan was removed.
+    - **New tests:** `Test_Audio_K3{DefenseSounds,ZombieVoice,CustomerMusic}Assigned`.
+    - **PIE checks (2 players):**
+      1. Music plays.
+      2. An event day plays the hot track.
+      3. At night the music rises with the zombie count, and a surge jumps it to intense.
+      4. Trap and turret sounds play, and repair plays at Day start.
+      5. Placing a defense snaps. Breach points thud and crash, but not on join or restore.
+      6. The client hears the ammo pickup.
+      7. Checkout plays its sounds; customers make "hmm" and annoyed blips; special archetypes chime once.
+      8. Zombie vocals have per-type pitches, and deaths sound silly.
+      9. Sounds fade with distance.
+      10. The F.4 cues still play.
+    - See docs/BUGS.md — "K3 audio: synthesized placeholders." and "`BP_CheckoutCounter` doesn't replicate."
 - [ ] **K4 Visuals (Phase 6 §1.1, rest of §1.3):** `M_PostProcess_CelShader` + toggle/slider, build-mode socket highlights + placement pop, "+$N" popups, customer archetype icons.
 - [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD label + own-screen respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
 - [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.

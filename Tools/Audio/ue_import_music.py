@@ -15,7 +15,7 @@ import unreal
 SOURCE_DIR = r"C:/Users/brest/source/GameDesignRepos/NoBrainers/NoBrainers/PlaceholderAssets/Audio/Music"
 DEST_PACKAGE_PATH = "/Game/Audio/Music"
 
-MUSIC_NAMES = ["MUS_Day", "MUS_Night"]
+MUSIC_NAMES = ["MUS_Day", "MUS_Night", "MUS_DayHot", "MUS_NightTense", "MUS_NightIntense"]
 
 SC_MUSIC_PATH = "/Game/Audio/SoundClasses/SC_Music"
 
