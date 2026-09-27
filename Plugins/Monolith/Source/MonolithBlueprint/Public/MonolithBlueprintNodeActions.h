@@ -22,6 +22,7 @@ public:
 	static FMonolithActionResult HandleAddNodesBulk(const TSharedPtr<FJsonObject>& Params);
 	static FMonolithActionResult HandleConnectPinsBulk(const TSharedPtr<FJsonObject>& Params);
 	static FMonolithActionResult HandleSetPinDefaultsBulk(const TSharedPtr<FJsonObject>& Params);
+	static FMonolithActionResult HandleRepairTextPinDefaults(const TSharedPtr<FJsonObject>& Params);
 
 	// Wave 5 — Scaffolding & Templates
 	static FMonolithActionResult HandleAddTimeline(const TSharedPtr<FJsonObject>& Params);

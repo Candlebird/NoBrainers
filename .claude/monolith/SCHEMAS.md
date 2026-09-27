@@ -500,6 +500,10 @@ with params {target_namespace, target_action}.
   old_name* string — Current variable name
   new_name* string — New variable name
 
+## blueprint.repair_text_pin_defaults — Find Text input pins whose literal was written to DefaultValue (ignored by the compiler) while DefaultTextValue is empty, and move it into DefaultTextValue. Covers every graph in the Blueprint.
+  asset_path* string — Blueprint asset path
+  dry_run boolean — Only report the affected pins. Default: false.
+
 ## blueprint.reparent_component — Change the parent of a component in a Blueprint. Pass empty string for new_parent to make it a root component.
   asset_path* string — Blueprint asset path
   component_name* string — Component variable name to reparent

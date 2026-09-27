@@ -733,6 +733,14 @@ void FMonolithBlueprintNodeActions::RegisterActions(FMonolithToolRegistry& Regis
 			.Optional(TEXT("graph_name"), TEXT("string"), TEXT("Graph name (searches all graphs if omitted)"))
 			.Build());
 
+	Registry.RegisterAction(TEXT("blueprint"), TEXT("repair_text_pin_defaults"),
+		TEXT("Find Text input pins whose literal was written to DefaultValue (ignored by the compiler) while DefaultTextValue is empty, and move it into DefaultTextValue. Covers every graph in the Blueprint."),
+		FMonolithActionHandler::CreateStatic(&HandleRepairTextPinDefaults),
+		FParamSchemaBuilder()
+			.RequiredAssetPath(TEXT("asset_path"), TEXT("Blueprint asset path"))
+			.Optional(TEXT("dry_run"), TEXT("boolean"), TEXT("Only report the affected pins. Default: false."))
+			.Build());
+
 	// ---- Wave 5 ----
 
 	Registry.RegisterAction(TEXT("blueprint"), TEXT("add_timeline"),
@@ -2355,6 +2363,12 @@ FMonolithActionResult FMonolithBlueprintNodeActions::HandleSetPinDefault(const T
 		Pin->DefaultObject = Resolved;
 		Pin->DefaultValue.Reset();
 	}
+	else if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Text)
+	{
+		// The compiler reads text literals from DefaultTextValue; DefaultValue is ignored.
+		Pin->DefaultTextValue = FText::FromString(Value);
+		Pin->DefaultValue.Reset();
+	}
 	else
 	{
 		Pin->DefaultValue = Value;
@@ -3412,6 +3426,69 @@ FMonolithActionResult FMonolithBlueprintNodeActions::HandleSetPinDefaultsBulk(co
 	Final->SetArrayField(TEXT("results"),  Results);
 
 	return FMonolithActionResult::Success(Final);
+}
+
+// ============================================================
+//  repair_text_pin_defaults
+// ============================================================
+
+FMonolithActionResult FMonolithBlueprintNodeActions::HandleRepairTextPinDefaults(const TSharedPtr<FJsonObject>& Params)
+{
+	FString AssetPath;
+	UBlueprint* BP = MonolithBlueprintInternal::LoadBlueprintFromParams(Params, AssetPath);
+	if (!BP)
+	{
+		return FMonolithActionResult::Error(FString::Printf(TEXT("Blueprint not found: %s"), *AssetPath));
+	}
+
+	bool bDryRun = false;
+	Params->TryGetBoolField(TEXT("dry_run"), bDryRun);
+
+	TArray<UEdGraph*> Graphs;
+	BP->GetAllGraphs(Graphs);
+
+	TArray<TSharedPtr<FJsonValue>> Repaired;
+	for (UEdGraph* Graph : Graphs)
+	{
+		if (!Graph) continue;
+		for (UEdGraphNode* Node : Graph->Nodes)
+		{
+			if (!Node) continue;
+			for (UEdGraphPin* Pin : Node->Pins)
+			{
+				if (!Pin || Pin->Direction != EGPD_Input || Pin->LinkedTo.Num() > 0) continue;
+				if (Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Text) continue;
+				if (Pin->DefaultValue.IsEmpty() || !Pin->DefaultTextValue.IsEmpty()) continue;
+
+				TSharedRef<FJsonObject> RO = MakeShared<FJsonObject>();
+				RO->SetStringField(TEXT("graph"), Graph->GetName());
+				RO->SetStringField(TEXT("node_id"), Node->GetName());
+				RO->SetStringField(TEXT("pin"), Pin->PinName.ToString());
+				RO->SetStringField(TEXT("value"), Pin->DefaultValue);
+				Repaired.Add(MakeShared<FJsonValueObject>(RO));
+
+				if (!bDryRun)
+				{
+					Node->Modify();
+					Pin->DefaultTextValue = FText::FromString(Pin->DefaultValue);
+					Pin->DefaultValue.Reset();
+					Node->PinDefaultValueChanged(Pin);
+				}
+			}
+		}
+	}
+
+	if (!bDryRun && Repaired.Num() > 0)
+	{
+		FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
+	}
+
+	TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("asset_path"), AssetPath);
+	Root->SetBoolField(TEXT("dry_run"), bDryRun);
+	Root->SetNumberField(TEXT("count"), Repaired.Num());
+	Root->SetArrayField(TEXT("pins"), Repaired);
+	return FMonolithActionResult::Success(Root);
 }
 
 // ============================================================
