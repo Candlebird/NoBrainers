@@ -286,6 +286,49 @@ From the user's playtest of G.
 - [x] **H.6 Editor startup crash.** An AsyncLoading2 NeedLoad assert fired on the `BP_PlayerController_ZombieStore` CDO. **DONE:** the GameMode constructor loaded `BP_HeroCharacter` synchronously, which recursed through asset cycles added in G. The load now happens in `BeginPlay`. See docs/BUGS.md — "Hard class references form asset load cycles." **USER TEST:** the editor opens cleanly, and respawn still works.
 - [x] **H.7 Tests.** Added `Test_Pickups_IgnorePawnCollision`, `Test_Audio_WeaponSoundMapsComplete` and `Test_DragDrop_ItemDragOpRoundTrip`.
 
+## I. Real audio + sound settings (2026-09-26, user request)
+
+STATUS NOTE: this is Phase 6-scope audio work (ParentTaskList audio transitions), done during Phase 7 at the user's request.
+
+- [x] **I.1 Real SFX.** All 35 placeholder SFX were replaced with Freesound sounds, trimmed to the onset with faded tails and imported as .wav. Credits are in `docs/AUDIO_CREDITS.md`. The OAuth flow is in the `freesound-audio` skill.
+- [x] **I.2 Sound classes.** `SC_Master` sits at the root, with `SC_Music`, `SC_SFX` and `SC_UI` as children, plus `SMix_UserSettings`. `DefaultSoundClassName` is `SC_SFX`.
+- [x] **I.3 Settings on Auto Settings.** The Auto Settings plugin (2.1.3) is enabled. It must be installed in the engine on every machine that builds the project.
+  - `/Game/Core/Settings/ST_Audio_{Master,Music,SFX,UI}Volume` persist to UserSettings.ini. Defaults are 1.0 / 0.7 / 1.0 / 1.0.
+  - `BP_GameInstance_NoBrainers.GetVolume`/`SetVolume` go through the setting registry. `ApplyAudioSettings` re-runs on `OnAppliedValueChanged`.
+  - `BP_SaveGame_Settings` was deleted.
+- [x] **I.4 Options menu.**
+  - `WBP_OptionsMenu` has 4 `WBP_VolumeSliderRow` rows (NativeSliderSettingWidget) and a Back button. Quit to Main Menu needs two clicks and appears in game only.
+  - Close keys are read from the `IA_CloseUI`/`IA_ToggleInventory`/`IA_Interact` mappings.
+  - Main menu: a Settings button. In game: Escape opens the menu when no interaction window is open. The game doesn't pause (co-op).
+  - Quit to Main Menu doesn't save beyond the existing autosaves, and a host quitting drops clients.
+- [x] **I.5 Music.**
+  - `MUS_Day` / `MUS_Night` come from Freesound. `BP_MusicPlayerComponent` sits on the PlayerController and is local only, with a 3 s crossfade on phase change.
+  - Day and Morning use the day track; Dusk and Night use the night track (the Dusk mapping is a design call, not from the GDD). RunOver fades out.
+  - The main menu plays the day track.
+- [x] **I.6 Tests.** Added `Test_Audio_SoundClassesAssigned`, `Test_Settings_VolumeRoundTrip`, `Test_Settings_VolumeClamp` and `Test_Settings_AudioKeysRegistered`.
+- See docs/BUGS.md — "Older interaction widgets hard-code Tab/Escape/E close keys." and "Monolith has no Get Subsystem node (K2Node_GetSubsystem)."
+
+## J. Video/Controls settings (2026-09-26, user request)
+
+STATUS NOTE: an extension of section I, built at the user's request. It isn't part of the A–F plan.
+
+- [x] **J.1 Input config.** Enhanced Input user settings are on, with class `AutoSettingsEnhancedInputUserSettings` (DefaultInput.ini). `AutoSettingsInputConfig` registers `IMC_Default` and `IMC_Inventory`, and Escape cancels a capture (DefaultGame.ini).
+- [x] **J.2 Setting types.** `/Game/Core/Settings/ST_Video_*` (resolution, window mode, VSync, frame rate limit, quality preset, resolution scale, FOV), `ST_Controls_LookSensitivity`, `ST_Controls_InvertY`, `ST_Input_KeyMapping`.
+- [x] **J.3 Remappable mappings.**
+  - `IMC_Default` has 15 remappable keyboard/mouse mappings and 11 remappable gamepad (`_Pad`) mappings. `IMC_Inventory` has QuickDrop and QuickDrop_Pad.
+  - The sticks, mouse look and `IA_CloseUI` (Escape / gamepad Menu) can't be rebound (design call). There's no gamepad menu navigation.
+- [x] **J.4 Applying settings.**
+  - `BP_GameInstance_NoBrainers` has `GetSettingString`/`SetSettingString`, `ApplyVideoSettings(bForce)` (skipped when nothing changed) and `OnLocalSettingsApplied`.
+  - The PlayerController (local only) and the main menu apply video settings on start.
+  - `BP_HeroCharacter` applies look sensitivity, invert Y and FOV, locally controlled only.
+- [x] **J.5 Options menu.**
+  - `WBP_OptionsMenu` has Audio / Video / Controls tabs. Row widgets live in `/Game/UI/Settings/`: SliderRow, ComboRow, CheckRow, KeyBindSelector, KeyBindRow.
+  - The Controls tab shows 18 action rows with Keyboard/Mouse and Gamepad columns.
+  - Capture guard: close keys are ignored during a rebind and for 0.3 s after it. Close keys are rebuilt from the current bindings on every key press.
+- [x] **J.6 Tests.** Added `Test_Settings_VideoKeysRegistered`, `Test_Settings_SettingStringRoundTrip`, `Test_Player_LookSettingsApplied`, `Test_Input_GamepadMappingsPresent` and `Test_Input_UserSettingsEnabled`.
+- [ ] **J.7 User test in Standalone:** video changes, rebinds that persist across relaunch, gamepad bindings, and co-op isolation.
+- See docs/BUGS.md — "Older interaction widgets hard-code Tab/Escape/E close keys." and "Monolith editing gaps found during the Video/Controls settings build."
+
 ## F. Game feel
 
 - [ ] **F.1 Hitmarker + headshot ding.** The crosshair hitmarker flashes on every hit; distinct color
@@ -314,8 +357,8 @@ Anti-kiting / "make it more interesting" ideas that weren't picked for tonight:
 - **Zombie-type intel.** A "Tonight: Runners, Spitters" preview at Dusk, plus a codex entry the first
   time you meet each type.
 - **Damage numbers / micro hit-stop / Brute knockback camera tumble.** Offered, not picked.
-- **Freesound sourcing.** Swap the synthesized SFX for CC0 Freesound sounds once there's an API key
-  (`.freesound_key`, gitignored), with CC-BY sounds credited in `PlaceholderAssets/Audio/CREDITS.md`.
+- **Freesound sourcing.** DONE on 2026-09-26 (see section I). OAuth token in `Tools/Audio/.freesound_token.json`
+  (gitignored), with CC-BY sounds credited in `docs/AUDIO_CREDITS.md`.
 - **More ideas:** carry-over zombies that dig in during Day and ambush when Dusk falls; a noise
   meter (gunfire draws zombies, melee is quiet); a boss night every 5th night (a giant Brute
   variant); an ammo-scarcity pressure valve (a vending machine with surge pricing at night).

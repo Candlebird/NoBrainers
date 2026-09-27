@@ -1,3 +1,6 @@
+# Freesound OAuth tokens (secrets, never commit)
+Tools/Audio/.freesound_token.json
+
 # Visual Studio 2015 user specific files
 .vs/
 

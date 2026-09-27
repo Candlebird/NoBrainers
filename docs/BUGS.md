@@ -1331,3 +1331,87 @@
 - **Actual:** The cycles load with warnings. Before the fix below, they crashed the editor at startup (`AsyncLoading2.cpp:11167`, `!Object->HasAnyFlags(RF_NeedLoad | RF_NeedInitialization)` on the `BP_PlayerController_ZombieStore` CDO).
 - **Expected:** No cycles. Use soft class refs (`TSoftClassPtr` / soft class variables) for the pickup drop class and the DataTable's zombie class columns.
 - **Status:** Crash fixed. `AGASDocumentationGameMode` loaded `BP_HeroCharacter` with `StaticLoadClass` in its constructor, which recursed through the cycle while the CDO was built. The load now happens in `BeginPlay`. The cycles remain. They're harmless for now, but any new constructor-time sync load of these assets could trip the same assert.
+
+## Monolith has no Get Subsystem node (K2Node_GetSubsystem)
+
+- **Area:** Monolith `blueprint.add_node` (found building the Auto Settings audio settings).
+- **Repro:** Try to add a "Get Game Instance Subsystem" node for `AutoSettingsSubsystem`.
+- **Actual:** No node type or alias creates `K2Node_GetSubsystem`.
+- **Expected:** A way to add the typed Get Subsystem node.
+- **Status:** Open, tool gap. Workaround (verified): `add_node` CallFunction `GetGameInstanceSubsystem` with `target_class` `SubsystemBlueprintLibrary`; `set_pin_default` pin `Class`, param `value` = `/Script/AutoSettings.AutoSettingsSubsystem`; DynamicCast to `AutoSettingsSubsystem`; then CallFunction `GetGameSettingRegistry` (`target_class` `AutoSettingsSubsystem`). Used in `BP_GameInstance_NoBrainers.GetAudioSettingRegistry` and `BP_TestController`.
+
+## Monolith Blueprint editing gaps found during the audio settings build
+
+- **Area:** Monolith `blueprint` / `ui` namespaces.
+- **Repro / Actual:**
+  - `set_pin_default` rejects an empty string `""`. Workaround: compare with `IsEmpty` instead of `== ""`.
+  - `MakeArray` fed only literal pin defaults stays Wildcard and won't compile. Workaround: feed it `MakeLiteralString` nodes.
+  - `K2Node_Select` can't get enum-indexed option pins. Workaround: `SwitchOnEnum` plus a local variable.
+  - `editor.delete_assets` fails when the asset still has in-memory references. Workaround: `collect_garbage`, then `EditorAssetLibrary.delete_asset` via Python.
+  - `ui.add_widget` has no insert-at-index; `move_widget` works but resets slot alignment (set it again afterwards).
+  - `ComponentBoundEvent` / `CreateDelegate` need an interim compile after adding the widget or event they reference.
+  - A foreign-property `VariableGet` (e.g. `SoundBase.SoundClassObject`) whose `self` pin only has a literal asset default compiles clean. At runtime the default is ignored and the read runs against the owning Blueprint, which fails with "Attempted to access missing property". Workaround: wire the `self` pin from a typed member variable that has the asset as its default. Local variables can't hold asset defaults. (Found in `Test_Audio_SoundClassesAssigned`.)
+  - The compact output of `get_graph_data`/`get_node_details` hides object pin defaults. Use `blueprint.export_graph` to read them.
+- **Expected:** Each works directly.
+- **Status:** Open, tool gaps with workarounds.
+
+## Older interaction widgets hard-code Tab/Escape/E close keys
+
+- **Area:** Interaction windows (shelf, kiosks, inventory) that predate `WBP_OptionsMenu`.
+- **Repro:** Inspect their key handling.
+- **Actual:** They check literal Tab/Escape/E keys. The new `WBP_OptionsMenu` instead reads its close keys from the `IA_CloseUI`, `IA_ToggleInventory` and `IA_Interact` mappings in `IMC_Default`.
+- **Expected:** All windows read close keys from the Enhanced Input mappings, so rebinding works everywhere.
+- **Status:** Open, follow-up refactor. Since section J (key rebinding) this is player-visible: rebinding Inventory away from Tab changes the options menu's close key, but the older windows still close on Tab.
+
+## Monolith editing gaps found during the Video/Controls settings build
+
+- **Area:** Monolith `blueprint` / `ui` namespaces (PHASE_7 section J).
+- **Repro / Actual:**
+  - **Editor crash:** `blueprint.add_property_access_node` in a WidgetBlueprint, then compile, fatally crashes the editor. Use variable get nodes or function calls instead.
+  - A `ConstructObjectFromClass` node added with no class hits an ensure and won't compile ("Unexpected node type"). Workaround: `GameplayStatics.SpawnObject`, then DynamicCast (its ReturnValue is plain Object).
+  - `ui.set_slot_property` / `set_widget_property` report success but don't set HorizontalBox/VerticalBox slot Fill, or ScrollBoxSlot padding (`UWidget::Slot` is TextExportTransient). Workaround: `editor.run_python`, `unreal.find_object(None, '<pkg>.<name>:WidgetTree.<FlatWidgetName>')`, then `slot.set_editor_property('size', unreal.SlateChildSize(...))` or `'padding'`, then compile and save. The object path must use the flat widget name, not a parent-qualified one.
+  - `ui.add_widget_variable` variables aren't instance-editable by default.
+  - New WidgetBlueprints get disabled PreConstruct/Construct/Tick stubs. Build off them rather than adding duplicates.
+  - SwitchOnInt case pins can't be created. Use Branch + Equal chains.
+  - `blueprint.save_asset` can fail silently. `editor.save_packages` with an explicit package list works.
+  - DynamicCast `cast_class` for Blueprint classes needs the `_C` suffix, and so does `add_property_access` for Blueprint-declared properties. Native properties use the bare class name.
+  - `Key_IsGamepadKey` and `EqualEqual_KeyKey` are on `KismetInputLibrary`, not `InputCoreTypes`.
+  - `InputModifierNegate` bX/bY/bZ need `set_property_at_path`.
+  - A VariableSet node's `Output_Get` pin feeding a later pure node reads the default when the Set didn't execute. Use a separate VariableGet. (Caused a false FAIL in `Test_Settings_VideoKeysRegistered`.)
+  - The IMC remap in section J left inert orphaned subobjects in `IMC_Default` and `IMC_Inventory`.
+- **Expected:** Each works directly.
+- **Status:** Open, tool gaps with workarounds.
+
+## Settings: GameInstance Init can't reach the Auto Settings registry (RESOLVED)
+
+- **Area:** `/Game/Core/BP_GameInstance_NoBrainers` (PHASE_7 section J).
+- **Repro:** Launch fresh and open Options > Video.
+- **Actual:** At `ReceiveInit` the game instance has no world yet, so `GetGameInstanceSubsystem` (inside `GetAudioSettingRegistry`) returns None. The seed of Resolution/Window Mode defaults and the `OnAppliedValueChanged` bind silently never ran. Result: blank Resolution/Window Mode combos, and video changes didn't apply live.
+- **Expected:** The registry is seeded and bound once a world exists.
+- **Status:** Resolved. `InitSettingsRegistry` runs lazily, guarded by `bSettingsRegistryInitialized`, from `ReceiveInit` and at the start of `ApplyAudioSettings`, which the main menu and player controller call.
+
+## Settings: Move row triggers an Auto Settings ensure when the Controls tab opens
+
+- **Area:** Options > Controls, `ST_Input_KeyMapping`, `IMC_Default` Move (Mouse2D / 2D axis).
+- **Repro:** Open Settings in PIE and check the log.
+- **Actual:** `Player:0:Input:None:0` registers with value `Mouse2D`, and `UEnhancedInputUserSettings::MapPlayerKey` fails for mapping `None`. That trips a handled ensure (`FailureReason.IsEmpty()`) in `UInputSettingBindingStrategy::ApplyKeyMapping`. It isn't fatal. The Move rows' gamepad column also shows blank, because the left stick is a 2D axis.
+- **Expected:** No ensure. The unrebindable axis mappings are skipped or shown as fixed.
+- **Status:** Open, cosmetic/log noise.
+
+## Editor crash: recompiling the GameInstance Blueprint while PIE is running
+
+- **Area:** Editor / Monolith, `BP_GameInstance_NoBrainers`.
+- **Repro:** With PIE running, edit and compile the GameInstance BP, then stop PIE.
+- **Actual:** Save is refused ("The Editor is currently in a play mode"). On PIE teardown, after `LogAutoSettings: Deinitializing in editor`, the editor crashes with `EXCEPTION_ACCESS_VIOLATION`, and the unsaved edits are lost.
+- **Expected:** No crash.
+- **Status:** Open, engine/plugin. Workaround: stop PIE before editing GameInstance (or any live-subsystem-owning) Blueprints.
+
+## Settings build: other gaps and limitations
+
+- **Area:** PHASE_7 section J (Video/Controls settings).
+- **Actual:**
+  - The Auto Settings sample widget `WBP_BasicInputMappingSelector` didn't work with this project's Enhanced Input setup. It was replaced by our own `/Game/UI/Settings/WBP_KeyBindButton`.
+  - `blueprint.set_pin_default` can't set a pin to an empty string. Workaround: delete and re-add the node.
+  - Key names use `AutoSettingsInputConfig.KeyFriendlyNames` (`Config/DefaultGame.ini`) for short labels. Keys not in that list fall back to the engine's long display name and may clip.
+  - The automation tests cover setting registration, but don't verify that resolution/window mode actually change. PIE can't meaningfully test window mode, so check it in Standalone.
+- **Status:** Open, known limitations.

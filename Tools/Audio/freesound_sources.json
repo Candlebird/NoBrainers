@@ -1,0 +1,382 @@
+[
+  {
+    "sfx_name": "SFX_AcidSplat",
+    "freesound_id": 447928,
+    "title": "Muddy Boots",
+    "author": "Breviceps",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/447928/",
+    "duration_seconds": 0.69
+  },
+  {
+    "sfx_name": "SFX_BruteImpact",
+    "freesound_id": 244983,
+    "title": "ANI Big Pipe Hit",
+    "author": "ani_music",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/244983/",
+    "duration_seconds": 1.0
+  },
+  {
+    "sfx_name": "SFX_BruteRoar",
+    "freesound_id": 800277,
+    "title": "Insect Animal Growl Chitter",
+    "author": "SecureSubset",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/800277/",
+    "duration_seconds": 1.47
+  },
+  {
+    "sfx_name": "SFX_DryFire",
+    "freesound_id": 467183,
+    "title": "Pistol Dry Fire (Bersa BP9CC 9x19)",
+    "author": "Sophia_C",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/s/467183/",
+    "duration_seconds": 0.38
+  },
+  {
+    "sfx_name": "SFX_Fire_LeverAction",
+    "freesound_id": 410400,
+    "title": "30-30 Lever Rifle Gunshot 2.wav",
+    "author": "Erokia",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/s/410400/",
+    "duration_seconds": 0.88
+  },
+  {
+    "sfx_name": "SFX_Fire_LongRifle",
+    "freesound_id": 855608,
+    "title": "Sniper Shot in Field 3 (M2010 Enhanced Sniper Rifle ESR)",
+    "author": "qubodup",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/855608/",
+    "duration_seconds": 1.44
+  },
+  {
+    "sfx_name": "SFX_Fire_Magnum",
+    "freesound_id": 645316,
+    "title": "snub_nose_357_magnum_noisegate-17.80.wav",
+    "author": "DarkShroom",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/645316/",
+    "duration_seconds": 0.33
+  },
+  {
+    "sfx_name": "SFX_Fire_Pistol",
+    "freesound_id": 773865,
+    "title": "gunshot 3",
+    "author": "MrGungus",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/773865/",
+    "duration_seconds": 0.66
+  },
+  {
+    "sfx_name": "SFX_Fire_Rifle",
+    "freesound_id": 371041,
+    "title": "Single Gunshot 3.wav",
+    "author": "morganpurkis",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/371041/",
+    "duration_seconds": 0.92
+  },
+  {
+    "sfx_name": "SFX_Fire_SawedOff",
+    "freesound_id": 528262,
+    "title": "Silenced Shot",
+    "author": "magnuswaker",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/528262/",
+    "duration_seconds": 0.29
+  },
+  {
+    "sfx_name": "SFX_AcidSizzle",
+    "freesound_id": 693967,
+    "title": "double boiler_Ting.wav",
+    "author": "BeroundSound",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/693967/",
+    "duration_seconds": 1.3
+  },
+  {
+    "sfx_name": "SFX_BloaterPop",
+    "freesound_id": 266981,
+    "title": "Balloon pop",
+    "author": "Huminaatio",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/266981/",
+    "duration_seconds": 0.54
+  },
+  {
+    "sfx_name": "SFX_BloaterSwell",
+    "freesound_id": 82166,
+    "title": "Balloon-Strain-04.wav",
+    "author": "Gniffelbaf",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/82166/",
+    "duration_seconds": 1.14
+  },
+  {
+    "sfx_name": "SFX_Fire_SMG",
+    "freesound_id": 579531,
+    "title": "PPSh Shooting.wav",
+    "author": "coolabc",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/579531/",
+    "duration_seconds": 0.56
+  },
+  {
+    "sfx_name": "SFX_Fire_Shotgun",
+    "freesound_id": 773873,
+    "title": "shotgun shoot",
+    "author": "MrGungus",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/773873/",
+    "duration_seconds": 1.18
+  },
+  {
+    "sfx_name": "SFX_HeadshotDing",
+    "freesound_id": 531020,
+    "title": "bell1.wav",
+    "author": "creeeeak",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/531020/",
+    "duration_seconds": 0.99
+  },
+  {
+    "sfx_name": "SFX_Hitmarker",
+    "freesound_id": 671105,
+    "title": "Classic Click",
+    "author": "adh.dreaming",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/671105/",
+    "duration_seconds": 0.09
+  },
+  {
+    "sfx_name": "SFX_KillConfirm",
+    "freesound_id": 405547,
+    "title": "Affirmative decision chime",
+    "author": "Raclure",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/405547/",
+    "duration_seconds": 0.17
+  },
+  {
+    "sfx_name": "SFX_MeleeClang",
+    "freesound_id": 278173,
+    "title": "metal tube 4.ogg",
+    "author": "adharca",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/278173/",
+    "duration_seconds": 0.78
+  },
+  {
+    "sfx_name": "SFX_MeleeWhoosh",
+    "freesound_id": 422495,
+    "title": "Swinging staff whoosh (low) 03.wav",
+    "author": "Nightflame",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/422495/",
+    "duration_seconds": 0.24
+  },
+  {
+    "sfx_name": "SFX_PlayerHurt",
+    "freesound_id": 547197,
+    "title": "Voice_AdultMale_PainGrunts_18.wav",
+    "author": "MrFossy",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/547197/",
+    "duration_seconds": 0.25
+  },
+  {
+    "sfx_name": "SFX_Reload_LeverAction",
+    "freesound_id": 679876,
+    "title": "GunRack1.mp3",
+    "author": "AKkingStudio",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/679876/",
+    "duration_seconds": 0.52
+  },
+  {
+    "sfx_name": "SFX_Reload_LongRifle",
+    "freesound_id": 655733,
+    "title": "Bolt Action 1.0.mp3",
+    "author": "VIPERSTRONG",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/655733/",
+    "duration_seconds": 1.55
+  },
+  {
+    "sfx_name": "SFX_Reload_Magnum",
+    "freesound_id": 645778,
+    "title": "Arming a Sci-Fi Gun",
+    "author": "jackolous",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/645778/",
+    "duration_seconds": 1.32
+  },
+  {
+    "sfx_name": "SFX_Reload_Pistol",
+    "freesound_id": 350348,
+    "title": "close gun",
+    "author": "nettimato",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/350348/",
+    "duration_seconds": 0.55
+  },
+  {
+    "sfx_name": "SFX_Reload_SMG",
+    "freesound_id": 593887,
+    "title": "MP5_Shoot.wav",
+    "author": "coolabc",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/593887/",
+    "duration_seconds": 1.13
+  },
+  {
+    "sfx_name": "SFX_Reload_Shotgun",
+    "freesound_id": 728613,
+    "title": "shotgun reload",
+    "author": "Siirxe",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/728613/",
+    "duration_seconds": 1.76
+  },
+  {
+    "sfx_name": "SFX_ScreamerShriek",
+    "freesound_id": 453001,
+    "title": "Pokemon Cry Parody",
+    "author": "Breviceps",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/453001/",
+    "duration_seconds": 1.72
+  },
+  {
+    "sfx_name": "SFX_SpitterSpit",
+    "freesound_id": 445118,
+    "title": "Cartoon - Splat!",
+    "author": "Breviceps",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/445118/",
+    "duration_seconds": 0.79
+  },
+  {
+    "sfx_name": "SFX_SurgeGroan",
+    "freesound_id": 683970,
+    "title": "Dog groan.wav",
+    "author": "eZZin",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/683970/",
+    "duration_seconds": 1.39
+  },
+  {
+    "sfx_name": "SFX_ZombieDigOut",
+    "freesound_id": 651292,
+    "title": "Digging in wet course sand (1)",
+    "author": "f3bbbo",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/651292/",
+    "duration_seconds": 0.37
+  },
+  {
+    "sfx_name": "SFX_ZombieHurt",
+    "freesound_id": 555425,
+    "title": "Zombie Pain 6.wav",
+    "author": "tonsil5",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/555425/",
+    "duration_seconds": 0.67
+  },
+  {
+    "sfx_name": "SFX_Reload_Rifle",
+    "freesound_id": 107800,
+    "title": "gunreload_4.wav",
+    "author": "j1987",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/107800/",
+    "duration_seconds": 1.84
+  },
+  {
+    "sfx_name": "SFX_Reload_SawedOff",
+    "freesound_id": 693507,
+    "title": "Toy Double Barrel Shotgun Reloading",
+    "author": "JumboSizedFish",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/693507/",
+    "duration_seconds": 1.5
+  },
+  {
+    "sfx_name": "SFX_ZombieDeath",
+    "freesound_id": 151710,
+    "title": "Rotten Zombie Death",
+    "author": "scorpion67890",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/151710/",
+    "duration_seconds": 1.83
+  },
+  {
+    "sfx_name": "SFX_ZombieAttack",
+    "freesound_id": 536180,
+    "title": "Ogre Roar 2.wav",
+    "author": "FiveBrosStopMosYT",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution_required": true,
+    "url": "https://freesound.org/s/536180/",
+    "duration_seconds": 0.81
+  },
+  {
+    "sfx_name": "MUS_Day",
+    "freesound_id": 674939,
+    "title": "Happy Commercial Music",
+    "author": "Seth_Makes_Sounds",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/674939/",
+    "duration_seconds": 121.0
+  },
+  {
+    "sfx_name": "MUS_Night",
+    "freesound_id": 348834,
+    "title": "Creepy/Eerie Horror Loop",
+    "author": "darkgamer364",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false,
+    "url": "https://freesound.org/s/348834/",
+    "duration_seconds": 77.77
+  }
+]

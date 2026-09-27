@@ -5,6 +5,10 @@ Re-run this any time the WAVs in PlaceholderAssets/Audio/ are replaced
 (e.g. swapped for Freesound-sourced files) — it will re-import and
 replace the existing SoundWave assets in place.
 
+After import (and after setting looping flags), each wave is assigned a
+SoundClass: SC_UI for UI feedback stingers (UI_NAMES) and SC_SFX for
+everything else.
+
 Run via Monolith: editor.run_python with mode=execute_file, command set to
 this file's absolute path.
 """
@@ -55,6 +59,10 @@ SFX_NAMES = [
 
 LOOPING_NAMES = {"SFX_AcidSizzle", "SFX_BloaterSwell"}
 
+UI_NAMES = {"SFX_Hitmarker", "SFX_HeadshotDing", "SFX_KillConfirm"}
+SC_SFX_PATH = "/Game/Audio/SoundClasses/SC_SFX"
+SC_UI_PATH = "/Game/Audio/SoundClasses/SC_UI"
+
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
 
 imported_paths = []
@@ -91,5 +99,24 @@ for name in LOOPING_NAMES:
         unreal.EditorAssetLibrary.save_loaded_asset(sound_wave, only_if_is_dirty=False)
     else:
         unreal.log_warning("SFX import: could not load {} to set looping".format(asset_path))
+
+# Assign SoundClasses: SC_UI for UI feedback stingers, SC_SFX for everything else.
+sc_sfx = unreal.EditorAssetLibrary.load_asset(SC_SFX_PATH)
+sc_ui = unreal.EditorAssetLibrary.load_asset(SC_UI_PATH)
+if not sc_sfx:
+    unreal.log_warning("SFX import: could not load SoundClass {}".format(SC_SFX_PATH))
+if not sc_ui:
+    unreal.log_warning("SFX import: could not load SoundClass {}".format(SC_UI_PATH))
+
+for name in SFX_NAMES:
+    asset_path = DEST_PACKAGE_PATH + "/" + name
+    sound_wave = unreal.EditorAssetLibrary.load_asset(asset_path)
+    if not sound_wave:
+        continue
+    target_class = sc_ui if name in UI_NAMES else sc_sfx
+    if not target_class:
+        continue
+    sound_wave.set_editor_property("sound_class_object", target_class)
+    unreal.EditorAssetLibrary.save_loaded_asset(sound_wave, only_if_is_dirty=False)
 
 unreal.log("SFX import complete. Imported: {}".format(imported_paths))
