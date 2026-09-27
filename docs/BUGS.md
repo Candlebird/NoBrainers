@@ -1449,3 +1449,16 @@
 - **Actual:** bReplicates=false, so bIsOccupied, CustomerAtCounter, bServed and QueueLine never reach clients. Any client-side counter UI or visuals can't reflect checkout state. K3 sale audio is routed through the replicated BP_Customer multicast as a workaround.
 - **Expected:** the counter replicates its checkout state, or it lives on a replicated actor.
 - **Status:** open.
+
+
+## K4 defense visuals: replication gaps
+
+- **Area:** Defense/Build mode (`BP_DefenseBase`, `BP_DefenseSocket`, `BP_Turret_Automated`).
+- **Repro:** 2-player listen server. Place a turret and watch it from the client. Have a second client join after defenses are placed. Place defenses while the client has lag.
+- **Actual:**
+  - The turret head's rotation isn't replicated, so clients see it aim differently from the host.
+  - Late joiners don't see the placement pop for defenses that were already placed. They see them already landed, which is fine.
+  - On a client, the socket's `OnRep_OccupyingDefense` can arrive before the defense actor does. The cast to `BP_DefenseBase` then fails, and the socket plays the plain thud without the drop or the dust.
+  - Placed socket instances in `Map_Store_Outdoors` weren't checked for a per-instance `bReplicates` override. The K4 fix set the class default to true, but the map wasn't loaded to confirm it.
+- **Expected:** the turret aim matches on every machine; every client sees the pop at placement.
+- **Status:** open. Cosmetic, apart from the unverified map-instance override.

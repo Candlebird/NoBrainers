@@ -443,7 +443,16 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
       9. Sounds fade with distance.
       10. The F.4 cues still play.
     - See docs/BUGS.md — "K3 audio: synthesized placeholders." and "`BP_CheckoutCounter` doesn't replicate."
-- [ ] **K4 Visuals (Phase 6 §1.1, rest of §1.3):** `M_PostProcess_CelShader` + toggle/slider, build-mode socket highlights + placement pop, "+$N" popups, customer archetype icons.
+- [x] **K4 Visuals (Phase 6 §1.1, rest of §1.3):** `M_PostProcess_CelShader` + toggle/slider, build-mode socket highlights + placement pop, "+$N" popups, customer archetype icons.
+    - **STATUS NOTE (2026-09-27, K4 done):** compiles clean; 79/79 tests pass; gate 2 ALIGNED; needs a PIE check. "+$N" appears at the register only, since shelf stocking isn't a sale.
+    - **PIE checklist:**
+      1. The cel shader is on by default. The Options > Video toggle and slider work, persist, and are per-client.
+      2. Socket type colors are subtle; the aimed socket pulses; leaving build mode hides the markers.
+      3. A placed defense shows on host and client, with the drop, thud and dust; the occupied socket's marker hides.
+      4. "+$N" rises above the register on both machines.
+      5. Rich, Fighter, Nurse, Scavenger and TrinketCollector show icons; Normal and Cheap show none. If an icon doesn't render, tick Usage > Used with Sprites on `M_CustomerIcon`.
+    - K4 also fixed `bReplicates`: `BP_DefenseSocket` and all 6 defense subclass CDOs had it set to false, so placed defenses and socket state never reached clients.
+    - See docs/BUGS.md — "K4 defense visuals: replication gaps."
 - [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD label + own-screen respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
 - [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.
 - [x] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
