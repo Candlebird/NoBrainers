@@ -25,7 +25,7 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 - **Spitter:** holds 10–18 m, backs off when you close in. Green glob arcs and is dodgeable (and doesn't pop on the Spitter itself). Puddle lasts 5 s, damages + slows you, hurts zombies.
 - **Screamer:** flees within 8 m. Shriek visibly speeds nearby zombies for 6 s and brings 2–4 extras (max 6 per Screamer).
 - **Bloater:** swells 1.5 s near a player/barricade then pops, damaging players, barricades and zombies. Shooting it dead also pops it (once).
-- **Headshots:** head hits do 1.5× (no ding yet — F.1).
+- **Headshots:** head hits do 1.5×, and per-type weak spots do 2× (gold hitmarker + ding added in K1).
 - **Hit-react/stagger:** every hit flinches; shotgun/sawed-off/magnum/melee interrupt attack/movement ~0.4 s.
 - **Death:** per-type death anim, then ragdoll thrown along the killing hit. If the body freezes instead, the physics asset (`PA_SK_Zombie`) isn't assigned. ≤8 bodies stay.
 - **Loot/cash:** specials drop and pay more (Brute/Bloater most).
@@ -89,7 +89,7 @@ its own animation set (group C). **Wrecker was cut by the user; see Proposals.**
 - [x] **B.8 Staggered unlock.** **DONE:** `BP_ZombieSpawnerManager.PickZombieClassFor(Night, AdLevel)` / `ComputeSpawnWeight` read unlock night + weight from `DT_ZombieTypes`. Night 1: Shamblers only. Runners join on night 2, Spitters on 4,
   Screamers on 5, Brutes and Bloaters on 6+. Spawn weights shift toward special types with night
   number and Store Advertisement level.
-- [x] **B.9 Headshots.** **DONE:** `BP_ZombieBase.GetHeadshotMultiplier` (head bone only, 1.5×), applied per pellet in `GA_BP_FireWeapon` (`bLastShotHeadshot` kept for F.1). 1.5× damage on head hits, all types. No per-type weak spots.
+- [x] **B.9 Headshots.** **DONE:** `BP_ZombieBase.GetHeadshotMultiplier` (head bone only, 1.5×), applied per pellet in `GA_BP_FireWeapon` (`bLastShotHeadshot` kept for F.1). 1.5× damage on head hits, all types. **Update (K1, 2026-09-26):** per-type weak spots added on top. `DT_ZombieTypes` `WeakSpot*` columns give Brute spine_03 from behind, Bloater spine_01 from the front, and Spitter neck_01 from the front, each at 2.0×. A weak-spot hit also counts as a headshot for the gold hitmarker. Bloater "early detonation" was not built.
 - [x] **B.10 Elites: one per surge.** **DONE:** `BP_ZombieBase.MakeElite(Modifier)` (1 Armored / 2 Swift / 3 Regenerating) + `EliteRegenTick`, replicated `EliteModifier` → `OnRep_EliteModifier` lights `EliteGlowLight` (PointLight). Spawner makes the first zombie spawned after `BeginSurge` elite (`bSurgeElitePending`). `DT_ZombieLoot` row `Elite` (2 guaranteed drops). Test: `Test_Zombie_EliteModifierApplies`. Each horde surge (D.2) includes exactly one elite: a random type
   plus one modifier (Armored +100% HP / Swift +35% speed / Regenerating out of combat), a colored
   glow, and a guaranteed better loot roll.
@@ -331,14 +331,47 @@ STATUS NOTE: an extension of section I, built at the user's request. It isn't pa
 
 ## F. Game feel
 
-- [ ] **F.1 Hitmarker + headshot ding.** The crosshair hitmarker flashes on every hit; distinct color
+- [x] **F.1 Hitmarker + headshot ding.** (Built in K1.) The crosshair hitmarker flashes on every hit; distinct color
   and sound on headshots; a bigger X on kills.
-- [ ] **F.2 Directional damage indicator.** A red arc points toward the attacker.
-- [ ] **F.3 Damage vignette + shake.** A red edge pulse and a small camera jolt, scaled by damage.
+- [x] **F.2 Directional damage indicator.** (Built in K1.) A red arc points toward the attacker.
+- [x] **F.3 Damage vignette + shake.** (Built in K1.) A red edge pulse and a small camera jolt, scaled by damage.
 - [ ] **F.4 Placeholder SFX.** Synthesized WAVs from a Python script
   (`PlaceholderAssets/Audio/`): dry-fire click, headshot ding, hitmarker tick, shriek, Bloater
   pop/swell, acid splat, surge groan, Brute charge roar. Each cue has a named slot so real
   Freesound sounds can replace it later.
+
+---
+
+## K. Finish Phase 6 + F + picked proposals (2026-09-26 Q&A)
+
+User-confirmed design calls (don't re-litigate):
+- **Post-process:** outlines + light toon shading, **with a toggle and an intensity slider** (Video tab of `WBP_OptionsMenu`).
+- **Gore:** green goo only, for hits and deaths. No confetti.
+- **Build menu:** keep the grid and polish it (green affordable cost, socket-type tag). No radial/carousel.
+- **Store dressing (Phase 6 §1.2):** skipped for now.
+- **Downed state:** no new mechanic. The teammate row shows DEAD + a respawn countdown.
+- **Music:** intensity crossfades. Day goes "hot" during customer events; Night goes "hot" as the zombie count rises and during surges.
+- **Audio source:** Freesound CC0/CC-BY via the `freesound-audio` skill (replaces F.4's synthesized WAVs). Every sound gets a named slot.
+- **Proposals picked:** per-type weak spots, and a boss night every 5th night. Everything else stays unscheduled.
+- The uncommitted zombie arm-pose rework (`Tools/Characters/blender_zombie_anims.py` + re-exported anims) predates this run; leave it out of K commits.
+
+Work order: K1 → K7. Commit locally after each group (no push).
+
+- [x] **K1 Combat feel:** F.1, F.2, F.3 (Phase 6 §2.2 hitmarker), plus per-type weak spots.
+  > **STATUS NOTE (2026-09-26):** Built. Everything compiles clean, and the automation covers the weak-spot data and multipliers.
+  > - **Damage feedback:** C++ `AGDHeroCharacter::ClientNotifyDamageTaken` → BP `OnLocalDamageTaken` plays `CS_DamageJolt`, then `WBP_HUD.ShowDamageFeedback` (vignette `M_UI_DamageVignette` + directional arc). Owning client only.
+  > - **Hitmarkers:** `GA_BP_FireWeapon` aggregates one marker per shot (highest pellet type), and `GA_BP_MeleeAttack` marks each swing. Both call `BP_HeroCharacter.Client_ShowHitMarker`, then `WBP_HUD.ShowHitMarker`: 1 = white, 2 = gold + ding, 3 = red X + kill SFX.
+  > - **Needs in-PIE confirmation** (host + client):
+  >   - Weak spots: Brute back, Bloater belly from the front, Spitter throat each do 2×.
+  >   - Victim-only vignette, jolt, and arc.
+  >   - Marker colors and sounds.
+  >   - A shotgun kill shows a single X.
+- [ ] **K2 Combat VFX (Phase 6 §1.3):** tracers, cartoon muzzle flash, green-goo hit and death FX.
+- [ ] **K3 Audio (F.4, Phase 6 §3.1–3.3):** F.4 cue list, retail/build/trap SFX, customer reactions, zombie vocals/breach thuds, intensity music, the G.7 `PickupSound`.
+- [ ] **K4 Visuals (Phase 6 §1.1, rest of §1.3):** `M_PostProcess_CelShader` + toggle/slider, build-mode socket highlights + placement pop, "+$N" popups, customer archetype icons.
+- [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD + respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
+- [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.
+- [ ] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys.
 
 ---
 

@@ -42,6 +42,13 @@ public:
 
 	virtual void FinishDying() override;
 
+	UFUNCTION(Client, Unreliable)
+	void ClientNotifyDamageTaken(float DamageAmount, FVector SourceLocation, bool bHasSourceLocation);
+	void ClientNotifyDamageTaken_Implementation(float DamageAmount, FVector SourceLocation, bool bHasSourceLocation);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "NoBrainers|Combat")
+	void OnLocalDamageTaken(float DamageAmount, FVector SourceLocation, bool bHasSourceLocation);
+
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GASDocumentation|Camera")
 	float BaseTurnRate = 45.0f;

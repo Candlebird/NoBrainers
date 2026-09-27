@@ -162,6 +162,11 @@ void AGDHeroCharacter::FinishDying()
 	// (e.g. Zombies).
 }
 
+void AGDHeroCharacter::ClientNotifyDamageTaken_Implementation(float DamageAmount, FVector SourceLocation, bool bHasSourceLocation)
+{
+	OnLocalDamageTaken(DamageAmount, SourceLocation, bHasSourceLocation);
+}
+
 /**
 * On the Server, Possession happens before BeginPlay.
 * On the Client, BeginPlay happens before Possession.

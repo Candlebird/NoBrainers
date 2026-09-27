@@ -9,6 +9,11 @@
 
 ---
 
+> **Scope decisions (2026-09-26 Q&A):** the remaining Phase 6 work is tracked as group K in
+> `docs/PHASE_7_TASKLIST.md`. Changes from the text below: outlines + light toon with a toggle and a slider;
+> green goo only (no confetti); keep the grid build menu (no carousel/radial); §1.2 store dressing is skipped for now;
+> teammates show DEAD + a respawn countdown (no downed/revive mechanic); music uses intensity crossfades, not stems.
+
 ## Task Breakdown
 
 ### 1. Stylized Visual Pipeline & Post-Processing

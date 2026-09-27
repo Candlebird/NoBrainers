@@ -3,6 +3,7 @@
 
 #include "Characters/Abilities/AttributeSets/GDAttributeSetBase.h"
 #include "Characters/GDCharacterBase.h"
+#include "Characters/Heroes/GDHeroCharacter.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
@@ -160,6 +161,13 @@ void UGDAttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectModCall
 				{
 					// No hit result. Default to front.
 					TargetCharacter->PlayHitReact(HitDirectionFrontTag, SourceCharacter);
+				}
+
+				if (AGDHeroCharacter* HeroTarget = Cast<AGDHeroCharacter>(TargetCharacter))
+				{
+					const bool bHasSource = IsValid(SourceActor) && SourceActor != TargetActor;
+					const FVector SourceLoc = bHasSource ? SourceActor->GetActorLocation() : FVector::ZeroVector;
+					HeroTarget->ClientNotifyDamageTaken(LocalDamageDone, SourceLoc, bHasSource);
 				}
 
 				// Show damage number for the Source player unless it was self damage
