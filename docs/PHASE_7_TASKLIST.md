@@ -355,6 +355,16 @@ User-confirmed design calls (don't re-litigate):
 - **Proposals picked:** per-type weak spots, and a boss night every 5th night. Everything else stays unscheduled.
 - The uncommitted zombie arm-pose rework (`Tools/Characters/blender_zombie_anims.py` + re-exported anims) predates this run; leave it out of K commits.
 
+**Follow-up decisions (2026-09-26 Q&A, round 2):**
+- **Boss night end:** the night still ends on its timer, and killing the boss is optional. A kill pays a bonus. A surviving boss carries over like any other zombie.
+- **Boss toughness:** scales with player count, at about 8× Brute HP per player. It is 1.6× Brute size and slower.
+- **Cel shader:** on by default at medium outline thickness with light toon banding. The toggle and slider live in Options > Video.
+- **Night music:** calm, tense, and intense tracks crossfade by how many zombies are alive. Surges and the boss push it to intense.
+- **Ammo can at full ammo:** the pickup is refused with an "Ammo full" prompt, and the can stays on the floor.
+- **Customer icons:** only special archetypes get one (Rich $, Nurse cross, other event types). Regular shoppers get none.
+- **Tracer:** delete the dead Niagara TracerFX branch and keep the faux-projectile tracer. This is done in K7.
+- **"+$N" popups:** world text at the sale point (register or shelf), visible to everyone nearby.
+
 Work order: K1 → K7. Commit locally after each group (no push).
 
 - [x] **K1 Combat feel:** F.1, F.2, F.3 (Phase 6 §2.2 hitmarker), plus per-type weak spots.
@@ -366,12 +376,18 @@ Work order: K1 → K7. Commit locally after each group (no push).
   >   - Victim-only vignette, jolt, and arc.
   >   - Marker colors and sounds.
   >   - A shotgun kill shows a single X.
-- [ ] **K2 Combat VFX (Phase 6 §1.3):** tracers, cartoon muzzle flash, green-goo hit and death FX.
+- [x] **K2 Combat VFX (Phase 6 §1.3):** tracers, cartoon muzzle flash, green-goo hit and death FX.
+  - STATUS NOTE (2026-09-26): built, compiles clean, **needs 2-player PIE confirmation**.
+    - New assets: `M_VFX_GooBlob` and `NS_GooSplat` (user params Color, BurstCount, Speed, SpriteSize). `NS_MuzzleFlash` is now a short, bright yellow pop.
+    - `BP_EquipmentComponent` has an `ImpactFX` variable and a `SpawnImpactFX` function. Zombie hits give a green splat; other hits give a grey puff; misses give nothing. `Multicast_FireTracer` gained a `HitActor` input and is unreliable. There is a new `Multicast_PlayImpactFX` (unreliable).
+    - `GA_BP_FireWeapon` passes the hit actor. `GA_BP_MeleeAttack` plays the goo on zombie hits. `BP_ZombieBase.Multicast_PlayDeath` plays a big goo burst (`DeathGooFX`).
+    - New test: `Test_VFX_CombatFXAssigned`. The suite passes 70/70.
+    - See docs/BUGS.md — "`Multicast_FireTracer`: the TracerFX Niagara branch never runs." and "`NS_MuzzleFlash` has no velocity module."
 - [ ] **K3 Audio (F.4, Phase 6 §3.1–3.3):** F.4 cue list, retail/build/trap SFX, customer reactions, zombie vocals/breach thuds, intensity music, the G.7 `PickupSound`.
 - [ ] **K4 Visuals (Phase 6 §1.1, rest of §1.3):** `M_PostProcess_CelShader` + toggle/slider, build-mode socket highlights + placement pop, "+$N" popups, customer archetype icons.
 - [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD + respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
 - [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.
-- [ ] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys.
+- [ ] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
 
 ---
 

@@ -1,5 +1,21 @@
 # Known Bugs
 
+## `Multicast_FireTracer`: the TracerFX Niagara branch never runs
+
+- **Area:** `/Game/Characters/BP_EquipmentComponent`, `Multicast_FireTracer`.
+- **Repro:** Read the graph. The chain IsValid(TracerFX) → Branch → SpawnSystemAtLocation(TracerFX) → set `User.BeamEnd` has nothing wired into the Branch's exec input.
+- **Actual:** The `NS_Tracer` beam is never spawned from here. The visible tracer probably comes from `BP_FauxProjectile`. Found in K2 (2026-09-26) and left as-is to keep that change scoped.
+- **Expected:** Delete the dead nodes and keep the faux-projectile tracer (user decision, 2026-09-26).
+- **Status:** Open. Scheduled for K7.
+
+## `NS_MuzzleFlash` has no velocity module
+
+- **Area:** `/Game/VFX/NS_MuzzleFlash`, FlashCore emitter.
+- **Repro:** Fire any gun.
+- **Actual:** K2 made the flash a short, bright yellow burst (7 sprites, 0.07 s), but the sprites don't move, so it may read as a static blob.
+- **Expected:** A small omnidirectional pop. Add an AddVelocity or cone velocity module if playtesting shows it looks flat.
+- **Status:** Open (optional polish).
+
 
 ## Old `ZombieTest` walk/idle clips are corrupt; `SK_Zombie` has no physics asset
 
