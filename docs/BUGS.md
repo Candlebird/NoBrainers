@@ -6,7 +6,7 @@
 - **Repro:** Read the graph. The chain IsValid(TracerFX) → Branch → SpawnSystemAtLocation(TracerFX) → set `User.BeamEnd` has nothing wired into the Branch's exec input.
 - **Actual:** The `NS_Tracer` beam is never spawned from here. The visible tracer probably comes from `BP_FauxProjectile`. Found in K2 (2026-09-26) and left as-is to keep that change scoped.
 - **Expected:** Delete the dead nodes and keep the faux-projectile tracer (user decision, 2026-09-26).
-- **Status:** Open. Scheduled for K7.
+- **Status:** RESOLVED (K7, 2026-09-26). The 4 dead nodes were removed. The `TracerFX` input pin stays so the RPC signature (NetMulticast, unreliable) is unchanged.
 
 ## `NS_MuzzleFlash` has no velocity module
 
@@ -1338,7 +1338,7 @@
 - **Repro:** Two clients drop/click-stock onto the same empty shelf slot at the same time.
 - **Actual:** The server RPC overwrites/merges the slot's stocked item without checking that the slot is still empty when it executes.
 - **Expected:** The server should reject (or otherwise safely resolve) a stock request when the target slot is already occupied by the time the RPC runs.
-- **Status:** Open. `WBP_ShelfSlot.OnDrop` only guards this client-side (checks `StockedItems[SlotIndex].Quantity == 0` before sending the RPC), which doesn't close the race for two near-simultaneous clients.
+- **Status:** RESOLVED (Phase 7 K7, needs PIE confirmation). The server now resolves this as a swap: `Server_StockItemToSlot` calls `BP_ShelfActor.GetAndClearSlotItem`. If the slot was occupied, the old item goes back to the requesting player's inventory (`Server_AddItem`) before the new item is stocked. A same-item drop is also treated as a swap. The `Quantity == 0` client guard in `WBP_ShelfSlot.OnDrop` was removed, so drag-and-drop can reach the swap. Known limitation: `Server_AddItem` returns void, so there's no reject path if the returning player's inventory is full.
 
 ## Hard class references form asset load cycles
 
@@ -1377,7 +1377,7 @@
 - **Repro:** Inspect their key handling.
 - **Actual:** They check literal Tab/Escape/E keys. The new `WBP_OptionsMenu` instead reads its close keys from the `IA_CloseUI`, `IA_ToggleInventory` and `IA_Interact` mappings in `IMC_Default`.
 - **Expected:** All windows read close keys from the Enhanced Input mappings, so rebinding works everywhere.
-- **Status:** Open, follow-up refactor. Since section J (key rebinding) this is player-visible: rebinding Inventory away from Tab changes the options menu's close key, but the older windows still close on Tab.
+- **Status:** RESOLVED (Phase 7 K7, needs PIE confirmation). A new function `BP_PlayerController_ZombieStore.IsUICloseKey(Key)` queries the live bindings via `QueryKeysMappedToAction`, the same way the options menu does. If no bindings are found it falls back to Tab/Escape/E. `WBP_ShelfPanel`, `WBP_Inventory` and `WBP_KioskCatalog` call it from `OnPreviewKeyDown`. `WBP_BuildMenu` calls it too, and also closes on any key bound to `IA_ToggleBuildMode` (it used to check a literal B). Minor pre-existing oddity, left as is: in these widgets, if the PlayerController cast fails, the handler returns Handled rather than Unhandled.
 
 ## Monolith editing gaps found during the Video/Controls settings build
 

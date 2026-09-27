@@ -365,7 +365,32 @@ User-confirmed design calls (don't re-litigate):
 - **Tracer:** delete the dead Niagara TracerFX branch and keep the faux-projectile tracer. This is done in K7.
 - **"+$N" popups:** world text at the sale point (register or shelf), visible to everyone nearby.
 
-Work order: K1 → K7. Commit locally after each group (no push).
+**Follow-up decisions (2026-09-26 Q&A, round 3):**
+- **Zombie vocals:** mixed. Horror growls and snarls in combat; silly sounds on idle and death (burps, gurgles, an arcade squeak). Pitch varies by type.
+- **Customer reactions:** Simlish gibberish blips (happy, annoyed, "hmm") plus an archetype chime. No real words.
+- **Day music:** crossfades from the calm track to a busier, more upbeat layer while a customer event is active.
+- **Surge/boss warnings:** none. Only the music intensity reacts.
+- **Socket highlights:** color by type (Floor green, Wall blue, TurretBase orange, Other purple), but **more subtle than the current ones**. Lower opacity/glow, with a pulse when aimed at.
+- **Placement pop:** the defense drops into place from a short height and lands with a thud (plus a dust puff).
+- **Cel outlines:** dark ink everywhere. No extra zombie readability (no through-wall outlines, not even for the boss).
+- **Boss kill bonus:** scales with boss number (about $150 × boss number) into shared store cash, plus a guaranteed rare loot drop.
+- **Respawn countdown:** only the dead player sees it (a big, centered countdown while spectating). Teammates see just "DEAD" in their teammate list.
+- **Occupied shelf slot (K7):** swap. The dragged item takes the slot, and the old item goes back to the player's inventory.
+- **Interact prompt:** verb only ("[E] Stock", "[E] Open", "[E] Pick up", "[E] Repair"). It shows whatever key Interact is bound to.
+
+**Follow-up decisions (2026-09-26 Q&A, round 4):**
+- **Order:** K7 bug fixes first, then K3 → K4 → K5 → K6.
+- **Boss size:** a Blender-made mesh scaled to 1.6× Brute at the source, with the Brute anims retargeted. It is imported and used at 1×1×1 (unit-scale rule). No actor or component scale.
+- **Audio gaps:** when Freesound has no fit, synthesize a placeholder (a Python-made WAV or a MetaSound) and log it in docs/BUGS.md.
+- **Budget:** no token cap for the overnight run. Keep going until done or blocked.
+
+**Follow-up decisions (2026-09-26 Q&A, round 5):**
+- **Dismantle refund:** 50% of the defense's price.
+- **Repair:** paid, any phase. Hold E on a damaged defense; the cost is proportional to missing health. The auto-restore at Day start stays.
+- **Build menu polish:** show the aimed socket's type and grey out entries that don't fit it; a per-entry info tooltip (damage/HP/cost/description); icons/thumbnails instead of text-only tiles.
+- **Boss readability:** a top-of-screen boss health bar with a name (e.g. "Manager of the Dead") while it's alive. No tint, no accessory, no new attack.
+
+Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group (no push).
 
 - [x] **K1 Combat feel:** F.1, F.2, F.3 (Phase 6 §2.2 hitmarker), plus per-type weak spots.
   > **STATUS NOTE (2026-09-26):** Built. Everything compiles clean, and the automation covers the weak-spot data and multipliers.
@@ -385,9 +410,29 @@ Work order: K1 → K7. Commit locally after each group (no push).
     - See docs/BUGS.md — "`Multicast_FireTracer`: the TracerFX Niagara branch never runs." and "`NS_MuzzleFlash` has no velocity module."
 - [ ] **K3 Audio (F.4, Phase 6 §3.1–3.3):** F.4 cue list, retail/build/trap SFX, customer reactions, zombie vocals/breach thuds, intensity music, the G.7 `PickupSound`.
 - [ ] **K4 Visuals (Phase 6 §1.1, rest of §1.3):** `M_PostProcess_CelShader` + toggle/slider, build-mode socket highlights + placement pop, "+$N" popups, customer archetype icons.
-- [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD + respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
+- [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD label + own-screen respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
 - [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.
-- [ ] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
+- [x] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
+
+> **STATUS NOTE (2026-09-26, K7 done; compiles clean, needs PIE):**
+> - **Ammo can:**
+>   - `BP_AmmoRefillPickup` only refills pools below `MaxStockpile`.
+>   - When every pool is full, the can stays in the world and the player sees "Ammo full" through a new generic HUD status line (`WBP_HUD.ShowStatusMessage`, `BP_HeroCharacter.Client_ShowStatusMessage`).
+> - **Shelf swap:**
+>   - `Server_StockItemToSlot` now returns an occupied slot's old item to the player's inventory before stocking the new one.
+>   - The `WBP_ShelfSlot.OnDrop` guard that only allowed drops on empty slots was removed.
+> - **Close keys:**
+>   - The new `PC.IsUICloseKey` reads the live bindings for `IA_CloseUI`, `IA_ToggleInventory` and `IA_Interact`.
+>   - It is used by the shelf panel, inventory, kiosk catalog and build menu. The build menu also closes on the key bound to `IA_ToggleBuildMode`.
+> - **Tracer:** the dead TracerFX branch was removed from `Multicast_FireTracer`.
+>
+> **PIE checks:**
+> - Walking over an ammo can with full ammo leaves it on the ground and shows "Ammo full". Walking over it with ammo missing refills and consumes it.
+> - Drag or click a different item onto an occupied shelf slot: the old item returns to your inventory.
+> - Rebind Inventory in Options, then open the shelf, inventory, kiosk and build menu: each closes on the new key, Escape and E. The build menu also closes on the build key.
+> - Tracers still show when firing.
+>
+> See docs/BUGS.md — "Server_StockItemToSlot doesn't check slot occupancy." and "Older interaction widgets hard-code Tab/Escape/E close keys."
 
 ---
 
