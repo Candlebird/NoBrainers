@@ -388,7 +388,7 @@ User-confirmed design calls (don't re-litigate):
 - **Dismantle refund:** 50% of the defense's price.
 - **Repair:** paid, any phase. Hold E on a damaged defense; the cost is proportional to missing health. The auto-restore at Day start stays.
 - **Build menu polish:** show the aimed socket's type and grey out entries that don't fit it; a per-entry info tooltip (damage/HP/cost/description); icons/thumbnails instead of text-only tiles.
-- **Boss readability:** a top-of-screen boss health bar with a name (e.g. "Manager of the Dead") while it's alive. No tint, no accessory, no new attack.
+- **Boss readability:** a top-of-screen boss health bar with a name (e.g. "Manager of the Dead") while it's alive. No tint, no accessory, no new attack. *(Superseded 2026-09-27 for the attack only: the user asked for a boss AOE slam. See the K6 follow-up below.)*
 
 Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group (no push).
 
@@ -490,6 +490,15 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
 > - **Tests:** 6 `Test_K6_*` checks in `BP_TestController`, including `Test_K6_BossSurgeScale`.
 > - **Change from the task wording:** the cash bonus is paid for killing the boss, not for surviving the night.
 > - See docs/BUGS.md — "K6 boss night: known limitations."
+- [x] **K6 follow-up: boss AOE slam** (user request 2026-09-27, overrides "no new attack").
+
+> **STATUS NOTE (2026-09-27, 95/95 automation tests pass, needs PIE):** `BP_Zombie_Boss` gets a close-range ground slam. All Blueprint, no new assets.
+> - **Trigger:** a server `CheckSlam` timer (every 0.5 s) fires when an alive player is within `SlamTriggerRange` 350, below the Brute charge 400 minimum, so close players get slammed and far players get charged. Shares `bActionLocked` with the charge.
+> - **Telegraph:** `A_Z_Brute_Attack3` at 0.6x plus a growl, 1.25 s windup (`SlamWindupTime`).
+> - **Impact:** every alive player within `SlamRadius` 450 takes 30 damage (`GE_MeleeDamage`) and is launched away at 500-900 horizontal (closer = harder) and 400 up. FX: NS_GooSplat dust (user params only, no scale), world camera shake (CS_DamageJolt, radius 300-1200), SFX_BruteImpact.
+> - **Timing:** 0.8 s recovery, 9 s slam cooldown, charge locked out 3 s after a slam.
+> - **Networking:** damage and knockback are server-authoritative (same LaunchCharacter path as the charge); FX on an unreliable multicast.
+> - **Tests:** `Test_BossSlam_KnockbackFalloff`, `Test_BossSlam_KnockbackEdgeCases`, `Test_BossSlam_TriggerInsideChargeGap`.
 - [x] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
 
 > **STATUS NOTE (2026-09-26, K7 done; compiles clean, needs PIE):**
