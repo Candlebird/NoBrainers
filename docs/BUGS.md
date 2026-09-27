@@ -1456,7 +1456,7 @@
 - **Repro:** Play `SCue_CustomerHappy`, `SCue_CustomerAnnoyed`, or `SCue_CustomerHmm` in the editor or in a customer interaction.
 - **Actual:** The nine Simlish blip variants (`SFX_Simlish_Happy_01/02/03`, `SFX_Simlish_Annoyed_01/02/03`, `SFX_Simlish_Hmm_01/02/03`) are synthesized placeholders (formant-filtered saw waves built by `Tools/Audio/synth_k3.py`, no real words), not real voice-over.
 - **Expected:** Real Simlish-style VO recorded/performed for each archetype mood, then reimported over the same SoundWave names via `Tools/Audio/ue_import_k3.py`.
-- **Status:** Open — placeholder synth, replace with real VO later.
+- **Status:** Resolved 2026-09-27 (tone pass). All nine were replaced with real adult non-verbal Freesound reactions (hums, sighs, "ugh", "hmm"; see docs/AUDIO_CREDITS.md). The asset names were kept. The cues live at `/Game/Audio/Cues/`, not under `SFX/Customer/`. Custom-recorded per-archetype VO remains a possible later polish.
 - **Update:** The 8 zombie vocal sounds (`/Game/Audio/SFX/Zombie/` — 3 growls, 3 idles, 2 death squeaks) added for `SCue_ZombieGrowl`, `SCue_ZombieIdle`, and `SCue_ZombieDeathSilly` are all real Freesound CC0 recordings, not synthesized; `synth_k3.py` was not needed for them.
 
 
