@@ -479,7 +479,17 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
       - See docs/BUGS.md — "Phase 6 UI pass: known limitations."
       - See docs/BUGS.md — "Shelf matching-row combo bonus never built."
       - See docs/BUGS.md — "Surge warning banner shows no text (not reproduced statically)."
-- [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.
+- [x] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a kill cash bonus.
+
+> **STATUS NOTE (2026-09-27, K6 done; 92/92 automation tests pass, needs PIE):**
+> - **Boss:** `BP_Zombie_Boss` (`/Game/Characters/Zombies/`) on the new `SK_Zombie_Boss` mesh (~1.6× Brute, unit scale, Blender source in `PlaceholderAssets/`), plus a `Boss` row in `DT_ZombieTypes` and `DT_ZombieLoot` (GoldWatch / AntlerTrophy / VintageCoin).
+> - **Shared anims:** `SK_Zombie_Skeleton`'s bone retargeting was changed so the boss mesh can reuse the zombie anims. To revert, set all 60 bones back to `Animation`.
+> - **Game state:** `BP_GameState_ZombieStore` has `BossNightInterval` 5, `BossKillBonusPerBoss` 150, `BossMaxPlayerScale` 4, and `ActiveBoss`. Its functions are `IsBossNightFor`, `GetBossNumberFor`, `IsBossAlive` (null-guarded), `ComputeBossMaxHealth`, and `ComputeBossKillBonus` (150 × boss number, paid to store cash on the kill).
+> - **Spawner:** `BP_ZombieSpawnerManager` scales the surge budget by `BossSurgeBudgetScale` (1.5) on boss nights and spawns one boss on the first surge. The boss is not despawned at night end, so it persists into Morning.
+> - **Music and HUD:** music stays intense while the boss is alive. `WBP_HUD` shows the "Manager of the Dead" boss bar top-centre (`UpdateBossBar`).
+> - **Tests:** 6 `Test_K6_*` checks in `BP_TestController`, including `Test_K6_BossSurgeScale`.
+> - **Change from the task wording:** the cash bonus is paid for killing the boss, not for surviving the night.
+> - See docs/BUGS.md — "K6 boss night: known limitations."
 - [x] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
 
 > **STATUS NOTE (2026-09-26, K7 done; compiles clean, needs PIE):**

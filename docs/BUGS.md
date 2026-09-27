@@ -1480,3 +1480,17 @@
   - Placed socket instances in `Map_Store_Outdoors` weren't checked for a per-instance `bReplicates` override. The K4 fix set the class default to true, but the map wasn't loaded to confirm it.
 - **Expected:** the turret aim matches on every machine; every client sees the pop at placement.
 - **Status:** open. Cosmetic, apart from the unverified map-instance override.
+
+
+## K6 boss night: known limitations
+
+- **Area:** Boss night (`BP_ZombieSpawnerManager.SpawnBoss`, `BP_Zombie_Boss`, `BP_GameState_ZombieStore.ActiveBoss`, `WBP_HUD.UpdateBossBar`).
+- **Repro:** Reach a boss night (every 5th night), then try each case below.
+- **Actual:**
+  - Saving and loading mid-night leaves `ActiveBoss` null. The boss bar and the boss music override won't come back for a boss that is still alive.
+  - If a boss survives into a later boss night, the new boss overwrites `ActiveBoss`. Only the newest boss gets the bar.
+  - `SK_Zombie_Boss` reuses the Brute clips on a 1.6× mesh, so its feet may slide.
+  - The 55/144 capsule may snag on geometry, or fail to spawn at a tight spawn point. `SpawnBoss` returns false and the night goes on without a boss.
+  - Player count is sampled once, when the boss spawns. Players who join or leave later don't rescale its health.
+- **Expected:** `ActiveBoss` is restored on load and tracks every live boss; the boss has its own locomotion clips; boss health follows the current player count.
+- **Status:** Open, known limitations (accepted for K6).
