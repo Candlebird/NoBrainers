@@ -1494,3 +1494,68 @@
   - Player count is sampled once, when the boss spawns. Players who join or leave later don't rescale its health.
 - **Expected:** `ActiveBoss` is restored on load and tracks every live boss; the boss has its own locomotion clips; boss health follows the current player count.
 - **Status:** Open, known limitations (accepted for K6).
+
+
+## Spitter glob can hit its own Spitter on clients
+
+- **Area:** Spitter (`BP_SpitterGlob` BeginPlay).
+- **Repro:** 2-player listen server (host + client). Watch a Spitter lob a glob from the client's view.
+- **Actual:** `IgnoreActorWhenMoving(Owner)` runs only in the `HasAuthority` branch. On the client, the glob's simulated copy can collide with the Spitter that fired it and stop or pop early, so it looks different from what the host sees.
+- **Expected:** the glob ignores its owner on every machine.
+- **Status:** fixed 2026-09-27, awaiting a PIE check with host + client. The gate was actually an `IsValid(GetOwner())` branch, not HasAuthority. It was removed, so the ignore call now always runs.
+
+
+## Spitter glob arc is computed before TargetLocation is set
+
+- **Area:** Spitter (`BP_Zombie_Spitter` Lob → `BP_SpitterGlob`).
+- **Repro:** Any session, including a host playing alone. Let a Spitter lob at a player standing away from the world origin.
+- **Actual:** Lob sets `TargetLocation` on the glob after `SpawnActor` returns, but the glob's BeginPlay has already computed its arc toward (0,0,0) by then. The lob probably flies toward the world origin, not toward the target.
+- **Expected:** the glob arcs to the player's position when the lob fires.
+- **Status:** fixed 2026-09-27, awaiting a PIE check. `TargetLocation` was already Expose on Spawn; the SpawnActor pin in `BP_Zombie_Spitter` is now wired to the Lob event's `TargetLoc`.
+
+
+## Weapon recoil pitch kick missing on remote clients
+
+- **Area:** Weapons (`GA_BP_FireWeapon` AddRecoil).
+- **Repro:** 2-player listen server. Fire a weapon as the client and as the host.
+- **Actual:** the `AddControllerPitchInput` recoil runs only on the authority branch, so the host gets a pitch kick and remote clients probably don't. Camera shake is fine, because it goes through a Client RPC.
+- **Expected:** every locally controlled player gets the same recoil.
+- **Status:** fixed 2026-09-27, awaiting a PIE check with host + client. The ability is LocalPredicted; `AddRecoil` now runs only where `IsLocallyControlled` is true, on both the authority and the non-authority paths.
+
+
+## Bloater explosion has no visual
+
+- **Area:** Bloater (`BP_Zombie_Bloater` Explode, `GE_BloaterBlast`).
+- **Repro:** Kill a Bloater, or let it explode, near a player.
+- **Actual:** the blast deals damage and plays `SFX_BloaterPop`, but it has no VFX and `GE_BloaterBlast` has no GameplayCue. Nobody can see the blast radius, host or client.
+- **Expected:** a visible burst (a GameplayCue or a multicast Niagara effect) that every player sees.
+- **Status:** open. This is a design/content gap, not a replication bug.
+
+
+## Multiplayer audit: low-risk hardening items
+
+- **Area:** Various (2026-09-27 listen-server audit, static only).
+- **Actual:**
+  - `BP_ZombieBase.HandleZombieDied`: the non-authority else branch repeats the whole death chain. It's harmless today, because the RPCs inside it are dropped on clients, but it's wasted work and fragile.
+  - `BP_Zombie_Boss` / `BP_Zombie_Brute` OnZombieActivated start the CheckSlam/CheckCharge timers on clients too. The functions gate on authority, so this only wastes ticks.
+  - Runner lunge `LaunchCharacter` runs only on the server and relies on CMC correction, so the lunge may look softer or snappier on clients.
+  - `BP_AmmoRefillPickup` has a brief window where its collision is still live before `Destroy` replicates.
+  - `BP_GameMode_ZombieStore.RespawnDeadPlayers` still has a debug Print String.
+- **Expected:** gate the client-side work on authority, move the lunge to a predicted path if it looks off, disable collision on pickup, and remove the debug print.
+- **Status:** open, low priority.
+
+## Host listen failure is silent
+
+- **Area:** Main menu multiplayer (`WBP_MainMenu` Host Game, `BP_GameInstance_NoBrainers.HandleNetworkError`).
+- **Repro:** Start a second host on the same machine while one is already listening on UDP 7777, or have a firewall block the port, then click Host Game.
+- **Actual:** the server-side `NetDriverListenFailure` is only logged (`[Net] server-side network error: ...`). The host still loads Map_Store_Outdoors as if it were hosting, and no one can join. There is no on-screen message.
+- **Expected:** the host sees "Could not host: port 7777 may already be in use." and stays on the main menu (or gets a clear in-game notice).
+- **Status:** open, known limitation of the 2026-09-27 main menu multiplayer feature.
+
+## IsBossAlive logs "Accessed None" for ActiveBoss on the test bed
+
+- **Area:** `BP_GameState_ZombieStore.IsBossAlive` (K6 boss night).
+- **Repro:** Run the automation test bed (`L_AutomationTestBed`) and grep the log.
+- **Actual:** about 138 warnings per run: `Accessed None trying to read (real) property ActiveBoss in BP_GameState_ZombieStore_C` at `IsBossAlive:0016`. The function already checks `IsValid(ActiveBoss)` before calling `IsAlive`, so the cause isn't obvious. It may be a stale reference to a destroyed boss, or the caller's evaluation order. Tests still pass.
+- **Expected:** no warnings. `IsBossAlive` returns false when there's no live boss.
+- **Status:** open, low priority (log noise). Not yet seen outside the test bed. It didn't reproduce on the 2026-09-27 rerun (0 warnings), so it may be intermittent.
