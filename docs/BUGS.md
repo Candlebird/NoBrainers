@@ -1201,7 +1201,25 @@
   - UMG pops fade in with RenderOpacity only. `ui.create_animation_v2` can't animate RenderTransform scale.
   - Build entry cost text isn't green (Cash color). `SetEntryData` drives its color white/grey at runtime.
 - **Expected:** everything listed in §2.1–2.4.
-- **Status:** Open. These were deferred from the overnight restyle as out of scope.
+- **Status:** Partly resolved (Phase 7 K5, 2026-09-27, needs PIE).
+  - **Fixed:**
+    - Dead teammates show a red "DEAD", and the dead player sees an own-screen respawn countdown. There's still no downed state.
+    - The interact prompt shows the bound key plus the per-actor `InteractVerb`.
+    - Build entry cost is green when affordable, red when not, and grey when locked.
+  - **By decision (K5):** the build menu stays a grid.
+  - **Still open:**
+    - No hit-marker animation on the reticle.
+    - No sun/moon icon art, and the UI still uses Roboto.
+    - Pops are RenderOpacity-only.
+    - See "Shelf matching-row combo bonus never built."
+
+## Shelf matching-row combo bonus never built
+
+- **Area:** shelf stocking and sales (`BP_ShelfActor`, checkout pricing); `docs/PHASE_6_TASKLIST.md` §2.3.
+- **Repro:** Stock one shelf row with matching items and sell from it.
+- **Actual:** No combo is detected, no bonus is paid, and no "3x Combo! +50% Profit" overlay appears. No combo logic, variable or widget exists anywhere in the project.
+- **Expected:** Per Phase 6 §2.3, a matching row pays a profit bonus and shows a combo overlay on the shelf.
+- **Status:** Open (known gap, not a regression). Found during Phase 7 K5, whose "combo/event banner check" had nothing to verify on the combo side. It needs a design pass first: the rules for what counts as matching, the bonus size, and whether it stacks with archetype events.
 
 ## Build mode: no trap can be placed (spike, swinging), placement flow needs ghost preview
 
@@ -1330,7 +1348,7 @@
 - **Repro:** Play a Night until a horde surge is announced (user playtest, 2026-09-26).
 - **Actual:** The banner panel pops up with no text.
 - **Expected:** "HORDE SURGE INCOMING!" / "FINAL SURGE INCOMING!".
-- **Status:** Open. A static check found nothing wrong: the SetText targets, the hardcoded literals, opacity, font size, anim (a 0→1 fade-in), the single widget instance, and replication are all fine. The literals were changed anyway. If it still reproduces, capture a screenshot and note host vs client and whether the customer-event banner (`ShowBanner`) also shows blank. The blank banner may not be the surge banner at all.
+- **Status:** Resolved by removal (Phase 7 K5). The surge banner poll is unhooked from `WBP_EventBanner`, per the K round-3 decision (surge/boss warnings: none, only the music reacts). The customer event banner now has an empty-title guard, and a test checks that every `DT_CustomerEvents` BannerTint has visible alpha. Re-open if the customer event banner shows blank. Earlier note: a static check found nothing wrong: the SetText targets, the hardcoded literals, opacity, font size, anim (a 0→1 fade-in), the single widget instance, and replication are all fine. The literals were changed anyway. If it still reproduces, capture a screenshot and note host vs client and whether the customer-event banner (`ShowBanner`) also shows blank. The blank banner may not be the surge banner at all.
 
 ## Server_StockItemToSlot doesn't check slot occupancy
 

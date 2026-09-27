@@ -454,6 +454,31 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
     - K4 also fixed `bReplicates`: `BP_DefenseSocket` and all 6 defense subclass CDOs had it set to false, so placed defenses and socket state never reached clients.
     - See docs/BUGS.md — "K4 defense visuals: replication gaps."
 - [ ] **K5 UI gaps (Phase 6 §2.1–2.4):** DEAD label + own-screen respawn countdown, per-actor interact verb, combo/event banner check, build grid polish, repair/dismantle prompt.
+    - **STATUS NOTE (2026-09-27, K5 done):** compiles clean; 86/86 tests pass; gate 2 found only a docs gap, now fixed; needs a PIE check. Not ticked until the PIE checks pass.
+      - **Death:** dead teammates show a red "DEAD". Only the dead player sees `WBP_HUD.Text_RespawnCountdown` ("RESPAWN IN M:SS" at night, "RESPAWN AT DAWN" otherwise).
+      - **Interact prompt:**
+        - `BP_Interaction_Base.InteractVerb`, with 7 child verbs (Stock, Open, Pick up ×2, Buy Ammo, Open Kiosk, Close Shop).
+        - The prompt key comes from IA_Interact's live mapping (`PC.GetInteractKeyText`).
+      - **Paid repair:**
+        - Hold E for 1 s on a damaged defense, in any phase; runs through `PC.Server_RepairDefense`.
+        - Cost = ceil(missing HP × `RepairCostPerHP`), minimum $1, recomputed on the server. Releasing early costs nothing.
+        - The Day auto-restore is unchanged.
+      - **Build menu:**
+        - Dismantle refunds 50% (all rows `SellRefundPercent 0.5`).
+        - Grid entries have icons (`/Game/UI/Icons/Defense/`), tooltips with damage/HP/cost, and a green/red/grey cost.
+        - A socket-type label, and entries that don't fit the socket are greyed.
+        - An occupied socket shows "HP X/Y   Repair: $N (hold E)" and "Dismantle (+$N)".
+      - **Banners:** the surge banner is unhooked per the round-3 decision (music only). The customer event banner has an empty-title guard. There's no combo feature to check.
+      - **PIE checklist:**
+        1. The prompt reads "[E] Stock" etc., and rebinding IA_Interact changes the key.
+        2. On a damaged barricade and a floor trap: "Repair ($N)" plus the hold bar. Releasing early costs nothing, a broke player gets "Not enough cash", and a full hold restores HP on host and client.
+        3. At night, the dead player sees the RESPAWN countdown and the teammate sees DEAD.
+        4. Build menu: the socket label is right, non-fitting entries are greyed, the cost is green or red, and the tooltip and icons show.
+        5. "Dismantle (+$half)" refunds exactly 50%.
+        6. A customer event banner shows its text.
+      - See docs/BUGS.md — "Phase 6 UI pass: known limitations."
+      - See docs/BUGS.md — "Shelf matching-row combo bonus never built."
+      - See docs/BUGS.md — "Surge warning banner shows no text (not reproduced statically)."
 - [ ] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a survival cash bonus.
 - [x] **K7 Bugs:** the G.7 ammo can is consumed at full ammo; `Server_StockItemToSlot` doesn't check occupancy; old widgets hard-code their close keys; delete the dead TracerFX branch in `Multicast_FireTracer`.
 
