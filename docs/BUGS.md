@@ -1559,3 +1559,11 @@
 - **Actual:** about 138 warnings per run: `Accessed None trying to read (real) property ActiveBoss in BP_GameState_ZombieStore_C` at `IsBossAlive:0016`. The function already checks `IsValid(ActiveBoss)` before calling `IsAlive`, so the cause isn't obvious. It may be a stale reference to a destroyed boss, or the caller's evaluation order. Tests still pass.
 - **Expected:** no warnings. `IsBossAlive` returns false when there's no live boss.
 - **Status:** open, low priority (log noise). Not yet seen outside the test bed. It didn't reproduce on the 2026-09-27 rerun (0 warnings), so it may be intermittent.
+
+## A player leaving mid-night doesn't re-check the run-over condition
+
+- **Area:** `BP_GameMode_ZombieStore`, `CheckRunOverCondition` (listen-server multiplayer).
+- **Repro:** In a hosted game at night, let every player but one go down, then have that last living client disconnect.
+- **Actual:** `CheckRunOverCondition` is only called from `OnPlayerDied` and `StartNightPhase`. There is no Logout hook, so the run doesn't end. The downed players spectate until morning, when `RespawnDeadPlayers` brings them back.
+- **Expected:** if nobody alive remains after a logout, the run ends the same way as when the last player dies (or the design explicitly accepts the current behavior).
+- **Status:** open, low priority (found in static review on 2026-09-27; nobody gets stuck for good).
