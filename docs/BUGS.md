@@ -1299,7 +1299,7 @@
 - **Repro:** Run the automation test bed (`L_AutomationTestBed`) and grep the log.
 - **Actual:** ~90 `Script Msg: Attempted to access index 0 from array 'EquipmentSlots' of length 0` warnings from `BP_HeroCharacter_C_0.EquipmentComponent`, likely a getter (e.g. `GetActiveAmmo`/active-slot lookup) running before any item is equipped.
 - **Expected:** Getters guard with `IsValidIndex` and return defaults when no slot exists.
-- **Status:** Open, low priority. No test failures attributed to it.
+- **Status:** RESOLVED (2026-09-29). `GetActiveSlotData` now checks `IsValidIndex(EquipmentSlots, ActiveSlotIndex)` first and returns empty slot data when the index is invalid. The test bed ran 118/0 with 0 of these warnings, down from ~70. Still needs a PIE check that equipping and swapping weapons works as before.
 
 ### Monolith `blueprint.disconnect_pins` can remove an unrelated link on a fan-out exec pin
 - **Area:** Monolith MCP tooling (Blueprint graph editing).
@@ -1330,7 +1330,7 @@
 - **Repro:** Run the full suite on `L_AutomationTestBed` (RunAllTests).
 - **Actual:** No `[AUTOTEST]` PASS/FAIL line for `Test_Weapon_CooldownBlocksRefire` in any Phase 7 run (suite reports 53/53 without it). It's likely an async test whose completion event never fires, or it isn't reached in RunAllTests.
 - **Expected:** One PASS/FAIL line per registered test.
-- **Status:** Open. Found during Phase 7 overnight run; not investigated.
+- **Status:** RESOLVED (2026-09-29, doc error). No test by that name exists in `BP_TestController`. The cooldown behavior is covered by `Test_Weapon_CooldownTagAppliedOnAttack` and `Test_Weapon_CooldownExpires`, which both PASS in every run.
 
 ## GA_BP_MeleeAttack has a dead CachedHero/CachedEquipment setup block
 
