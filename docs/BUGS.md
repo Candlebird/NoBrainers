@@ -1338,7 +1338,7 @@
 - **Repro:** Inspect the graph. The `Cast To GDHeroCharacter` → set `CachedHero`/`CachedEquipment` block has no exec input, and its branch would call `SwingOnce` a second time.
 - **Actual:** `CachedHero` and `CachedEquipment` are always None. Nothing live reads them since the G.8 fix (RegisterHit now uses `PendingHitDirection`).
 - **Expected:** Either wire the block in without the duplicate `SwingOnce`, or delete it.
-- **Status:** Open, harmless. Found during Phase 7 G.8.
+- **Status:** RESOLVED (2026-09-29, Phase 7 L.1). It wasn't harmless: `Multicast_PlayImpactFX` read the None `CachedEquipment` and logged Accessed None on every swing. The block and vars are deleted, and the FX now reads the EquipmentComponent directly.
 
 ## Surge warning banner shows no text (not reproduced statically)
 
@@ -1642,3 +1642,11 @@
 - **Actual:** the Morning and Dusk switch outputs are empty.
 - **Expected:** the HUD, lighting and music handle all five phases.
 - **Status:** Open, awaiting the user's description of what looked wrong.
+
+## Test_CheckoutQueueSpotLocation started failing (2026-09-29)
+
+- **Area:** `BP_TestController` → `CheckoutQueueSpotLocation`, `BP_CheckoutCounter` queue spots.
+- **Repro:** Run the automation test bed.
+- **Actual:** Bare `[AUTOTEST] FAIL: CheckoutQueueSpotLocation` with no error text in 3 runs from 04:50 on 2026-09-29. It passed at 03:33 the same night. None of the L.1–L.3/L.7 changes landed in between touches customer or checkout assets, so the cause is unknown. It may be test-order state or a prior uncommitted change.
+- **Expected:** PASS.
+- **Status:** Open. It will be investigated with Phase 7 L.4 (random checkout), which reworks the same queue code.

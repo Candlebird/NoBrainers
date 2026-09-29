@@ -201,7 +201,7 @@ Player movement is **out of scope** (user: leave the player alone).
 | DT_ZombieTypes | Screamer CashReward | 15 | 20 | Specials worth hunting; Shamblers pay a trickle |
 | DT_ZombieTypes | Bloater CashReward | 15 | 20 | Specials worth hunting; Shamblers pay a trickle |
 | DT_ZombieTypes | Brute CashReward | 25 | 40 | Specials worth hunting; Shamblers pay a trickle |
-| BP_ZombieBase | EliteCashMult (new) | — | 3 | An elite kill pays 3× type cash |
+| BP_ZombieBase | EliteCashMult (new) | — | 3 | An elite kill pays 3× type cash. **Superseded by L.3:** removed; replaced by `CashRewardMin` (per type) plus `EliteCashMin`/`EliteCashMax` (6/12). |
 | DT_ZombieLoot | Runner MaxDrops | 3 | 2 | Each special drops loot that fits its theme |
 | DT_ZombieLoot | Screamer GuaranteedDropCount | 0 | 1 | Each special drops loot that fits its theme |
 | DT_ZombieLoot | Screamer GoldWatch / VintageCoin / LuckyCharm / BigfootFigurine / AntlerTrophy | .015 / .0225 / .03 / .0225 / .015 | ×2 | Each special drops loot that fits its theme |
@@ -529,6 +529,63 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
 > - Tracers still show when firing.
 >
 > See docs/BUGS.md — "Server_StockItemToSlot doesn't check slot occupancy." and "Older interaction widgets hard-code Tab/Escape/E close keys."
+
+---
+
+## L. Playtest fixes, round 3 (2026-09-28 Q&A, overnight)
+
+All of this must be correct for a listen-server client, not just the host. Work in Blueprint only.
+
+- [x] **L.1 Melee error on every swing.** Every melee weapon logs a GA_ error on each swing. Root-cause it and fix it.
+  - **STATUS NOTE (2026-09-29):** The error was `Accessed None ... CachedEquipment` in `GA_BP_MeleeAttack` `Multicast_PlayImpactFX`, caused by a setup block with no exec input. The FX call now reads the EquipmentComponent directly, and the dead block and its variables are deleted.
+- [x] **L.2 Melee damage and feel.**
+  - A Shambler dies in 2–3 hits: heavy weapons take 2, light weapons take 3.
+  - Swings are about 1.5× slower (`AttackInterval` ×1.5). The montage must not speed up to fit the interval.
+  - A swing cleaves: every zombie in the arc takes full damage, up to 3 per swing.
+  - The heavy weapons (Fire Axe, Canoe Paddle) knock zombies back a little.
+  - **STATUS NOTE (2026-09-29):**
+    - **One-shot kills:** caused by `BoxTraceMulti` applying damage once per hit component. The fix dedupes per actor (`HitActorsThisSwing`, `MaxCleaveTargets` 3).
+    - **Montage play rate:** the clamp max is now 1.0, so the montage never speeds up.
+    - **Knockback:** `LaunchCharacter` with XY 350 and Z 120, for `KnockbackWeaponIDs` [FireAxe, CanoePaddle] on non-lethal hits.
+    - **DT_Weapons BaseDamage/AttackInterval:** Bat 40/0.9, PipeWrench 42/1.05, Machete 40/0.675, FireAxe 60/1.65, CanoePaddle 60/0.825.
+    - **Damage headroom:** escalation scales zombie health (a Shambler is already MaxHealth 109 in the test bed's default state). The damage is set so the hit counts hold up to about a 1.15× health multiplier.
+    - **Test:** `Test_MeleeHitsToKillShambler` passes (MeleeBatThreeHitsShambler, MeleeFireAxeTwoHitsShambler).
+    - **USER TEST:**
+      - Every melee weapon swings with no GA error.
+      - Slower swings.
+      - 3 light / 2 heavy hits per Shambler.
+      - Cleave on grouped zombies.
+      - Axe/paddle knockback. If stagger masks it, raise `KnockbackZ`.
+      - Check all of this as a client too.
+- [x] **L.3 Kill cash.** Shambler $1–2 (random). Specials $2–4. Elites $6–12 regardless of type (this replaces the 3× `EliteCashMult`). Change nothing else in the economy.
+  - **STATUS NOTE (2026-09-29):**
+    - `S_ZombieTypeData` gained `CashRewardMin`. `CashReward` is now the max.
+    - Rows: Shambler 1/2, Runner/Brute/Spitter/Screamer/Bloater 2/4, Boss unchanged.
+    - `BP_ZombieBase.HandleZombieDied` pays `RandomIntegerInRange(EliteCashMin 6, EliteCashMax 12)` for elites, and `RandomIntegerInRange(CashRewardMin, CashReward)` otherwise. The Boss has min 0, so it pays its fixed `CashReward`.
+    - `EliteCashMult` is removed.
+    - Brute drops from $40 to $2–4, per the spec.
+    - **USER TEST:** Watch the per-kill payouts as host and as client.
+- [ ] **L.4 Random checkout.** A customer picks a random counter among those whose queue has room. They no longer go to the nearest one.
+- [ ] **L.5 Customer patience.**
+  - The timer runs from joining the queue until a player starts checking the customer out. It lives on the server and replicates to clients.
+  - The length comes from a new `Patience` column in `DT_CustomerArchetypes`, 15 s on every row.
+  - An overhead pie drains and shifts green → yellow → red.
+  - On timeout, the customer leaves without paying and takes the items with them (the stock is lost). They play an angry bark (`SCue_CustomerAnnoyed`) and a red "-sale" popup appears.
+  - The end-of-day recap shows customers lost and revenue lost.
+- [ ] **L.6 Weapon bloom.**
+  - Each shot adds spread, and spread recovers to 0 over time.
+  - Per-weapon values go in `DT_Weapons` (moderate set): Pistol +1°/shot, max 5°, recovers in 0.6 s. SMG +0.3°, max 4°, 0.4 s. Rifle +1.5°, max 6°, 1.0 s. Sniper/Long Rifle +3°, max 8°, 1.8 s. Shotguns +2° of pellet cone, 1.0 s.
+  - ADS halves the spread.
+  - A crosshair of 4 ticks spreads apart to match the actual cone. Clients predict the spread locally.
+  - Add an automation test: spread rises after shots and recovers to 0.
+- [x] **L.7 Gun damage tune.** Body shots to kill a Shambler: Pistol 3, SMG 5–6, Rifle 2, Shotgun 1 up close, Sniper 1.
+  - **STATUS NOTE (2026-09-29):**
+    - DT_Weapons BaseDamage: Pistol 38, SMG 19, Rifle 60, LongRifle 120, Shotgun 14/pellet. Magnum, LeverAction and SawedOff are untouched.
+    - Pistol has thin headroom at 109 HP (3 hits = 109.6 effective), so the counts go up by one on higher-escalation nights.
+    - The automatic Rifle at 2 shots/kill has high DPS. Watch it.
+    - **USER TEST:** Count body shots per Shambler for each gun.
+- [ ] **L.8 GA audit.** One read-only pass over the `GA_BP_*` abilities for unwired exec pins and null refs. Fix the trivial ones and log the rest to BUGS.md.
+- [ ] **L.9 Spare time:** work on open low-risk BUGS.md entries, then unchecked active-phase tasks.
 
 ---
 
