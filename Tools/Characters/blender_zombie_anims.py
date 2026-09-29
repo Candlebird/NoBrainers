@@ -13,8 +13,9 @@ Technique: every pose is authored as an *armature-space* rotation about a bone's
 character axes (U = world up, Rv = character "right" pointed axis, Fv = forward = U x Rv, both derived from the
 clavicle_l/clavicle_r rest offset exactly like Tools/Characters/blender_melee_anim.py). This sidesteps needing each
 bone's local roll/axis convention: rotating any bone by a signed "P" (pitch, swing fwd/back, about Rv), "B" (bank,
-raise/lower sideways, about Fv) or "Y" (yaw/twist, about U) degree amount behaves the same regardless of which side
-of the body it is on or how its rest roll is set, and a pose dict is just {bone_name: [(axis_letter, degrees), ...]}
+raise/lower sideways, about Fv) or "Y" (yaw/twist, about U) degree amount doesn't depend on the bone's rest roll.
+B and Y are sign-mirrored for _l/_r bones (see SIDE_SIGN) so +B raises either arm, and upperarms are pre-dropped
+from the T-pose rest to hanging (ARM_HANG) so arm P reads as swing forward/back. A pose dict is just {bone_name: [(axis_letter, degrees), ...]}
 applied in order on top of the bone's rest transform. Pelvis root motion (spawn climb, lying deaths) is done the
 same way plus a direct world-space translation of the pelvis bone.
 
@@ -152,6 +153,8 @@ def main():
     Fv = Fv * FORWARD_SIGN
     PELVIS_REST_Z = bones["pelvis"].head_local.z
     AXIS = {"P": Rv, "B": Fv, "Y": U}
+    SIDE_SIGN = {"B": {"r": -1.0, "l": 1.0}, "Y": {"r": 1.0, "l": -1.0}}
+    ARM_HANG = 85.0  # T-pose rest -> arms hanging just clear of the body
     print(f"ZOMBIE_ANIM axes U={tuple(U)} Rv={tuple(round(x,3) for x in Rv)} "
           f"Fv={tuple(round(x,3) for x in Fv)} pelvisZ={round(PELVIS_REST_Z,2)}")
 
@@ -183,6 +186,10 @@ def main():
     def rot_world(name, axis_letter, deg):
         if abs(deg) < 1e-6:
             return
+        # B and Y are about axes that do NOT mirror across the body, so the same signed amount raises one arm
+        # and lowers the other. Mirror them per side: +B = raise sideways (abduct), +Y = swing toward the front.
+        if axis_letter in ("B", "Y") and name[-2:] in ("_l", "_r"):
+            deg *= SIDE_SIGN[axis_letter][name[-1]]
         pb = pbs[name]
         h = pb.head.copy()
         R = Matrix.Rotation(math.radians(deg), 4, AXIS[axis_letter])
@@ -201,8 +208,12 @@ def main():
         vl.update()
 
     def apply_pose(pose, pelvis_pos=None):
-        """pose: {bone_name: [(axis,deg), ...]}. Bones in ORDER not present in pose stay at rest for this frame."""
+        """pose: {bone_name: [(axis,deg), ...]}. Bones in ORDER not present in pose stay at rest for this frame.
+        Upperarms are first dropped from the T-pose rest to hanging (ARM_HANG), so authored arm ops read as
+        P = swing forward(+)/back(-), B = raise sideways(+)/in(-), Y = twist."""
         for name in ORDER:
+            if name.startswith("upperarm_"):
+                rot_world(name, "B", -ARM_HANG)
             if name in pose:
                 apply_ops(name, pose[name])
         if pelvis_pos is not None:
@@ -222,13 +233,16 @@ def main():
     # ------------------------------------------------------------------------------------------------------- pose
     # library: base arm carry, gait generator, attack/death/special shapes.
     def base_arms(p):
+        # Classic zombie reach: both arms raised forward to about shoulder height, elbows soft, wrists limp.
+        # arm_reach types carry them a little lower with more elbow bend. Left sits a few degrees lower so the
+        # pair doesn't read as mechanical.
         if p["arm_reach"]:
-            b, elbow, wrist = -42.0, 55.0, 10.0
+            fwd, elbow, wrist = 68.0, 22.0, -20.0
         else:
-            b, elbow, wrist = -68.0, 30.0, 5.0
+            fwd, elbow, wrist = 80.0, 10.0, -30.0
         ops = {}
-        for s in ("l", "r"):
-            ops[f"upperarm_{s}"] = [("B", b), ("P", -8.0 if p["arm_reach"] else 0.0)]
+        for s, lift in (("l", -5.0), ("r", 0.0)):
+            ops[f"upperarm_{s}"] = [("B", 4.0), ("P", fwd + lift)]
             ops[f"lowerarm_{s}"] = [("P", elbow)]
             ops[f"hand_{s}"] = [("P", wrist)]
         return ops
@@ -256,9 +270,9 @@ def main():
             add(f"thigh_{s}", "P", thigh)
             add(f"calf_{s}", "P", calf)
             add(f"foot_{s}", "P", -0.4 * calf - 6.0 * max(0.0, -math.sin(two_pi * ph)))
-            # contralateral arm swing on top of the carry pose
-            add(f"upperarm_{s}", "P", -arm_amp * math.sin(two_pi * ph + math.pi))
-            add(f"lowerarm_{s}", "P", 6.0 * max(0.0, math.sin(two_pi * ph)))
+            # small contralateral bob on top of the forward reach (full swing would flap the raised arms)
+            add(f"upperarm_{s}", "P", -0.35 * arm_amp * math.sin(two_pi * ph + math.pi))
+            add(f"lowerarm_{s}", "P", 4.0 * max(0.0, math.sin(two_pi * ph)))
         add("spine_01", "P", -hunch * 0.4)
         add("spine_02", "P", -hunch * 0.35)
         add("spine_03", "P", -hunch * 0.25)
@@ -310,11 +324,11 @@ def main():
 
     def _claw(side, p, big):
         wind = dict(base_arms(p))
-        wind[f"upperarm_{side}"] = [("B", -20.0), ("P", -40.0 * big)]
+        wind[f"upperarm_{side}"] = [("B", 50.0), ("P", 35.0 * big)]
         wind[f"lowerarm_{side}"] = [("P", 70.0 * big)]
         wind["spine_03"] = [("Y", 14.0 if side == "r" else -14.0), ("P", -10.0)]
         strike = dict(base_arms(p))
-        strike[f"upperarm_{side}"] = [("B", -10.0), ("P", 60.0 * big)]
+        strike[f"upperarm_{side}"] = [("B", -5.0), ("P", 75.0 * big)]
         strike[f"lowerarm_{side}"] = [("P", 15.0)]
         strike["spine_03"] = [("Y", -18.0 if side == "r" else 18.0), ("P", 8.0)]
         return wind, strike
@@ -333,13 +347,13 @@ def main():
         else:  # overhead_bite: two-hand overhead smash / bite lunge
             wind = dict(base_arms(p))
             for s in ("l", "r"):
-                wind[f"upperarm_{s}"] = [("B", 40.0), ("P", -55.0 * big)]
-                wind[f"lowerarm_{s}"] = [("P", 90.0)]
+                wind[f"upperarm_{s}"] = [("B", 15.0), ("P", 150.0)]
+                wind[f"lowerarm_{s}"] = [("P", 70.0)]
             wind["spine_03"] = [("P", -22.0 * big)]
             wind["neck_01"] = [("P", -18.0)]
             strike = dict(base_arms(p))
             for s in ("l", "r"):
-                strike[f"upperarm_{s}"] = [("B", -30.0), ("P", 45.0 * big)]
+                strike[f"upperarm_{s}"] = [("B", 0.0), ("P", 65.0 * big)]
                 strike[f"lowerarm_{s}"] = [("P", 20.0)]
             strike["spine_03"] = [("P", 30.0 * big)]
             strike["neck_01"] = [("P", 22.0)]
@@ -359,7 +373,7 @@ def main():
         standing = Vector((0.0, 0.0, PELVIS_REST_Z))
         claw_up = dict(base_arms(p))
         for s in ("l", "r"):
-            claw_up[f"upperarm_{s}"] = [("B", 60.0), ("P", -70.0)]
+            claw_up[f"upperarm_{s}"] = [("B", 15.0), ("P", 160.0)]
             claw_up[f"lowerarm_{s}"] = [("P", 20.0)]
         claw_up["spine_01"] = [("P", 20.0)]
         claw_up["spine_03"] = [("P", 15.0)]
@@ -464,7 +478,7 @@ def main():
             crouch["calf_l"] = crouch["calf_r"] = [("P", 55.0)]
             thrust = dict(base_arms(p))
             for s in ("l", "r"):
-                thrust[f"upperarm_{s}"] = [("B", -35.0), ("P", 70.0)]
+                thrust[f"upperarm_{s}"] = [("B", 0.0), ("P", 85.0)]
                 thrust[f"lowerarm_{s}"] = [("P", 10.0)]
             thrust["spine_02"] = [("P", 45.0)]
             thrust["spine_03"] = [("P", 20.0)]
@@ -480,13 +494,13 @@ def main():
             n = round(1.0 * FPS)
             rear = dict(base_arms(p))
             for s in ("l", "r"):
-                rear[f"upperarm_{s}"] = [("B", 30.0), ("P", -60.0)]
-                rear[f"lowerarm_{s}"] = [("P", 100.0)]
+                rear[f"upperarm_{s}"] = [("B", 15.0), ("P", 150.0)]
+                rear[f"lowerarm_{s}"] = [("P", 70.0)]
             rear["spine_02"] = [("P", -30.0)]
             rear["neck_01"] = [("P", -15.0)]
             release = dict(base_arms(p))
             for s in ("l", "r"):
-                release[f"upperarm_{s}"] = [("B", -25.0), ("P", 55.0)]
+                release[f"upperarm_{s}"] = [("B", 0.0), ("P", 80.0)]
                 release[f"lowerarm_{s}"] = [("P", 10.0)]
             release["spine_02"] = [("P", 35.0)]
             recover = {k: [(a, d * 0.3) for a, d in v] for k, v in release.items()}
