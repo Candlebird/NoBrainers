@@ -621,7 +621,8 @@ All of this must be correct for a listen-server client, not just the host. Work 
     - Pistol has thin headroom at 109 HP (3 hits = 109.6 effective), so the counts go up by one on higher-escalation nights.
     - The automatic Rifle at 2 shots/kill has high DPS. Watch it.
     - **USER TEST:** Count body shots per Shambler for each gun.
-- [ ] **L.8 GA audit.** One read-only pass over the `GA_BP_*` abilities for unwired exec pins and null refs. Fix the trivial ones and log the rest to BUGS.md.
+- [x] **L.8 GA audit.** One read-only pass over the `GA_BP_*` abilities for unwired exec pins and null refs. Fix the trivial ones and log the rest to BUGS.md.
+  - STATUS NOTE (2026-09-29): All 16 `GA_` assets compile clean, and the No Brainers `GA_BP_*` abilities are clean. No trivial fixes were needed. See docs/BUGS.md — "Orphaned nodes in GASDocumentation sample abilities GA_AimDownSight_BP and GA_Meteor_BP."
 - [ ] **L.9 Spare time:** work on open low-risk BUGS.md entries, then unchecked active-phase tasks.
 
 ---

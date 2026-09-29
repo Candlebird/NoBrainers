@@ -1660,3 +1660,14 @@
 - **Actual:** It FAILED once (05:47:24) and PASSED in the 4 other runs that night. No code touching the Brute changed between those runs.
 - **Expected:** A consistent PASS.
 - **Status:** Open, low priority. The likely cause is timing or test-order sensitivity in an async movement check. Not investigated.
+
+## Orphaned nodes in GASDocumentation sample abilities GA_AimDownSight_BP and GA_Meteor_BP (2026-09-29)
+
+- **Area:** GASDocumentation sample content: `GA_AimDownSight_BP` and `GA_Meteor_BP`. These are not No Brainers `GA_BP_*` abilities.
+- **Repro:** Open either ability's EventGraph, or query it with `blueprint.get_graph_data`.
+- **Actual:** Disconnected nodes with no exec input:
+  - `GA_AimDownSight_BP`: Set `TargetArmLength` (K2Node_VariableSet_4), `RemoveGameplayEffectFromOwnerWithHandle` (K2Node_CallFunction_7), and `ApplyGameplayEffectToOwner` (K2Node_CallFunction_5).
+  - `GA_Meteor_BP`: `Wait Target Data Using Actor` (K2Node_LatentAbilityCall_1).
+  - Both compile with 0 errors.
+- **Expected:** No dead nodes. Either wire them or remove them.
+- **Status:** Open, low priority. Found by the L.8 audit. I left them alone because this is legacy sample content, and I couldn't tell whether they were leftovers or were deliberately disconnected. All 16 `GA_` assets compile clean, and every No Brainers `GA_BP_*` ability had no unwired exec pins or null refs.
