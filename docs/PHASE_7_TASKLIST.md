@@ -596,12 +596,25 @@ All of this must be correct for a listen-server client, not just the host. Work 
   - An overhead pie drains and shifts green → yellow → red.
   - On timeout, the customer leaves without paying and takes the items with them (the stock is lost). They play an angry bark (`SCue_CustomerAnnoyed`) and a red "-sale" popup appears.
   - The end-of-day recap shows customers lost and revenue lost.
-- [ ] **L.6 Weapon bloom.**
+- [x] **L.6 Weapon bloom.**
   - Each shot adds spread, and spread recovers to 0 over time.
   - Per-weapon values go in `DT_Weapons` (moderate set): Pistol +1°/shot, max 5°, recovers in 0.6 s. SMG +0.3°, max 4°, 0.4 s. Rifle +1.5°, max 6°, 1.0 s. Sniper/Long Rifle +3°, max 8°, 1.8 s. Shotguns +2° of pellet cone, 1.0 s.
   - ADS halves the spread.
   - A crosshair of 4 ticks spreads apart to match the actual cone. Clients predict the spread locally.
   - Add an automation test: spread rises after shots and recovers to 0.
+  - **STATUS NOTE (2026-09-29):**
+    - `S_WeaponData` gained SpreadPerShot, MaxSpread and SpreadRecoveryTime. `DT_Weapons` is filled per the table above. Additions: Shotgun max 6°, SawedOff 3/8/1.0, Magnum 2/6/0.9, LeverAction 2/6/1.2, melee 0.
+    - `BP_EquipmentComponent` holds the Bloom functions. Bloom isn't replicated. The server and the owning client each add it per shot. Recovery is time-based: a hold of AttackInterval + 0.1 s, then a linear decay.
+    - `GA_BP_FireWeapon`'s cone is now SpreadDegrees + bloom. `WBP_HUD.UpdateCrosshair` moves the existing reticle ticks to match the cone.
+    - **Deviation:** ADS halves only the bloom part, not the base SpreadDegrees. This keeps first-shot accuracy and the L.7 shotgun one-shot. Confirm with the user.
+    - 5 `Test_Bloom_*` tests PASS (full bed 118/0).
+    - **USER TEST (listen server, 2 players):**
+      - Holding SMG fire widens the cone, which tightens about 0.4 s after release.
+      - The Pistol's first shot is pinpoint.
+      - The Shotgun still one-shots a Shambler up close.
+      - The ticks widen while firing and pull in by half the bloom on RMB.
+      - Melee shows the default gap.
+      - The client's hits match its crosshair.
 - [x] **L.7 Gun damage tune.** Body shots to kill a Shambler: Pistol 3, SMG 5–6, Rifle 2, Shotgun 1 up close, Sniper 1.
   - **STATUS NOTE (2026-09-29):**
     - DT_Weapons BaseDamage: Pistol 38, SMG 19, Rifle 60, LongRifle 120, Shotgun 14/pellet. Magnum, LeverAction and SawedOff are untouched.
