@@ -1184,9 +1184,7 @@
 - **Expected:** `StockedItems` should retain the restored items regardless of `SlotTransforms`'
   length (shelf slot layout is now driven by `GetSlotTransform`'s procedural fallback, not by
   `SlotTransforms` array length).
-- **Status:** Open, not fixed — found while implementing Task 4 (default shelf slot grid) in
-  `docs/PHASE_5_TASKLIST.md`. Task 4 was scoped to leave `RestoreShelfState`'s `StockedItems`
-  sizing untouched.
+- **Status:** Fixed — resize now uses GetNumSlots() (tier SlotCount); BeginPlay SlotTransforms padding loop removed.
 
 ## Phase 6 UI pass: known limitations
 
@@ -1567,3 +1565,10 @@
 - **Actual:** `CheckRunOverCondition` is only called from `OnPlayerDied` and `StartNightPhase`. There is no Logout hook, so the run doesn't end. The downed players spectate until morning, when `RespawnDeadPlayers` brings them back.
 - **Expected:** if nobody alive remains after a logout, the run ends the same way as when the last player dies (or the design explicitly accepts the current behavior).
 - **Status:** open, low priority (found in static review on 2026-09-27; nobody gets stuck for good).
+
+## Shelf customer stand point was behind the shelf and ignored the slot position
+
+- **Area:** `BP_ShelfActor` customer reach (`GetCustomerStandLocation`, `IsLocationAtShelf`).
+- **Actual:** the stand point was at actor −X (the back panel side), a single centre point; end slots of 700 cm shelves were unreachable by the 140 cm reach gate.
+- **Expected:** stand in front (+X) of the target slot.
+- **Status:** RESOLVED — `GetSlotReachAnchor` + `SlotIndex` inputs on `GetCustomerStandLocation`/`IsLocationAtShelf`; the BT tasks pass the slot index (Tasks 3.2/3.3).

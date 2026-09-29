@@ -14,7 +14,8 @@ import unreal
 PROJ = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 SRC = os.path.join(PROJ, "PlaceholderAssets", "FBX")
 DEST = "/Game/Environment/StoreFixtures"
-NAMES = ["StockShelf", "CheckoutCounter", "AmmoKiosk", "DiscountKiosk", "CloseShopStation", "AmmoPickup"]
+NAMES = ["StockShelf", "CheckoutCounter", "AmmoKiosk", "DiscountKiosk", "CloseShopStation", "AmmoPickup",
+         "StockShelf_T0", "StockShelf_T1", "StockShelf_T2", "StockShelf_T3", "StockShelf_T4"]
 MAT_DIR = "/Game/Environment/Greybox/MI_LV_"
 
 

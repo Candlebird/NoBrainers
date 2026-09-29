@@ -150,6 +150,55 @@ def stock_shelf():
     REPORT.append("  header sign face: centre %s, facing +X, size %g W (Y) x %g H (Z)" % (ue((-28, 0, 152)), 228 * UE_K[0][1], 22 * UE_K[0][2]))
 
 
+# ---------------------------------------------------------------- 1b. stock shelf tiers (T0-T4)
+T_W = 700.0                     # overall width (Y)
+T_D = 60.0                      # overall depth (X)
+T_INNER = 346.0                 # inner half-width (Y half-extent of usable bay)
+T_ROW_TOPS = (70.0, 130.0)      # top surface z of each row's board
+T_TIERS = {
+    "StockShelf_T0": (1, 4),
+    "StockShelf_T1": (1, 6),
+    "StockShelf_T2": (2, 4),
+    "StockShelf_T3": (2, 6),
+    "StockShelf_T4": (2, 8),
+}
+
+
+def stock_shelf_tier(rows, cols):
+    """700 W (Y) x 60 D (X) tiered stock shelf; rows x cols slots, identical frame across all tier variants."""
+    cube(BLACK, -30, 30, -350, 350, 0, 6)                          # plinth
+    cube(ORANGE, -30, 30, -350, -346, 0, 200)                      # end panels
+    cube(ORANGE, -30, 30, 346, 350, 0, 200)
+    cube(BLUE, -30, -27, -346, 346, 6, 200)                        # back panel
+    for yy in range(-325, 326, 50):                                # vertical ribs
+        cube(DARK, -27, -26, yy - 1, yy + 1, 6, 200)
+    cube(ORANGE, 27, 30, -346, 346, 0, 16)                         # front kick rail
+    cube(STOCK, -30, -24, -350, 350, 200, 230)                     # header
+    cube(STOCK, -30, -24, -350, -342, 190, 200)                    # header ears
+    cube(STOCK, -30, -24, 342, 350, 190, 200)
+    cube(WHITE, -24, -23, -340, 340, 203, 227)                     # blank sign face
+
+    for r in range(rows):
+        zt = T_ROW_TOPS[r]
+        pitch = 692.0 / cols
+        cube(WHITE, -27, 27, -346, 346, zt - 3, zt)                # board
+        cube(YELLOW, 27, 29.3, -346, 346, zt - 6, zt + 1.5)        # price-tag rail
+        for c in range(cols):
+            yc = -346 + (c + 0.5) * pitch
+            cube(RED, 29.3, 30, yc - 6, yc + 6, zt - 5, zt + 0.5)  # price tag
+            w = min(pitch - 12, 80)
+            cube(TAN, -20, 20, yc - w / 2, yc + w / 2, zt, zt + 0.6)  # slot pad
+        for c in range(1, cols):
+            yb = -346 + c * pitch
+            cube(DARK, -27, 27, yb - 1, yb + 1, zt, zt + 38)      # divider
+
+    for i in range(rows * cols):
+        row, col = i // cols, i % cols
+        pitch = 692.0 / cols
+        REPORT.append("slot %d: UE %s" % (i, ue((0, -346 + (col + 0.5) * pitch, T_ROW_TOPS[row]))))
+    REPORT.append("sign face: UE centre (-23, 0, 215) facing +X")
+
+
 # ---------------------------------------------------------------- 2. checkout counter
 def checkout_counter():
     """220 L (Y) x 80 D (X) x 91 H counter (lane pole to ~203). Customer side = +X (front), cashier = -X.
@@ -344,6 +393,8 @@ MODELS = {
     "CloseShopStation": close_shop_station,
     "AmmoPickup": ammo_pickup,
 }
+for _name, (_rows, _cols) in T_TIERS.items():
+    MODELS[_name] = (lambda rows=_rows, cols=_cols: stock_shelf_tier(rows, cols))
 # per-axis (X depth, Y width, Z height) size multiplier baked into the mesh at join time (UE import stays
 # 1x1x1). The stock shelf is authored at the 240 W base; after playtest feedback it is ~2x (432 W x 332 H)
 # but keeps its 70 cm depth so it still fits against the gondolas it backs onto in Map_Store_Outdoors, and
