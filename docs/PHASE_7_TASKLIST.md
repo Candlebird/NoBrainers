@@ -565,8 +565,32 @@ All of this must be correct for a listen-server client, not just the host. Work 
     - `EliteCashMult` is removed.
     - Brute drops from $40 to $2–4, per the spec.
     - **USER TEST:** Watch the per-kill payouts as host and as client.
-- [ ] **L.4 Random checkout.** A customer picks a random counter among those whose queue has room. They no longer go to the nearest one.
-- [ ] **L.5 Customer patience.**
+- [x] **L.4 Random checkout.** A customer picks a random counter among those whose queue has room. They no longer go to the nearest one.
+  - **STATUS NOTE (2026-09-29):**
+    - The new function `BP_Customer.ChooseCheckoutCounter()` picks at random among counters where the queue length is under `MaxQueueLength`. It returns None when every queue is full.
+    - `BTT_JoinCheckoutQueue` no longer uses the shortest-queue logic. It calls ChooseCheckoutCounter, then TryJoinQueue.
+    - Test `Test_CheckoutRandomPickOnlyWithRoom` PASSES. The test bed has only 1 counter, so the multi-counter branch goes unexercised there and only the "all full → None" check actually runs.
+    - **USER TEST:** On Map_Store_Outdoors (3 checkouts), customers should spread across counters and skip full queues.
+- [x] **L.5 Customer patience.**
+  - **STATUS NOTE (2026-09-29):**
+    - `DT_CustomerArchetypes` has a new `Patience` column, 15 on every row.
+    - `BP_Customer` gained `StartPatience`/`StopPatience`/`HandlePatienceTimeout` and a server timer. `PatienceEndServerTime` is replicated, and `bPatienceActive` uses RepNotify.
+    - The overhead `WBP_PatiencePie` uses the new material `M_UI_PatiencePie` and appears in a screen-space WidgetComponent at z=170.
+    - The timer starts in `BTT_JoinCheckoutQueue` once the customer has joined. It stops in `BP_CheckoutCounter.OnInteract` before the sale.
+    - On timeout:
+      - The customer leaves the queue and the cart is cleared (no payment).
+      - `GameState.RecordCustomerLost(CartTotal)` records the lost customer and revenue.
+      - A multicast plays the `SCue_CustomerAnnoyed` bark and a red `BP_MoneyPopup` (bNegative, "-$N" or "LOST SALE").
+    - `BP_GameState_ZombieStore` has new stats `DayCustomersLost`/`DayRevenueLost` (replicated, reset in AdvanceDay).
+    - **Deviations:**
+      - The customer walks toward the exit and despawns via `SetLifeSpan(20)`, not on arrival. Monolith can't author the latent AI MoveTo node.
+      - The recap is an 8 s `WBP_HUD` status message on the Day→next-phase transition (`CheckDayRecap`, run from HUDPoll after UpdateBossBar), because no day-recap screen exists.
+    - **Tests:** `Test_CustomerPatienceTimeoutLeavesQueue` PASSES. It saves and empties the counter queue first, because earlier tests leave it full at 5.
+    - **Not yet verified:** the pie material hasn't been seen rendering. If it shows black, check the Custom HLSL mask → EmissiveColor in `M_UI_PatiencePie`.
+    - **USER TEST:**
+      - Let a queued customer wait 15 s. The pie should drain green→red, then they walk out with the bark and a red popup.
+      - Checking a customer out before the timer runs out should stop the pie.
+      - At the end of Day, host and client should both see "Day N recap: X customers walked out, $Y in lost sales". The stats reset next Morning.
   - The timer runs from joining the queue until a player starts checking the customer out. It lives on the server and replicates to clients.
   - The length comes from a new `Patience` column in `DT_CustomerArchetypes`, 15 s on every row.
   - An overhead pie drains and shifts green → yellow → red.

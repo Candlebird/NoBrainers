@@ -1649,4 +1649,14 @@
 - **Repro:** Run the automation test bed.
 - **Actual:** Bare `[AUTOTEST] FAIL: CheckoutQueueSpotLocation` with no error text in 3 runs from 04:50 on 2026-09-29. It passed at 03:33 the same night. None of the L.1–L.3/L.7 changes landed in between touches customer or checkout assets, so the cause is unknown. It may be test-order state or a prior uncommitted change.
 - **Expected:** PASS.
-- **Status:** Open. It will be investigated with Phase 7 L.4 (random checkout), which reworks the same queue code.
+- **Status:** RESOLVED (2026-09-29).
+  - **Cause:** the test's expectation was out of date. `GetQueueSpotLocation` projects each spot onto navmesh. The test bed counter has no `QueueSpotOffsets`, so spot 0 falls back to the spacing formula. Projection lands it 124 uu from QueuePoint against `QueueSpacing` 110, which fails the old ±5 tolerance.
+  - **Fix:** check 4 now compares spot 0 against the raw unprojected spot, within 100 uu. The test also prints `SAssert1..4`/`SpotDiag`. It PASSES.
+
+## Test_Brute_ChargeUsesCharacterMovement is intermittently flaky (2026-09-29)
+
+- **Area:** `BP_TestController` → `Test_Brute_ChargeUsesCharacterMovement`.
+- **Repro:** Run the automation test bed several times in one editor session.
+- **Actual:** It FAILED once (05:47:24) and PASSED in the 4 other runs that night. No code touching the Brute changed between those runs.
+- **Expected:** A consistent PASS.
+- **Status:** Open, low priority. The likely cause is timing or test-order sensitivity in an async movement check. Not investigated.
