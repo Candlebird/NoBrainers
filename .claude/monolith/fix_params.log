@@ -2699,3 +2699,34 @@ blueprint.get_node_details: node_name->node_id
 blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
 blueprint.list_graphs: blueprint_path->asset_path
 blueprint.set_pin_defaults_bulk: entries->defaults
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_node_details: node_ids[0]->node_id
+editor.run_python: code->command
+monolith_discover.None: top-level->params

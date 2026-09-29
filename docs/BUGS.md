@@ -1606,3 +1606,39 @@
 - **Actual:** the shelves were shifted 50 cm north to fit the 7 m unit. That leaves a 20 cm gap to Archery_Divider.
 - **Expected:** players and customers can move around the aisle end.
 - **Status:** Open. Check in play whether the gap causes nav or player snagging.
+
+## Dead C++ SpectatorController_ZombieStore
+
+- **Area:** `Source/GASDocumentation/{Public,Private}/Player/SpectatorController_ZombieStore.*`.
+- **Actual:** nothing references it. Spectating is done in `BP_PlayerController_ZombieStore`.
+- **Expected:** delete the class in its own task.
+- **Status:** Open, cleanup.
+
+## Turret and socket collision volumes: follow-ups after the trace fix
+
+- **Area:** `BP_Turret_Automated.DetectionSphere`, `BP_DefenseSocket.SocketCollision` (moved from WorldDynamic to PhysicsBody so object-type interact and fire traces skip them).
+- **Actual:** not checked: `BP_Trap_Spike`'s trigger box, per-instance collision overrides on sockets placed in `Map_Store_Outdoors`, and a stale line near 932 of this file saying the build trace uses ObjectTypeQuery2.
+- **Expected:** no defense volume blocks the interact or fire traces; build-mode repair and dismantle still work.
+- **Status:** Needs PIE confirmation.
+
+## Zombie replication smoothing: unchecked items
+
+- **Area:** `BP_ZombieBase` changes (no controller yaw, `MinNetUpdateFrequency` 20, `FaceLocation` authority-only) and the Brute charge now driven through the movement component.
+- **Actual:** not checked: zombie subclass BPs overriding these properties, `ABP_SK_Zombie` root motion mode, the Boss slam and the climb teleporting the actor.
+- **Expected:** zombies move smoothly on clients.
+- **Status:** Needs PIE confirmation from a client.
+
+## Barrier nav area doc mismatch
+
+- **Area:** `BP_BreachPoint.RefreshBreachVisual`.
+- **Actual:** docs say the barrier nav area is `NavArea_Null`. The real default was `NavArea_Obstacle`. It is now explicit: intact `NavArea_Obstacle`, breached `NavArea_Default`.
+- **Expected:** docs match the assets.
+- **Status:** Open, docs only.
+
+## Morning and Dusk phases show nothing on the HUD
+
+- **Area:** `WBP_HUD` EventGraph, Switch on `E_GamePhase`; `BP_MusicPlayerComponent.GetDesiredTrack` unchecked for Morning.
+- **Repro:** play through a night. The cycle logic is correct (Night, Morning, Day, Dusk, Night) but the user reported it looked like Night to Dusk.
+- **Actual:** the Morning and Dusk switch outputs are empty.
+- **Expected:** the HUD, lighting and music handle all five phases.
+- **Status:** Open, awaiting the user's description of what looked wrong.
