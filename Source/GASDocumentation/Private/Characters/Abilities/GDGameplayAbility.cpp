@@ -24,3 +24,16 @@ void UGDGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo * ActorInfo
 		ActorInfo->AbilitySystemComponent->TryActivateAbility(Spec.Handle, false);
 	}
 }
+
+void UGDGameplayAbility::SendShotTargetDataToServer(const FGameplayAbilityTargetDataHandle& TargetData)
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	const FGameplayAbilityActorInfo* Info = GetCurrentActorInfo();
+	if (!ASC || !Info || Info->IsNetAuthority() || !Info->IsLocallyControlled())
+	{
+		return;
+	}
+
+	FScopedPredictionWindow ScopedPrediction(ASC, true);
+	ASC->CallServerSetReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey(), TargetData, FGameplayTag(), ASC->ScopedPredictionKey);
+}

@@ -626,6 +626,26 @@ All of this must be correct for a listen-server client, not just the host. Work 
 - [x] **L.9 Spare time:** work on open low-risk BUGS.md entries, then unchecked active-phase tasks.
   - STATUS NOTE (2026-09-29): Guarded `GetActiveSlotData` against an empty `EquipmentSlots` (test bed 118/0, log spam ~70 → 0) and closed the phantom `Test_Weapon_CooldownBlocksRefire` entry. The other unchecked Phase 7 items (G.4, G.5, G.7, J.7, K5) are built and waiting on user PIE tests. F.4 SFX is left for the user because of the audio-tone preference.
 
+## M. Playtest fixes, round 4 (2026-09-29)
+
+- [x] **M.1 Melee re-swing + 0.75× speed.** `GA_BP_MeleeAttack` never called EndAbility, so only the first swing fired. Melee AttackInterval in DT_Weapons is now ~1.33× (Bat 1.2 s). Commit 8ed787c. `Test_Weapon_CooldownExpires` now waits 1.5 s to match.
+- [x] **M.2 Bloom tune.** Crosshair halved, SpreadPerShot/MaxSpread halved (Pistol 0.5/2.5, SMG 0.15/2.0), full 360° spread, traces from the camera. ADS untouched. Commits 91680e1 and 8ed787c. `Test_Bloom_WeaponRowsHaveBloom` expectations updated.
+- [x] **M.3 Customer patience.** The pie shows on every queued customer, and timed-out customers walk out. Commit acdd74a.
+- [x] **M.4 Customer give-up.** Customers wander 3 shelf rounds before giving up and scoff only at shelves. Commit b0bb72c.
+- [x] **M.5 Client-predicted shooting** (user-approved small C++ helpers).
+  - The client traces, plays its own tracer and sound, predicts ammo, and sends target data. The server's `ProcessServerShot` validates each shot (line of sight, origin drift ≤ 250, hit-actor drift ≤ 300, range) before applying damage. Spread is still predicted locally.
+  - C++: `UGDGameplayAbility::SendShotTargetDataToServer`, `UGDAT_ServerWaitForClientTargetData`, and `UGDBlueprintLibrary::IsAbilityLocalPredicted`.
+  - BP: `BP_EquipmentComponent` does the predicted ammo and local cosmetics. The multicasts skip the owner, so the owner doesn't hear double sound. `WBP_HUD` shows the predicted ammo. `GA_BP_FireWeapon` splits into local and server paths.
+  - 3 new tests.
+  - **USER TEST (listen server, host + client, ideally with `Net PktLag=150`):**
+    - The client's shots fire instantly: tracer, sound, and the ammo count ticks down with no bounce.
+    - The client's hits register on zombies, and hit markers show.
+    - Each shot sounds once on the shooter, and the other player hears it too.
+    - The host still fires and hits normally.
+    - Reload and weapon swap mid-burst don't desync the ammo count.
+    - Shooting right next to a wall doesn't hit through it.
+    - Shotgun pellets register on the client.
+
 ---
 
 ## Proposals (not scheduled; for the user to pick from later)

@@ -34,4 +34,8 @@ public:
 	// If an ability is marked as 'ActivateAbilityOnGranted', activate them immediately when given here
 	// Epic's comment: Projects may want to initiate passives or do other "BeginPlay" type of logic here.
 	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+
+	// Locally-controlled client sends shot target data to the server for this ability's activation.
+	UFUNCTION(BlueprintCallable, Category = "Ability|TargetData")
+	void SendShotTargetDataToServer(const FGameplayAbilityTargetDataHandle& TargetData);
 };

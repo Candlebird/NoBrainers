@@ -9,6 +9,7 @@
 
 class UDragDropOperation;
 class UImage;
+class UGameplayAbility;
 
 /**
  *
@@ -25,5 +26,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "NoBrainers|DragDrop")
 	static void GetItemDragOpInfo(UDragDropOperation* Operation, FString& Tag, UObject*& Payload);
+
+	UFUNCTION(BlueprintPure, Category = "NoBrainers|Abilities")
+	static bool IsAbilityLocalPredicted(TSubclassOf<UGameplayAbility> AbilityClass);
 
 };

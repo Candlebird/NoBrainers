@@ -4,6 +4,12 @@
 #include "GDBlueprintLibrary.h"
 #include "Blueprint/DragDropOperation.h"
 #include "Components/Image.h"
+#include "Abilities/GameplayAbility.h"
+
+bool UGDBlueprintLibrary::IsAbilityLocalPredicted(TSubclassOf<UGameplayAbility> AbilityClass)
+{
+	return AbilityClass && AbilityClass->GetDefaultObject<UGameplayAbility>()->GetNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+}
 
 UDragDropOperation* UGDBlueprintLibrary::MakeItemDragOp(UImage* SourceIcon, const FString& Tag, UObject* Payload)
 {
