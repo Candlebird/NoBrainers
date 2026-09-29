@@ -488,7 +488,7 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
       - See docs/BUGS.md — "Phase 6 UI pass: known limitations."
       - See docs/BUGS.md — "Shelf matching-row combo bonus never built."
       - See docs/BUGS.md — "Surge warning banner shows no text (not reproduced statically)."
-- [x] **K6 Boss night:** every 5th night, a giant Brute variant + a bigger surge + a kill cash bonus.
+- [x] **K6 Boss night:** every 3rd night (changed from 5th by user request 2026-09-29), a giant boss + a bigger surge + a kill cash bonus.
 
 > **STATUS NOTE (2026-09-27, K6 done; 92/92 automation tests pass, needs PIE):**
 > - **Boss:** `BP_Zombie_Boss` (`/Game/Characters/Zombies/`) on the new `SK_Zombie_Boss` mesh (~1.6× Brute, unit scale, Blender source in `PlaceholderAssets/`), plus a `Boss` row in `DT_ZombieTypes` and `DT_ZombieLoot` (GoldWatch / AntlerTrophy / VintageCoin).
@@ -499,6 +499,7 @@ Work order: K7 first, then K3 → K6 (round 4). Commit locally after each group 
 > - **Tests:** 6 `Test_K6_*` checks in `BP_TestController`, including `Test_K6_BossSurgeScale`.
 > - **Change from the task wording:** the cash bonus is paid for killing the boss, not for surviving the night.
 > - See docs/BUGS.md — "K6 boss night: known limitations."
+> - **Update 2026-09-29 (user request):** `BossNightInterval` is now 3. The boss now uses `SK_Zombie_SwampBoss` (the Swamp creature built 1.5× in Blender, 310 cm, `MI_Zombie_Swamp`) with a 60/155 capsule. `SK_Zombie_Boss` is no longer used.
 - [x] **K6 follow-up: boss AOE slam** (user request 2026-09-27, overrides "no new attack").
 
 > **STATUS NOTE (2026-09-27, 95/95 automation tests pass, needs PIE):** `BP_Zombie_Boss` gets a close-range ground slam. All Blueprint, no new assets.

@@ -17,8 +17,11 @@ need (perf, engine-level hook, etc.) that Blueprint can't cover. See
 
 - The project is built directly on top of **Dan Kestranek's GASDocumentation**
   sample (Unreal's Gameplay Ability System reference project). The `.uproject`
-  is still literally named `GASDocumentation.uproject`, the C++ module is
-  `GASDocumentation`, and most class prefixes are still `GD*` (GASDocumentation).
+  and build targets are renamed to `NoBrainers` (packaged exe is `NoBrainers.exe`,
+  company PolySpark), but the C++ module is still `GASDocumentation`
+  (`Source/GASDocumentation/`, `/Script/GASDocumentation`) and most class
+  prefixes are still `GD*`. Renaming the module would need CoreRedirects for
+  every Blueprint that references its classes, so it was left as-is.
   This is intentional per `docs/GDD.md` §5 — GAS's built-in replication support
   is why the project started here.
 - Engine: **UE 5.7** (`EngineAssociation` in the `.uproject`).

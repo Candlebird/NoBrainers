@@ -7,6 +7,10 @@ Input : PlaceholderAssets/Blender/SK_Zombie.blend (read only, never saved over).
 Output: PlaceholderAssets/FBX/Zombie/SK_Zombie_Boss.fbx (armature + mesh, no animation)
         PlaceholderAssets/Blender/Zombie/SK_Zombie_Boss.blend
 
+Optional args after `--`: <output name> <scale>. The Swamp boss is built from the rigged swamp variant:
+  blender -b --factory-startup PlaceholderAssets/Blender/Zombie/SK_Zombie_Swamp.blend \
+      --python Tools/Characters/blender_zombie_boss.py -- SK_Zombie_SwampBoss 1.5
+
 Technique: select the armature ("Armature") and every MESH object, scale the armature by 1.6 (children
 follow via parenting), then apply scale on the whole selection. That folds the 1.6x into the armature's
 bone rest lengths/positions and each mesh's vertices, leaving every object's own scale at (1,1,1) -- so
@@ -23,7 +27,9 @@ from mathutils import Vector
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 BDIR = os.path.join(ROOT, "PlaceholderAssets", "Blender", "Zombie")
 FDIR = os.path.join(ROOT, "PlaceholderAssets", "FBX", "Zombie")
-SCALE = 1.6
+ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+OUT_NAME = ARGS[0] if ARGS else "SK_Zombie_Boss"
+SCALE = float(ARGS[1]) if len(ARGS) > 1 else 1.6
 TOL = 0.01
 
 
@@ -106,7 +112,7 @@ def main():
     bpy.context.view_layer.objects.active = arm
 
     bpy.ops.export_scene.fbx(
-        filepath=os.path.join(FDIR, "SK_Zombie_Boss.fbx"),
+        filepath=os.path.join(FDIR, f"{OUT_NAME}.fbx"),
         use_selection=False,
         object_types={"ARMATURE", "MESH"},
         apply_unit_scale=True,
@@ -117,7 +123,7 @@ def main():
         mesh_smooth_type="FACE",
     )
 
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(BDIR, "SK_Zombie_Boss.blend"), copy=False)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(BDIR, f"{OUT_NAME}.blend"), copy=False)
 
     print(f"BOSS_MESH OK ratio={ratio:.4f}")
 

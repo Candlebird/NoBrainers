@@ -6,12 +6,16 @@
 Every HitReact clip is set up as a local-space additive (ref pose = animation frame 0 of itself), so it can be
 layered over any base pose in the ABP. All imported clips have root motion disabled.
 
-Run via Monolith editor.run_python {command: "<abs>/ue_import_zombie_anims.py", unattended: true}.
+Run via Monolith editor.run_python {command: "<abs>/ue_import_zombie_anims.py [Type ...]", unattended: true}.
 Do NOT run this outside the editor -- it only makes sense as an in-editor Unreal Python call.
 """
 import os
+import sys
 
 import unreal
+
+# Optional args: Type names to limit the import to (e.g. "ue_import_zombie_anims.py Shambler").
+ONLY_TYPES = set(sys.argv[1:])
 
 PROJ = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 SRC_DIR = os.path.join(PROJ, "PlaceholderAssets", "FBX", "Zombie")
@@ -106,6 +110,8 @@ def main():
         if not type_name:
             print(f"ZOMBIE_IMPORT NOTE skipped unrecognized filename {filename}")
             continue
+        if ONLY_TYPES and type_name not in ONLY_TYPES:
+            continue
         try:
             if import_one(skeleton, filename, type_name, clip_name):
                 ok += 1
@@ -116,7 +122,7 @@ def main():
             print(f"ZOMBIE_IMPORT_FAIL {filename}: {e}")
 
     if fail:
-        print(f"ZOMBIE_IMPORT_FAIL {fail} of {len(files)} imports failed, {ok} ok")
+        print(f"ZOMBIE_IMPORT_FAIL {fail} of {ok + fail} imports failed, {ok} ok")
     else:
         print(f"ZOMBIE_IMPORT OK {ok}")
 

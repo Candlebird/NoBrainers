@@ -15,7 +15,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$UProject = Join-Path $ProjectDir "GASDocumentation.uproject"
+$UProject = Join-Path $ProjectDir "NoBrainers.uproject"
 $BuildBat = Join-Path $EngineDir "Engine\Build\BatchFiles\Build.bat"
 $EditorExe = Join-Path $EngineDir "Engine\Binaries\Win64\UnrealEditor.exe"
 
@@ -48,8 +48,8 @@ if ($Clean) {
 }
 
 # 3. Build.
-Write-Host "Building GASDocumentationEditor Win64 Development..."
-& $BuildBat GASDocumentationEditor Win64 Development "-Project=$UProject" -WaitMutex -NoHotReloadFromIDE
+Write-Host "Building NoBrainersEditor Win64 Development..."
+& $BuildBat NoBrainersEditor Win64 Development "-Project=$UProject" -WaitMutex -NoHotReloadFromIDE
 if ($LASTEXITCODE -ne 0) {
     Write-Host "BUILD FAILED (exit $LASTEXITCODE). Editor not relaunched."
     exit $LASTEXITCODE

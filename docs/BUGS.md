@@ -1,5 +1,15 @@
 # Known Bugs
 
+## Pistol deals no damage after a reload (`[SHOTDBG] REJECT noHitActor`)
+
+- **Area:** `/Game/Characters/Abilities/GA_BP_FireWeapon` (parent of `GA_BP_FirePistol`), FireShot client trace → `ProcessServerShot`.
+- **Repro:** PIE as host. Kill a zombie with the pistol, reload, and keep shooting zombies.
+- **Actual:** Every shot prints `[SHOTDBG] REJECT noHitActor12` and deals no damage. That print sits on the IsValid(HitActor)-false branch after the server re-trace (`K2Node_IfThenElse_12`). HitActor comes from the target data that FireShot builds, which means the client-side trace (`K2Node_CallFunction_12`, camera origin + cone around the camera's forward vector × TraceRange) returned no blocking hit, or a hit with no actor. The aim, spread, bloom, and range math were read statically, and none of it depends on reload state, so the cause is still unknown. The `PlayMontageAndWait ... montage None` warning is separate: the pistol has no FireMontage set.
+- **Expected:** Shots at a zombie hit it and apply damage, before and after a reload.
+- **Findings (2026-09-29):** The server always validated the same hit result: the first shot of the session, at `ShotTargetData` index 0. If that shot was a hit, `REJECT validate2` fired once the zombie died or moved (`act`/`len` were identical on every shot and `org` kept growing). If it was a miss, `REJECT noHitActor` fired from the first shot on. So `ShotTargetData` was accumulating across shots. The unwired "Set ShotTargetData" (`K2Node_VariableSet_16`) wasn't clearing it.
+- **Fix:** `K2Node_VariableSet_16` now copies from a new, never-written member `EmptyShotTargetData`, so each shot sends only its own hit (log confirmed `n=1`).
+- **Status:** RESOLVED (2026-09-29). User-tested: kills work before and after a reload. The temporary debug prints and trace debug draw were removed.
+
 ## `Multicast_FireTracer`: the TracerFX Niagara branch never runs
 
 - **Area:** `/Game/Characters/BP_EquipmentComponent`, `Multicast_FireTracer`.
@@ -1314,7 +1324,10 @@
 - **Repro:** Kill any zombie.
 - **Actual:** Death anim plays ~0.5 s, then an instant full ragdoll with an impulse along the killing hit. No gradual physics-weight blend via `PhysicalAnimationComponent`.
 - **Expected (original design):** Death anim blended into physics with ramping physics weight.
-- **Status:** Known limitation — the planned fallback was used for the overnight run. Revisit if the snap to ragdoll looks bad in playtest.
+- **Findings:** `StartRagdoll` called `SetSimulatePhysics(true)`, which sets `bBlendPhysics` and forces physics weight 1 instantly (the snap).
+- **Fix:** Ragdoll now starts at `(death montage length − RagdollBlendTime)`. `StartRagdoll` simulates all bodies at blend weight 0 (no `SetSimulatePhysics`), then timeline `TL_RagdollBlend` ramps `SetAllBodiesPhysicsBlendWeight` 0→1 over `RagdollBlendTime` (default 0.5 s). No-anim deaths ragdoll immediately with the same fade.
+- **Open: fling on activation.** When physics takes over, the ragdoll can launch into the air, as if it clipped into the ground. One attempted fix made it considerably worse and was reverted on 2026-09-29: `RagdollBlendTime` 1.0, 4 cm spheres on the shapeless `clavicle_l`/`clavicle_r` bodies, depenetration capped at 100 cm/s, and higher damping (0.1 linear, 0.5 angular). Untried: disabling self-collision between bodies in the PA editor.
+- **Status:** Blend fix landed; fling unresolved.
 
 ## ABP_SK_Zombie has an orphaned old Locomotion state machine
 
@@ -1483,12 +1496,12 @@
 ## K6 boss night: known limitations
 
 - **Area:** Boss night (`BP_ZombieSpawnerManager.SpawnBoss`, `BP_Zombie_Boss`, `BP_GameState_ZombieStore.ActiveBoss`, `WBP_HUD.UpdateBossBar`).
-- **Repro:** Reach a boss night (every 5th night), then try each case below.
+- **Repro:** Reach a boss night (every 3rd night), then try each case below.
 - **Actual:**
   - Saving and loading mid-night leaves `ActiveBoss` null. The boss bar and the boss music override won't come back for a boss that is still alive.
   - If a boss survives into a later boss night, the new boss overwrites `ActiveBoss`. Only the newest boss gets the bar.
-  - `SK_Zombie_Boss` reuses the Brute clips on a 1.6× mesh, so its feet may slide.
-  - The 55/144 capsule may snag on geometry, or fail to spawn at a tight spawn point. `SpawnBoss` returns false and the night goes on without a boss.
+  - The boss mesh (`SK_Zombie_SwampBoss` since 2026-09-29: the Swamp creature built 1.5× in Blender, 310 cm) reuses the Brute clips, so its feet may slide.
+  - The 60/155 capsule may snag on geometry, or fail to spawn at a tight spawn point. `SpawnBoss` returns false and the night goes on without a boss.
   - Player count is sampled once, when the boss spawns. Players who join or leave later don't rescale its health.
 - **Expected:** `ActiveBoss` is restored on load and tracks every live boss; the boss has its own locomotion clips; boss health follows the current player count.
 - **Status:** Open, known limitations (accepted for K6).

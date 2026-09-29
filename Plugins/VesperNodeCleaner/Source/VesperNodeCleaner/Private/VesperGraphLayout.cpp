@@ -1741,6 +1741,11 @@ namespace VesperLayout
 
 TSharedPtr<SGraphEditor> FVesperGraphLayout::GetActiveGraphEditor()
 {
+	if (!FSlateApplication::IsInitialized())
+	{
+		return nullptr;
+	}
+
 	TSharedPtr<SWidget> FocusedWidget = FSlateApplication::Get().GetKeyboardFocusedWidget();
 	if (FocusedWidget.IsValid())
 	{
@@ -1761,7 +1766,8 @@ TSharedPtr<SGraphEditor> FVesperGraphLayout::GetActiveGraphEditor()
 
 void FVesperGraphLayout::RegisterFocusTracking()
 {
-	if (!GFocusChangingHandle.IsValid())
+	// Slate doesn't exist in commandlets (cook/package), so there's no focus to track.
+	if (!GFocusChangingHandle.IsValid() && FSlateApplication::IsInitialized())
 	{
 		GFocusChangingHandle = FSlateApplication::Get().OnFocusChanging().AddStatic(&HandleGlobalFocusChanging);
 	}

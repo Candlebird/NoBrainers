@@ -3,9 +3,9 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class GASDocumentationTarget : TargetRules
+public class NoBrainersTarget : TargetRules
 {
-	public GASDocumentationTarget(TargetInfo Target) : base(Target)
+	public NoBrainersTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.Latest;
