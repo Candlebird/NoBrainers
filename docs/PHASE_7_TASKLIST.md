@@ -147,7 +147,7 @@ every change in the before/after table below with reasoning, so any line can be 
   Buff damage/uptime/area so each trap has a clear job against the new types.
   **DONE — root cause: every trap applied an empty GE once on overlap. Traps now pulse via a timer in BP_DefenseBase (ApplyTrapHit/TrapPulse) with per-trap interval/radius/damage/wear; Slow Strip halves MoveSpeed (GE_Slow ×0.5, 1 s, non-stacking; C++ floor 150→25).**
 - [x] **E.4 Shelf tier upgrade curve** (`DT_ShelfTiers`) against the revenue each tier adds.
-  **DONE — Tier1 150→140, Tier2 250→280.**
+  **DONE — Tier1 150→140, Tier2 250→280.** These were tuned against the old 12-shelf layout, before the H.1 status note. See docs/BUGS.md — "Shelf slot economy unverified after the 16-shelf conversion."
 - [x] **E.5 Free auto-repair at Day start.** Every surviving defense restores to full HP for free when
   Day begins. Destroyed defenses stay destroyed (rebuy). Remove manual paid repair.
   **DONE — BP_GameMode_ZombieStore.AutoRepairDefenses at the end of StartDayPhase → BP_DefenseBase.RestoreFullHealth; Repair button, BP OnServerRepairDefense and C++ Server_RepairDefense removed; RepairCostPerHP set to 0.**
@@ -266,6 +266,15 @@ From the user's playtest of G.
   - The `BP_ShelfActor` InteractionBox is now extent 38×218×170. The label moved up and was scaled.
   - Every placed shelf's components were reset to the class defaults. Three shelves moved slightly to clear walls or other fixtures.
   - **USER TEST:** shelves sit on the floor, 4 items per row, and interact works.
+  - **STATUS NOTE (2026-09-28): G.10 and H.1's single `SM_StockShelf`, its InteractionBox extents and the 12-shelf layout are superseded.** The long aisle gondolas in Map_Store_Outdoors are now 16 `BP_ShelfActor`s: 2 back to back per aisle, each 700 cm wide.
+    - Categories: Ammo 4, Trinkets 4, Med 4, Food 2, Hardware 2.
+    - Each upgrade tier has its own real-size mesh, `SM_StockShelf_T0..T4` (1×4, 1×6, 2×4, 2×6, 2×8 slots), placed at scale 1 with the pivot on the floor.
+    - `DT_ShelfTiers` rows carry `Columns` and `ShelfMesh`, and `ApplyShelfTier` swaps the mesh.
+    - InteractionBox extent is 30×350×115.
+    - Customers stand in front (+X) of their target slot.
+    - Tests: TierMeshMatchesSlotCount, SlotGridFollowsTierColumns, RestoreKeepsStockedItems, StandPointReachesEndSlots.
+    - The E.4 upgrade costs were tuned against the old 48-slot layout. See docs/BUGS.md — "Shelf slot economy unverified after the 16-shelf conversion."
+    - Also: the `GiveMoney <amount>` console cheat (`BP_PlayerController_ZombieStore`, disabled in shipping).
 - [x] **H.2 Drops ignore pawns.** `BP_ItemPickup` and `BP_AmmoPickup` InteractionMesh and InteractionBox ignore the Pawn channel. **USER TEST:** stand on a dropped item; no spinning or launching.
 - [x] **H.3 Weapon sounds.** Every sound is a synthesized placeholder (`Tools/Audio/synth_sfx.py`).
   - Each gun has a unique fire and reload sound: `BP_EquipmentComponent` WeaponFireSounds and WeaponReloadSounds maps, played via `Multicast_PlaySoundAtLocation`, with the fire sound played from `GA_BP_FireWeapon`.

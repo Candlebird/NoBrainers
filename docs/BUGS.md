@@ -1572,3 +1572,37 @@
 - **Actual:** the stand point was at actor −X (the back panel side), a single centre point; end slots of 700 cm shelves were unreachable by the 140 cm reach gate.
 - **Expected:** stand in front (+X) of the target slot.
 - **Status:** RESOLVED — `GetSlotReachAnchor` + `SlotIndex` inputs on `GetCustomerStandLocation`/`IsLocationAtShelf`; the BT tasks pass the slot index (Tasks 3.2/3.3).
+
+## Shelf slot economy unverified after the 16-shelf conversion
+
+- **Area:** `DT_ShelfTiers`, Map_Store_Outdoors shelves, customer spawning (`BP_CustomerSpawner`); PHASE_7 §E.4.
+- **Repro:** Start a run and compare total stockable slots and day revenue against the pre-conversion layout.
+- **Actual:**
+  - 16 shelves at T0 give 64 slots, up from 48 before.
+  - Up to 256 slots at T4.
+  - Customer spawn count isn't scaled to the shelf count.
+  - The E.4 upgrade costs were tuned against the old layout.
+- **Expected:** the early game stays tight; capacity, customer volume and upgrade costs are balanced together.
+- **Status:** Open. It needs a playtest pass on stocking pace, customer demand and upgrade cost.
+
+## Full-category match is harder on 16-slot shelves
+
+- **Area:** shelf matching / meta payout, `BP_ShelfActor`.
+- **Actual:** a T4 shelf has 16 slots (was 8 per shelf before), so filling a whole shelf with one category takes twice the items.
+- **Expected:** matching stays achievable. Tune it together with "Shelf matching-row combo bonus never built," for example by matching per row instead of per shelf.
+- **Status:** Open (design question).
+
+## Long rifle overlaps neighbouring slots on T4 shelves
+
+- **Area:** `SM_StockShelf_T4` (8 columns, ~86 cm pitch), item display meshes.
+- **Repro:** Upgrade a shelf to T4 and stock a long rifle next to other items.
+- **Actual:** the rifle mesh extends into the adjacent slots.
+- **Expected:** each item reads as its own slot.
+- **Status:** Open, cosmetic. Possible fixes: a per-item display scale or yaw, or shorter long-gun display meshes authored in Blender (never component scale).
+
+## Shelf_Camp_Gond1 has only 20 cm clearance from Archery_Divider
+
+- **Area:** Map_Store_Outdoors, `Shelf_Camp_Gond1_F/B` (Y −1600..−900).
+- **Actual:** the shelves were shifted 50 cm north to fit the 7 m unit. That leaves a 20 cm gap to Archery_Divider.
+- **Expected:** players and customers can move around the aisle end.
+- **Status:** Open. Check in play whether the gap causes nav or player snagging.

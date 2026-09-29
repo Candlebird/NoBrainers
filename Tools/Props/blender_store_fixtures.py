@@ -166,7 +166,7 @@ T_TIERS = {
 
 def stock_shelf_tier(rows, cols):
     """700 W (Y) x 60 D (X) tiered stock shelf; rows x cols slots, identical frame across all tier variants."""
-    cube(BLACK, -30, 30, -350, 350, 0, 6)                          # plinth
+    cube(BLACK, -28.57, 28.57, -348.23, 348.23, 0, 6)              # plinth, inset so it doesn't z-fight the ends/kick
     cube(ORANGE, -30, 30, -350, -346, 0, 200)                      # end panels
     cube(ORANGE, -30, 30, 346, 350, 0, 200)
     cube(BLUE, -30, -27, -346, 346, 6, 200)                        # back panel
