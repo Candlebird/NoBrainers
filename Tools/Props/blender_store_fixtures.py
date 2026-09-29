@@ -173,9 +173,9 @@ def stock_shelf_tier(rows, cols):
     for yy in range(-325, 326, 50):                                # vertical ribs
         cube(DARK, -27, -26, yy - 1, yy + 1, 6, 200)
     cube(ORANGE, 27, 30, -346, 346, 0, 16)                         # front kick rail
-    cube(STOCK, -30, -24, -350, 350, 200, 230)                     # header
-    cube(STOCK, -30, -24, -350, -342, 190, 200)                    # header ears
-    cube(STOCK, -30, -24, 342, 350, 190, 200)
+    cube(STOCK, -30, -24, -349.5, 349.5, 200, 230)                 # header, inset so it doesn't z-fight the end panels
+    cube(STOCK, -29.5, -24, -349.5, -342, 190, 200)                # header ears (inset in X and Y for the same reason)
+    cube(STOCK, -29.5, -24, 342, 349.5, 190, 200)
     cube(WHITE, -24, -23, -340, 340, 203, 227)                     # blank sign face
 
     for r in range(rows):
