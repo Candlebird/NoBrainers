@@ -623,7 +623,8 @@ All of this must be correct for a listen-server client, not just the host. Work 
     - **USER TEST:** Count body shots per Shambler for each gun.
 - [x] **L.8 GA audit.** One read-only pass over the `GA_BP_*` abilities for unwired exec pins and null refs. Fix the trivial ones and log the rest to BUGS.md.
   - STATUS NOTE (2026-09-29): All 16 `GA_` assets compile clean, and the No Brainers `GA_BP_*` abilities are clean. No trivial fixes were needed. See docs/BUGS.md — "Orphaned nodes in GASDocumentation sample abilities GA_AimDownSight_BP and GA_Meteor_BP."
-- [ ] **L.9 Spare time:** work on open low-risk BUGS.md entries, then unchecked active-phase tasks.
+- [x] **L.9 Spare time:** work on open low-risk BUGS.md entries, then unchecked active-phase tasks.
+  - STATUS NOTE (2026-09-29): Guarded `GetActiveSlotData` against an empty `EquipmentSlots` (test bed 118/0, log spam ~70 → 0) and closed the phantom `Test_Weapon_CooldownBlocksRefire` entry. The other unchecked Phase 7 items (G.4, G.5, G.7, J.7, K5) are built and waiting on user PIE tests. F.4 SFX is left for the user because of the audio-tone preference.
 
 ---
 
