@@ -110,6 +110,7 @@ that can go stale (as it just did).**
 | 5 | Meta-Progression & Run Loop | Implement the end-to-end run loop (15–45 min target duration), escalation mechanics driven by store advertisements, victory/defeat scoring, and persistent meta-currency logic across playthroughs. |
 | 6 | Art, UI & Audio | Implement all UI overlays and HUD elements, post-processing materials, cartoonish particle effects, and audio transitions between the cozy daytime retail loop and the silly horror night phase. |
 | 7 | Zombie Variety, Combat Depth & Balance | Distinct zombie types with full animation sets, horde surges/flanking, weapon fixes and feel, and an economy/balance pass to stop kiting from being dominant. |
+| 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Planned 2026-09-29, not started. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's
