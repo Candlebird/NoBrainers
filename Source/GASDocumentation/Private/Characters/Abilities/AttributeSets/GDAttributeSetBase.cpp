@@ -126,6 +126,11 @@ void UGDAttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectModCall
 				//UE_LOG(LogTemp, Warning, TEXT("%s() %s is NOT alive when receiving damage"), TEXT(__FUNCTION__), *TargetCharacter->GetName());
 			}
 
+			if (TargetCharacter && SourceController && SourceController != TargetController)
+			{
+				TargetCharacter->LastDamageSourceController = SourceController;
+			}
+
 			// Apply the health change and then clamp it
 			const float NewHealth = GetHealth() - LocalDamageDone;
 			SetHealth(FMath::Clamp(NewHealth, 0.0f, GetMaxHealth()));

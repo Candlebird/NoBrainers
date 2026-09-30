@@ -32,6 +32,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GASDocumentation|GDCharacter")
 	FCharacterDiedDelegate OnCharacterDied;
 
+	// Server-only: controller that last damaged this character (excludes self-damage)
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "NoBrainers|Loot")
+	TObjectPtr<AController> LastDamageSourceController;
+
 	// Implement IAbilitySystemInterface
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
