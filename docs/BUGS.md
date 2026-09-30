@@ -1702,3 +1702,19 @@
   - Both compile with 0 errors.
 - **Expected:** No dead nodes. Either wire them or remove them.
 - **Status:** Open, low priority. Found by the L.8 audit. I left them alone because this is legacy sample content, and I couldn't tell whether they were leftovers or were deliberately disconnected. All 16 `GA_` assets compile clean, and every No Brainers `GA_BP_*` ability had no unwired exec pins or null refs.
+
+## Open doors let players walk outside the store (2026-09-29)
+
+- **Area:** `BP_BreachPoint` door toggle.
+- **Repro:** Tap E on any breach-point door to open it, then walk through.
+- **Actual:** Players can leave the store. No doc says whether that's allowed, and nothing stops them.
+- **Expected:** Undecided. It's a design question: players could be allowed outside, or open doors could be zombie-only or player-blocking.
+- **Status:** Open. Flagged by the door plan. It will likely be settled by the door-choice (funneling) feature.
+
+## Door leaf swing may clip nearby geometry (2026-09-29)
+
+- **Area:** `BP_BreachPoint` `DoorLeaf` (a placeholder with no collision) on Map_Store_Outdoors, especially the 4.5 m Dock panel.
+- **Repro:** Open each of the 6 breach doors in PIE and watch the swing.
+- **Actual:** Not verified. The leaf swings 90° around a hinge at the panel edge, and the wide Dock leaf has a large arc.
+- **Expected:** The leaf clears walls, shelves and props when open.
+- **Status:** Open, needs a PIE check. Possible fixes are a per-instance `OpenYawDegrees` or a split double door for the Dock.

@@ -397,6 +397,12 @@ User-confirmed design calls (don't re-litigate):
 - **Dismantle refund:** 50% of the defense's price.
 - **Repair:** paid, any phase. Hold E on a damaged defense; the cost is proportional to missing health. The auto-restore at Day start stays.
   - STATUS NOTE (2026-09-29): Breach points (`BP_BreachPoint`) now have the same paid hold-E repair, but only in Morning, Day, and Dusk (the server rejects it at Night). The cost is `ceil(missing × RepairCostPerHP)`, with a default of 1.0 per instance. A broken door is aimed at through a hidden `RepairTraceVolume`. Automation: the `Test_BreachRepair_*` tests (4) PASS. The PIE check is still pending; see docs/BUGS.md — "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
+  - STATUS NOTE (2026-09-29, doors): Breach points are now doors (user request).
+    - Tapping E (release within 0.25 s) opens or closes one in any phase via `Server_ToggleDoor`. Holding E still repairs.
+    - An open door ignores damage and zombies path through it (`IsPassable` in `BTS_ZombieBreachDecision`).
+    - A breached door can't toggle, repair leaves it closed, and closing is refused while a pawn is in the doorway.
+    - The HUD prompt comes from `GetAimedInteractPromptText`. Automation: `Test_Door_*` (5). The PIE check is pending. See docs/BUGS.md — "Open doors let players walk outside the store" and "Door leaf swing may clip nearby geometry."
+    - Fixed along the way: `ApplyBreachDamage` re-evaluated the pure `Clamp(Health - Damage)` for its `<= 0` check after Health was already set, so damage was subtracted twice and any hit of at least half the remaining HP breached the door early. The check now reads the Set node's output.
 - **Build menu polish:** show the aimed socket's type and grey out entries that don't fit it; a per-entry info tooltip (damage/HP/cost/description); icons/thumbnails instead of text-only tiles.
 - **Boss readability:** a top-of-screen boss health bar with a name (e.g. "Manager of the Dead") while it's alive. No tint, no accessory, no new attack. *(Superseded 2026-09-27 for the attack only: the user asked for a boss AOE slam. See the K6 follow-up below.)*
 
