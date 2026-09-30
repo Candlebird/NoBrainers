@@ -1743,3 +1743,59 @@
 - **Actual:** One item goes into the inventory, and the pickup is destroyed.
 - **Expected:** Each unit takes a slot until the inventory is full, and the rest stays on the ground.
 - **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups.
+
+## Loot slot capacity checks always reported full (Phase 8) (RESOLVED, needs in-PIE confirmation)
+
+- **Area:** `BP_InventoryComponent` `GetFreeLootSlotCount` / `HasFreeLootSlot` (`docs/PHASE_8_TASKLIST.md` C.2–C.4)
+- **Repro:** With an empty inventory, walk over a loot pickup, take an item back from a shelf, withdraw from the deposit box, or buy a kiosk Item.
+- **Actual:** Both functions were missing the Entry→Return exec link, so they returned defaults (0 / false). Every capped path showed "Inventory full" and did nothing.
+- **Expected:** Pickups succeed until 6 (or 7 with Deep Pockets) loot slots are used.
+- **Status:** Fixed in the Phase 8 overnight run (Task 33R). Caught by `Test_Inventory_PickupBlockedAtCapAllowedWithPerk` and `Test_Inventory_ShelfTakeBackBlockedWhenFull`. A sweep of 143 functions across the 16 Phase 8 assets found no other exec gaps. Needs in-PIE confirmation.
+
+## `BFL_LootMath` pity, piñata and Ad shift functions returned 0 (Phase 8) (RESOLVED)
+
+- **Area:** `/Game/Core/Loot/BFL_LootMath` `ComputePityShift`, `ComputePinataCount`, `ComputeAdShift` (`docs/PHASE_8_TASKLIST.md` B.3, B.4, B.6)
+- **Repro:** Run `Test_Loot_PityEngagesAndReleases` or `Test_Loot_PinataCountAndTreasure`.
+- **Actual:** The same missing Entry→Return exec link, so pity and the Ad nudge were always 0 and the piñata count was 0.
+- **Expected:** The values from the formulas in B.3/B.4/B.6.
+- **Status:** Fixed in the Phase 8 overnight run and verified by automation. Note the G.2 tuning sim assumed the Ad nudge works, so in-game income now matches the sim, but nobody has played with the Ad nudge active yet.
+
+## `BFL_LootMath` has no divide-by-zero guard (Phase 8)
+
+- **Area:** `/Game/Core/Loot/BFL_LootMath` (pity and weight normalization math)
+- **Repro:** A `DT_LootNightCurve` row with all-zero weights or `ExpectedNightValue` 0.
+- **Actual:** Not guarded. Current data never hits it.
+- **Expected:** A safe fallback (no shift, or Junk).
+- **Status:** Open, known limitation. Only matters if the data tables are edited to zeros.
+
+## `BP_DepositBox.RestoreStoredItems` has no authority guard (Phase 8)
+
+- **Area:** `/Game/Interactable/BP_DepositBox`
+- **Repro:** Call `RestoreStoredItems` on a client.
+- **Actual:** It would write the replicated arrays locally on the client. Today only the GameInstance load path calls it, on the host.
+- **Expected:** Server-only, like `TryDeposit`/`TryWithdraw`.
+- **Status:** Open, low priority.
+
+## Junk-tier pickups on clients keep the default glow (Phase 8)
+
+- **Area:** `BP_ItemPickup` `LootTier` RepNotify (`docs/PHASE_8_TASKLIST.md` E.1)
+- **Repro:** As a client, look at a Junk drop.
+- **Actual (expected from code):** Junk is enum value 0, the same as the default, so `OnRep_LootTier` never fires on clients. The light keeps its default color and there's no overlay.
+- **Expected:** A gray glow, like on the host.
+- **Status:** Open, needs a PIE check. Fix: call `ApplyTierVisuals` from `BeginPlay` on clients too.
+
+## Flaky tests: `Test_Brute_ChargeUsesCharacterMovement` and `Test_Zombie_TargetsNearestDoorWhenOutside`
+
+- **Area:** `BP_TestController` (Phase 7 tests; Phase 8 didn't touch the assets under test)
+- **Repro:** Run the full test bed several times in a row.
+- **Actual:** Each test fails in some runs and passes in others, with no asset changes between runs. Brute run on 2026-09-30 07:14: `[AUTOTEST-DIAG] phase1` sampled movement mode 5 with velocity 0 while `bCharging=true`, even though the Brute had moved ~330 units. It passed at 06:47 and 07:03.
+- **Expected:** A stable pass.
+- **Status:** Open. Probably a timing or sampling race in the test, not a gameplay bug. The Brute test probably needs to sample velocity on a tick while charging, not at a fixed delay.
+
+## `GatherSessionState` hardcodes the deposit box capacity fallback (Phase 8)
+
+- **Area:** `BP_GameInstance_NoBrainers.GatherSessionState`
+- **Repro:** Save a run on a map with no `BP_DepositBox`.
+- **Actual:** It saves an empty list and capacity 12, a literal in the graph, not read from the `BP_DepositBox` default.
+- **Expected:** Works as-is. The 12 would drift if the box default ever changes.
+- **Status:** Open, cosmetic. Update both if the default capacity changes.

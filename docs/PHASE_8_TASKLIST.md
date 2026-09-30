@@ -7,7 +7,9 @@ All design calls below were confirmed with the user in a 6-round Q&A. Don't re-l
 If one turns out to be infeasible, log it in `docs/BUGS.md` and pick the closest fallback noted
 on the task.
 
-**Status:** planned, not started.
+**Status:** built 2026-09-30 in an overnight run (A–G). All tasks compile, and the Phase 8
+automation tests pass (see G.3). Nothing has been played in PIE yet: see the Morning test
+checklist below.
 
 ## Confirmed design decisions
 
@@ -43,52 +45,104 @@ after each group (no push).
 
 ## Morning test checklist
 
-_Filled in as groups land. Each line is something that needs manual PIE confirmation._
+Everything below is built and compiles. None of it has been played in PIE yet. Test host and
+client where it says so.
+
+**Loot drops (B)**
+- [ ] Normal zombies drop 0–2 items. Elites drop 2–4, visibly better ones. Night 1 pays
+  roughly $500–$900 in loot.
+- [ ] Boss death: 8+ items arc out, at least one gold (Treasure). They land on reachable floor,
+  not inside walls or the corpse, and clients see them.
+- [ ] Drops may feel **sparse** (~14–16% drop chance per kill, about 17 drop events per night).
+  Say if you'd rather have more, cheaper drops.
+- [ ] Ammo-box items are still in the loot pool. Decide whether to keep them.
+
+**Inventory cap (C)**
+- [ ] Pick up 6 loot items. The 7th shows "Inventory full" and stays on the floor. Weapons and
+  walk-over ammo still work while full.
+- [ ] At 6/6: taking an item back from a shelf shows "Inventory full". Stocking an occupied
+  slot swaps 1-for-1.
+- [ ] Carry 6 items to the shipping crate and interact. All 6 go in, and the inventory empties.
+- [ ] The inventory shows exactly 6 fixed slots. Empty ones are gray, and there are no quantity
+  numbers. Hovering shows the name, $price and tier.
+
+**Deposit box (D)**
+- [ ] Open the Stockroom Box. The prompt reads "Stockroom Box (n/cap)". Deposit and withdraw on
+  host **and** client. Closes on Tab, Esc and E.
+- [ ] Withdraw when at 6/6: blocked with "Inventory full". Deposit into a full box: blocked.
+- [ ] **Check the box position** in Map_Store_Outdoors: (6500, 1100, 50), 2 m from the shipping
+  crate. The stockroom location wasn't verified, so move it by hand if it's wrong.
+- [ ] Save mid-run, quit, then load. The box contents and capacity come back.
+- [ ] Kiosk StockroomExpansion ($250, untuned): capacity 12 → 18 → 24. With no box or a maxed
+  box, the purchase fails and **cash is refunded**.
+- [ ] At 6/6, buy a kiosk Item entry: "Inventory full" shows and cash is unchanged.
+- [ ] The deposit UI uses `IMC_Inventory`, set by hand. Check that mouse and keys work while
+  it's open.
+
+**Tier visuals (E)**
+- [ ] Drops glow in their tier color at night (gray/white/green/blue/gold), on host and
+  client. See docs/BUGS.md — "Junk-tier pickups on clients keep the default glow."
+- [ ] Rare and Treasure drops have a vertical beam that **persists**. The Niagara loop mode was
+  assumed, and the `User.BeamColor` parameter wasn't runtime-checked. The beam disappears on
+  pickup.
+- [ ] The glow light and beam sit on the pickup, not at the world origin. The components were
+  added with no explicit parent.
+- [ ] The pickup prompt shows name, price and tier.
+- [ ] Stocked shelf slots show "$price" in the tier color, not overlapping the quantity text.
+
+**Perks (F)**
+- [ ] Buy Deep Pockets and start a run. There are 7 slots on host and client.
+- [ ] Buy Scavenger. Kills cause no errors. The luck shift is subtle, and tests cover the math.
+
+**Ads**
+- [ ] The Ad tier nudge was broken until the end of this run (see docs/BUGS.md —
+  "`BFL_LootMath` pity, piñata and Ad shift functions returned 0"). Play one high-Ad night and
+  check that loot doesn't feel over-generous.
 
 ---
 
 ## A. Loot data model
 
-- [ ] **A.1 Loot tiers on items.** Add `E_LootTier` (Junk, Common, Uncommon, Rare, Treasure) and
+- [x] **A.1 Loot tiers on items.** Add `E_LootTier` (Junk, Common, Uncommon, Rare, Treasure) and
   a `LootTier` column on the `DT_Items` row struct. Assign every row a tier by `BaseSellPrice`
   band. Starting bands: Junk <$10, Common $10–24, Uncommon $25–44, Rare $45–69, Treasure $70+.
   Weapons sold as items get a tier too.
-- [ ] **A.2 Per-night tier curve.** Create `DT_LootNightCurve`. Each row is a night number and
+- [x] **A.2 Per-night tier curve.** Create `DT_LootNightCurve`. Each row is a night number and
   holds tier weights (5 floats), `BonusMaxDrops` (int) and `ExpectedNightValue` (the
   +20%/night target, used by pity). Author nights 1–10. Nights past the last row reuse the last
   row's weights and keep growing `ExpectedNightValue` by ×1.2 per night.
-- [ ] **A.3 Rework `DT_ZombieLoot` rows.** Replace per-item chances with: `DropChance`,
+- [x] **A.3 Rework `DT_ZombieLoot` rows.** Replace per-item chances with: `DropChance`,
   `GuaranteedDropCount`, `MaxDrops`, `TierOffset` (int; Elite = +1), and a themed item bias list.
   The themed list keeps the Phase 7 E.6 flavor (Spitter → medical, Brute → hardware, and so on)
   by picking themed items more often *within* the rolled tier. The old flat per-item chances go
   away.
-- [ ] **A.4 Boss piñata row.** Rework the `Boss` row: `PinataBaseCount` 8, `PinataPerBossNumber`
+- [x] **A.4 Boss piñata row.** Rework the `Boss` row: `PinataBaseCount` 8, `PinataPerBossNumber`
   +1 (capped at 12), `MinTreasureCount` 1, `TierOffset` +1.
 
 ## B. Roll logic (`BP_ZombieBase.Server_RollAndSpawnLoot`)
 
-- [ ] **B.1 Tiered roll.** Rewrite the roll so that:
+- [x] **B.1 Tiered roll.** Rewrite the roll so that:
   1. The drop count = the type row's guaranteed drops + chance-based extras, capped at
      `MaxDrops + BonusMaxDrops(night)`.
   2. For each drop, roll a tier from the night's weights, shifted by (type `TierOffset` + Ads
      nudge + Luck perk + pity boost).
   3. Pick an item within that tier, weighted toward the type's themed list.
   Keep the existing ammo-pickup roll (`AmmoDropChance`, 100% for elites) separate and unchanged.
-- [ ] **B.2 Tier shift math.** Implement a shift as moving a fraction of each tier's weight to the
+- [x] **B.2 Tier shift math.** Implement a shift as moving a fraction of each tier's weight to the
   next tier up. It is a float, so a partial nudge like Ads +0.25 or Luck +0.15 works. Elite +1.0
   is a full step. Clamp so that Treasure never exceeds a cap (starting value 35%), except for the
   boss piñata.
-- [ ] **B.3 Soft pity.** `BP_GameState_ZombieStore` keeps `NightLootValueDropped` (the sum of
+- [x] **B.3 Soft pity.** `BP_GameState_ZombieStore` keeps `NightLootValueDropped` (the sum of
   dropped items' `BaseSellPrice`) and compares it with
   `ExpectedNightValue × elapsed night fraction`. While the drop value runs more than 15% behind,
   add a pity tier shift that grows with the deficit (max +1.0), and remove it once caught up.
   Reset it at night start. Server-only.
-- [ ] **B.4 Ads nudge.** Read the store's current Ad escalation level from
+- [x] **B.4 Ads nudge.** Read the store's current Ad escalation level from
   `BP_StoreEscalationComponent` and map it to a tier shift (starting at +0.1 per Ad level,
   max +0.5).
-- [ ] **B.5 Elite roll.** Elites use their type row with `TierOffset` +1 and 2–3 guaranteed
+- [x] **B.5 Elite roll.** Elites use their type row with `TierOffset` +1 and 2–3 guaranteed
   drops. Replaces the old `Elite` row behavior.
-- [ ] **B.6 Boss piñata burst.** On boss death, spawn the piñata count of items. Scatter them
+- [x] **B.6 Boss piñata burst.** On boss death, spawn the piñata count of items. Scatter them
   with a randomized outward/up impulse in a ring around the corpse, and force at least
   `MinTreasureCount` Treasure. Make sure the items land on reachable floor (not inside the
   corpse or level geometry) and the burst replicates to clients. Remove K6's single guaranteed
@@ -96,63 +150,71 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 
 ## C. Inventory: no stacking, 6-slot cap
 
-- [ ] **C.1 Remove stacking.** Each inventory entry is one item (quantity is always 1). Update
+- [x] **C.1 Remove stacking.** Each inventory entry is one item (quantity is always 1). Update
   the add, remove, drop and stock paths plus the save/load serialization. Old saves with stacks
   can be wiped; no migration.
-- [ ] **C.2 Loot slot cap.** Add `MaxLootSlots` (default 6, replicated) to the inventory
+- [x] **C.2 Loot slot cap.** Add `MaxLootSlots` (default 6, replicated) to the inventory
   component, with a server-side `HasFreeLootSlot` check. Weapons routed to `Server_EquipItem`
   and `BP_AmmoPickup` bypass the cap.
-- [ ] **C.3 Blocked pickup.** `BP_ItemPickup` interaction checks the cap on the server. When
+- [x] **C.3 Blocked pickup.** `BP_ItemPickup` interaction checks the cap on the server. When
   it's full, the item stays on the floor and the picking player sees an "Inventory full" HUD
   message (through the existing `WBP_HUD` status message).
-- [ ] **C.4 Cap edge cases.** These paths must respect the cap:
+  - **STATUS NOTE (2026-09-30):** Built. See docs/BUGS.md — "Item pickups with Quantity > 1 only
+    grant one item" and "Loot slot capacity checks always reported full."
+- [x] **C.4 Cap edge cases.** These paths must respect the cap:
   - taking an item back from a shelf (click and drag)
   - the K7 occupied-slot swap (the old item returns to inventory — with a full inventory,
     the swap is still 1-for-1, so it's allowed)
   - withdrawing from the deposit box
   - any code path that grants loot directly
   When a path would overflow, block it with the same message. Never drop items silently.
-- [ ] **C.5 Inventory UI.** `WBP_Inventory` shows exactly `MaxLootSlots` fixed slots (6, or 7
+- [x] **C.5 Inventory UI.** `WBP_Inventory` shows exactly `MaxLootSlots` fixed slots (6, or 7
   with the perk), with filled and empty states and no quantity text.
 
 ## D. Stockroom deposit box
 
-- [ ] **D.1 `BP_DepositBox` actor.** An interactable, replicated storage container that holds
+- [x] **D.1 `BP_DepositBox` actor.** An interactable, replicated storage container that holds
   `Capacity` items (default 12). Its UI shows the box contents and the player's inventory side by
   side. It supports deposit (inventory → box) and withdraw (box → inventory, capped at 6), all
   through server RPCs. It must close on Tab, Escape and E, and its input goes through Enhanced
   Input.
-- [ ] **D.2 Full-box behavior.** When the box is full, deposits are blocked with a "Stockroom
+- [x] **D.2 Full-box behavior.** When the box is full, deposits are blocked with a "Stockroom
   full" message. The box empties only through withdrawals, so players must pull items out and
   stock shelves during the day to free space.
-- [ ] **D.3 Placement.** Place one box in the stockroom/back area of `Map_Store_Outdoors`, and
+- [x] **D.3 Placement.** Place one box in the stockroom/back area of `Map_Store_Outdoors`, and
   one in `Test_Level_Zero`. **`Map_Store_Outdoors` has user hand edits: spawn the actor into the
   level with an editor action. Never regenerate the map through LevelView.**
-- [ ] **D.4 Persistence.** Box contents save and load with the run, alongside shelf stock.
-- [ ] **D.5 Capacity upgrade.** A day-phase kiosk purchase (`DT_KioskCatalog` row) raises the
+- [x] **D.4 Persistence.** Box contents save and load with the run, alongside shelf stock.
+- [x] **D.5 Capacity upgrade.** A day-phase kiosk purchase (`DT_KioskCatalog` row) raises the
   capacity: 12 → 18 → 24. The price is a starting value, tuned in G.2.
+  - **STATUS NOTE (2026-09-30):** Built at $250 (untuned). See docs/BUGS.md — "Kiosk charged
+    cash when fulfillment failed."
 
 ## E. Price and tier display
 
-- [ ] **E.1 Tier glow on drops.** `BP_ItemPickup` gets a replicated `LootTier` and a tier-colored
+- [x] **E.1 Tier glow on drops.** `BP_ItemPickup` gets a replicated `LootTier` and a tier-colored
   glow/outline. Colors: Junk gray, Common white, Uncommon green, Rare blue, Treasure gold. It has
   to read clearly at night on host and client.
-- [ ] **E.2 Rare+ light beam.** Rare and Treasure drops shoot a short vertical light beam in their
+  - **STATUS NOTE (2026-09-30):** Built. See docs/BUGS.md — "Junk-tier pickups on clients keep
+    the default glow."
+- [x] **E.2 Rare+ light beam.** Rare and Treasure drops shoot a short vertical light beam in their
   tier color (Niagara or an emissive mesh), visible across the store. It stops once the item is
   picked up.
-- [ ] **E.3 Pickup prompt.** The world interaction prompt shows the item name, `BaseSellPrice` and
+- [x] **E.3 Pickup prompt.** The world interaction prompt shows the item name, `BaseSellPrice` and
   a tier label/color.
-- [ ] **E.4 Inventory tooltip.** Hovering an inventory slot shows the name, price and tier.
-- [ ] **E.5 Shelf slot price.** Stocked `WBP_ShelfSlot` entries show the item's price with a tier
+- [x] **E.4 Inventory tooltip.** Hovering an inventory slot shows the name, price and tier.
+- [x] **E.5 Shelf slot price.** Stocked `WBP_ShelfSlot` entries show the item's price with a tier
   color accent.
 
 ## F. Meta perks
 
-- [ ] **F.1 +1 Slot perk.** A new meta-shop perk (Phase 5 perk pipeline) sets `MaxLootSlots` to 7.
+- [x] **F.1 +1 Slot perk.** A new meta-shop perk (Phase 5 perk pipeline) sets `MaxLootSlots` to 7.
   It has to replicate so the UI shows 7 slots.
-- [ ] **F.2 Luck perk.** A new meta-shop perk adds a small tier shift (starting at +0.15) to that
+- [x] **F.2 Luck perk.** A new meta-shop perk adds a small tier shift (starting at +0.15) to that
   player's kills. Decide during implementation whether "that player" means the killer or the whole
   team, and default to the killer. It feeds into B.2.
+  - **STATUS NOTE (2026-09-30):** Built as `DeepPockets` and `Scavenger` in `DT_MetaPerks`
+    ($200 each). Luck applies to the killer only.
 
 ## G. Tuning tools and tests
 
@@ -185,7 +247,7 @@ Final DT_ZombieLoot: MaxDrops 2 on all non-Boss rows. DropChance 0.14 (Default, 
 
 StockroomExpansion price: 250, untuned.
 
-- [ ] **G.3 Automation tests.** Add `Test_*` checks in `BP_TestController`:
+- [x] **G.3 Automation tests.** Add `Test_*` checks in `BP_TestController`:
   - the tier roll respects the night weights
   - an elite shift gives a higher mean tier
   - a pity boost engages while behind and releases once caught up
@@ -194,6 +256,16 @@ StockroomExpansion price: 250, untuned.
   - a shelf take-back is blocked when the inventory is full
   - a deposit is blocked when the box is full
   - box contents round-trip through save/load
+  - **STATUS NOTE (2026-09-30):** Built as `Test_Loot_*` (4), `Test_Inventory_*` (2) and
+    `Test_DepositBox_*` (2), plus updates to `Test_Zombie_EliteModifierApplies`,
+    `Test_K6_BossDataRows` and `Test_Data_SellableItemsComplete`. Final suite: 141 PASS /
+    2 FAIL, 0 runtime errors. Every Phase 8 test passes. The 2 failures aren't from Phase 8:
+    `Test_CustomerSpawnerMaxConcurrent` was already failing, and the other is a flaky Brute
+    test. See docs/BUGS.md — "Test_CustomerSpawnerMaxConcurrent fails in the test bed" and
+    "Flaky tests: `Test_Brute_ChargeUsesCharacterMovement` and
+    `Test_Zombie_TargetsNearestDoorWhenOutside`." The tests exposed three Entry→Return exec
+    gaps that the fixes closed. See docs/BUGS.md — "Loot slot capacity checks always reported
+    full" and "`BFL_LootMath` pity, piñata and Ad shift functions returned 0."
 
 ## Risks and notes
 

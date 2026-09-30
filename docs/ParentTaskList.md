@@ -6,6 +6,8 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-09-30): Phase 8 (Loot Economy & Inventory) is built and waiting on PIE testing.** See `docs/PHASE_8_TASKLIST.md`. The overnight run built groups A–G: tiered loot with elite shift, soft pity, the Ad nudge and the boss piñata; a 6-slot loot cap with no stacking; the stockroom deposit box; tier glow, beams and prices; and the Deep Pockets and Scavenger perks. Tuning used `Tools/loot_sim.py`. All work is committed locally, not pushed. Start with that file's "Morning test checklist".
+
 **UPDATE (2026-09-25): Phase 7 (Zombie Variety, Combat Depth & Balance) is active.** See `docs/PHASE_7_TASKLIST.md`. It covers reload bug fixes, 5 new zombie types with Blender animation sets, horde surges/flanking, an economy pass and game feel. The design was confirmed with the user in a Q&A; the overnight run works through it in the order A→F.
 
 **UPDATE (2026-09-24):** A new game level, `/Game/Levels/Map_Store_Outdoors`, now exists. It's a Bass Pro-style hunting and outdoor superstore greybox of about 70×50 m. It has a vaulted clerestory nave, 3 checkouts, a central hub display, 6 breach entries, and defense sockets. The layout is authored in Python with the new LevelView toolkit (`Tools/LevelView/`, documented in `docs/LEVELVIEW.md`), then pushed into the editor and reviewed over 3 in-editor passes. The Main Menu's Start Run now opens it. `Test_Level_Zero` is untouched. **Needs in-PIE confirmation.** See the manual test list in `docs/LEVELVIEW.md` and the BUGS.md entry "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
@@ -110,7 +112,7 @@ that can go stale (as it just did).**
 | 5 | Meta-Progression & Run Loop | Implement the end-to-end run loop (15–45 min target duration), escalation mechanics driven by store advertisements, victory/defeat scoring, and persistent meta-currency logic across playthroughs. |
 | 6 | Art, UI & Audio | Implement all UI overlays and HUD elements, post-processing materials, cartoonish particle effects, and audio transitions between the cozy daytime retail loop and the silly horror night phase. |
 | 7 | Zombie Variety, Combat Depth & Balance | Distinct zombie types with full animation sets, horde surges/flanking, weapon fixes and feel, and an economy/balance pass to stop kiting from being dominant. |
-| 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Planned 2026-09-29, not started. |
+| 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Built 2026-09-30, needs PIE testing. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's

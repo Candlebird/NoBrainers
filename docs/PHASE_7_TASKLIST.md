@@ -153,6 +153,9 @@ every change in the before/after table below with reasoning, so any line can be 
   **DONE — BP_GameMode_ZombieStore.AutoRepairDefenses at the end of StartDayPhase → BP_DefenseBase.RestoreFullHealth; Repair button, BP OnServerRepairDefense and C++ Server_RepairDefense removed; RepairCostPerHP set to 0.**
 - [x] **E.6 Per-type loot/cash values** (with B.11).
   **DONE — cash rewards and loot chances (table below); elites pay 3× cash (BP_ZombieBase.EliteCashMult).**
+  - **Superseded (2026-09-30):** Phase 8 A.3 replaced the loot chances with tiered rolls
+    (`docs/PHASE_8_TASKLIST.md`). The loot rows in the table below are historical. The cash
+    values still apply.
 
 Player movement is **out of scope** (user: leave the player alone).
 
