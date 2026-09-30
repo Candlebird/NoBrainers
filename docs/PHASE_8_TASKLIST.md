@@ -91,7 +91,7 @@ client where it says so.
 - [ ] Stocked shelf slots show "$price" in the tier color, not overlapping the quantity text.
 
 **Perks (F)**
-- [ ] Buy Deep Pockets and start a run. There are 7 slots on host and client.
+- [ ] Buy Deep Pockets and start a run. There are 7 slots on host and client. (Superseded: Deep Pockets is now tiered. See the `docs/PHASE_9_TASKLIST.md` checklist.)
 - [ ] Buy Scavenger. Kills cause no errors. The luck shift is subtle, and tests cover the math.
 
 **Ads**
@@ -215,6 +215,7 @@ client where it says so.
   team, and default to the killer. It feeds into B.2.
   - **STATUS NOTE (2026-09-30):** Built as `DeepPockets` and `Scavenger` in `DT_MetaPerks`
     ($200 each). Luck applies to the killer only.
+  - **SUPERSEDED (2026-09-30):** Phase 9 made Deep Pockets a 9-tier track (6 → 18 slots, base cost 150). See `docs/PHASE_9_TASKLIST.md`. Owning the old `DeepPockets` unlock now counts as tier 1 (7 slots).
 
 ## G. Tuning tools and tests
 

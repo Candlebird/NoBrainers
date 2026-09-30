@@ -44,6 +44,13 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
 
 **Meta-Progression:** Persistent unlocks purchased with meta-currency, awarded as a lump sum at the end of each run (victory or defeat). The payout is calculated from that run's performance: total store cash generated, days survived, zombie kills, and shelves fully matched.
 
+**Tiered perk tracks (user decision, 2026-09-30):** Most meta perks are 9-tier tracks bought in order. Each tier costs ×1.5 the previous one.
+- Deep Pockets adds loot slots: +1 per tier for tiers 1–6 and +2 per tier for tiers 7–9, so 6 base slots becomes 18.
+- The stat tracks each give +5% per tier (+45% at max): max health, max stamina, health regen, stamina regen, armor, fire rate, weapon damage, reload speed, and melee damage.
+- All tracks are per-player: they affect only the buyer's own character.
+- QuickFeet (move speed) and Scavenger (loot luck) stay single unlocks.
+- The 5%-per-tier rule replaces the earlier single-unlock magnitudes. Detail is in `docs/PHASE_9_TASKLIST.md`.
+
 ## 4. Enemies
 
 Special zombie types are planned (e.g. fast, tanky, defense-targeting), all deriving from a single shared base zombie class.

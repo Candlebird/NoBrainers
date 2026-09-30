@@ -94,6 +94,22 @@ public:
 	FGameplayAttributeData MoveSpeed;
 	ATTRIBUTE_ACCESSORS(UGDAttributeSetBase, MoveSpeed)
 
+	UPROPERTY(BlueprintReadOnly, Category = "PerkMultipliers", ReplicatedUsing = OnRep_FireRateMultiplier)
+	FGameplayAttributeData FireRateMultiplier;
+	ATTRIBUTE_ACCESSORS(UGDAttributeSetBase, FireRateMultiplier)
+
+	UPROPERTY(BlueprintReadOnly, Category = "PerkMultipliers", ReplicatedUsing = OnRep_WeaponDamageMultiplier)
+	FGameplayAttributeData WeaponDamageMultiplier;
+	ATTRIBUTE_ACCESSORS(UGDAttributeSetBase, WeaponDamageMultiplier)
+
+	UPROPERTY(BlueprintReadOnly, Category = "PerkMultipliers", ReplicatedUsing = OnRep_ReloadSpeedMultiplier)
+	FGameplayAttributeData ReloadSpeedMultiplier;
+	ATTRIBUTE_ACCESSORS(UGDAttributeSetBase, ReloadSpeedMultiplier)
+
+	UPROPERTY(BlueprintReadOnly, Category = "PerkMultipliers", ReplicatedUsing = OnRep_MeleeDamageMultiplier)
+	FGameplayAttributeData MeleeDamageMultiplier;
+	ATTRIBUTE_ACCESSORS(UGDAttributeSetBase, MeleeDamageMultiplier)
+
 	UPROPERTY(BlueprintReadOnly, Category = "Character Level", ReplicatedUsing = OnRep_CharacterLevel)
 	FGameplayAttributeData CharacterLevel;
 	ATTRIBUTE_ACCESSORS(UGDAttributeSetBase, CharacterLevel)
@@ -159,6 +175,18 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MoveSpeed(const FGameplayAttributeData& OldMoveSpeed);
+
+	UFUNCTION()
+	virtual void OnRep_FireRateMultiplier(const FGameplayAttributeData& OldFireRateMultiplier);
+
+	UFUNCTION()
+	virtual void OnRep_WeaponDamageMultiplier(const FGameplayAttributeData& OldWeaponDamageMultiplier);
+
+	UFUNCTION()
+	virtual void OnRep_ReloadSpeedMultiplier(const FGameplayAttributeData& OldReloadSpeedMultiplier);
+
+	UFUNCTION()
+	virtual void OnRep_MeleeDamageMultiplier(const FGameplayAttributeData& OldMeleeDamageMultiplier);
 
 	UFUNCTION()
 	virtual void OnRep_CharacterLevel(const FGameplayAttributeData& OldCharacterLevel);

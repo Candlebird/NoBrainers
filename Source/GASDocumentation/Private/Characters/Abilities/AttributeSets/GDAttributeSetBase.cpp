@@ -16,6 +16,10 @@ UGDAttributeSetBase::UGDAttributeSetBase()
 	HitDirectionBackTag = FGameplayTag::RequestGameplayTag(FName("Effect.HitReact.Back"));
 	HitDirectionRightTag = FGameplayTag::RequestGameplayTag(FName("Effect.HitReact.Right"));
 	HitDirectionLeftTag = FGameplayTag::RequestGameplayTag(FName("Effect.HitReact.Left"));
+	InitFireRateMultiplier(1.f);
+	InitWeaponDamageMultiplier(1.f);
+	InitReloadSpeedMultiplier(1.f);
+	InitMeleeDamageMultiplier(1.f);
 }
 
 void UGDAttributeSetBase::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -40,6 +44,10 @@ void UGDAttributeSetBase::PreAttributeChange(const FGameplayAttribute& Attribute
 	{
 		// Cannot slow less than 25 units/s (so a trap slow can halve a Shambler's ~150 speed) and cannot boost more than 1000 units/s
 		NewValue = FMath::Clamp<float>(NewValue, 25, 1000);
+	}
+	else if (Attribute == GetFireRateMultiplierAttribute() || Attribute == GetWeaponDamageMultiplierAttribute() || Attribute == GetReloadSpeedMultiplierAttribute() || Attribute == GetMeleeDamageMultiplierAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.1f);
 	}
 }
 
@@ -247,6 +255,10 @@ void UGDAttributeSetBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, StaminaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, Armor, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, MoveSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, FireRateMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, WeaponDamageMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, ReloadSpeedMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, MeleeDamageMultiplier, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, CharacterLevel, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, XP, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UGDAttributeSetBase, XPBounty, COND_None, REPNOTIFY_Always);
@@ -321,6 +333,26 @@ void UGDAttributeSetBase::OnRep_Armor(const FGameplayAttributeData& OldArmor)
 void UGDAttributeSetBase::OnRep_MoveSpeed(const FGameplayAttributeData& OldMoveSpeed)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UGDAttributeSetBase, MoveSpeed, OldMoveSpeed);
+}
+
+void UGDAttributeSetBase::OnRep_FireRateMultiplier(const FGameplayAttributeData& OldFireRateMultiplier)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UGDAttributeSetBase, FireRateMultiplier, OldFireRateMultiplier);
+}
+
+void UGDAttributeSetBase::OnRep_WeaponDamageMultiplier(const FGameplayAttributeData& OldWeaponDamageMultiplier)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UGDAttributeSetBase, WeaponDamageMultiplier, OldWeaponDamageMultiplier);
+}
+
+void UGDAttributeSetBase::OnRep_ReloadSpeedMultiplier(const FGameplayAttributeData& OldReloadSpeedMultiplier)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UGDAttributeSetBase, ReloadSpeedMultiplier, OldReloadSpeedMultiplier);
+}
+
+void UGDAttributeSetBase::OnRep_MeleeDamageMultiplier(const FGameplayAttributeData& OldMeleeDamageMultiplier)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UGDAttributeSetBase, MeleeDamageMultiplier, OldMeleeDamageMultiplier);
 }
 
 void UGDAttributeSetBase::OnRep_CharacterLevel(const FGameplayAttributeData& OldCharacterLevel)

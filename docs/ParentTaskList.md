@@ -6,6 +6,13 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-09-30, later): Phase 9 (Tiered Meta Progression) is built and waiting on PIE testing.** See `docs/PHASE_9_TASKLIST.md`. Ten per-player tracks now have 9 tiers each at ×1.5 price per tier:
+- Deep Pockets: 6 → 18 slots.
+- Health, stamina, both regens and armor: +5% per tier.
+- New fire-rate, weapon-damage, reload-speed and melee-damage multipliers, backed by 4 new C++ GAS attributes.
+
+Everything is committed locally, not pushed. Start with that file's "PIE test checklist". Phase 8 PIE testing is also still outstanding.
+
 **UPDATE (2026-09-30): Phase 8 (Loot Economy & Inventory) is built and waiting on PIE testing.** See `docs/PHASE_8_TASKLIST.md`. The overnight run built groups A–G: tiered loot with elite shift, soft pity, the Ad nudge and the boss piñata; a 6-slot loot cap with no stacking; the stockroom deposit box; tier glow, beams and prices; and the Deep Pockets and Scavenger perks. Tuning used `Tools/loot_sim.py`. All work is committed locally, not pushed. Start with that file's "Morning test checklist".
 
 **UPDATE (2026-09-25): Phase 7 (Zombie Variety, Combat Depth & Balance) is active.** See `docs/PHASE_7_TASKLIST.md`. It covers reload bug fixes, 5 new zombie types with Blender animation sets, horde surges/flanking, an economy pass and game feel. The design was confirmed with the user in a Q&A; the overnight run works through it in the order A→F.
@@ -113,6 +120,7 @@ that can go stale (as it just did).**
 | 6 | Art, UI & Audio | Implement all UI overlays and HUD elements, post-processing materials, cartoonish particle effects, and audio transitions between the cozy daytime retail loop and the silly horror night phase. |
 | 7 | Zombie Variety, Combat Depth & Balance | Distinct zombie types with full animation sets, horde surges/flanking, weapon fixes and feel, and an economy/balance pass to stop kiting from being dominant. |
 | 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Built 2026-09-30, needs PIE testing. |
+| 9 | Tiered Meta Progression | 9-tier per-player meta perk tracks (Deep Pockets slots, health/stamina/regen/armor, fire rate, weapon/melee damage, reload speed) with ×1.5 per-tier pricing. Built 2026-09-30, needs PIE testing. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's

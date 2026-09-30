@@ -91,6 +91,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDCharacter|Attributes")
 	float GetMoveSpeedBaseValue() const;
 
+	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDCharacter|Attributes")
+	float GetFireRateMultiplier() const;
+
+	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDCharacter|Attributes")
+	float GetWeaponDamageMultiplier() const;
+
+	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDCharacter|Attributes")
+	float GetReloadSpeedMultiplier() const;
+
+	UFUNCTION(BlueprintCallable, Category = "GASDocumentation|GDCharacter|Attributes")
+	float GetMeleeDamageMultiplier() const;
+
 
 	virtual void Die();
 

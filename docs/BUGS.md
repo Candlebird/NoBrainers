@@ -1,5 +1,25 @@
 # Known Bugs
 
+## Phase 9: tiered perks unverified in PIE (needs PIE testing)
+
+- **Area:** Phase 9 tiered meta progression (`DT_MetaPerks`, `BP_PerkComponent`, `BP_InventoryComponent`, `WBP_MetaShop`, `GA_BP_FireWeapon`, `GA_BP_MeleeAttack`, `BP_EquipmentComponent`).
+- **Repro:** Follow the "PIE test checklist" in `docs/PHASE_9_TASKLIST.md`.
+- **Actual:** Built unattended and covered only by automation. It has never been run in a real game session.
+- **Expected:** Every checklist item passes.
+- **Status:** Open. These specific risks were noted during the build:
+  - **Stamina regen.** Nothing has confirmed a consumer actually reads `StaminaRegenRate`, so the StaminaRegen track may do nothing.
+  - **Meta shop layout.** `WBP_MetaShop` rows reuse the existing `EntriesScrollBox`. If its slot isn't set to Fill, 12 rows may not fit or scroll properly.
+  - **Meta shop closing.** `WBP_MetaShop` has no Tab/Esc/E close handling of its own; only its Back button closes it. This isn't new in Phase 9.
+  - **Deposit entries.** The `WBP_DepositEntry` `TierBorder` was recreated with an empty brush and color, so the tier color may not show until the graph sets it. The deposit column has no scroll and its height at 18 slots hasn't been measured.
+  - **Slot text.** Text on 100 px-wide inventory slots may clip.
+  - **Shop tier label.** It uses the default text color.
+  - **Perk icons.** All `DT_MetaPerks` rows have `Icon = None`.
+  - **Legacy values.** ThickSkin, Endurance and ReinforcedVest tier 1 are weaker than the old single unlocks (25→5, 30→5, 10→5.75), by the user's design decision.
+  - **Economy.** Maxing every track costs about 79k meta-currency, against about 800–1000 per run. Tune it through `DT_MetaPerks.Cost`.
+  - **Stray save entries.** Until `GetNextTierPrice` was fixed (it now returns -1 for an unknown track), two test runs "bought" the fake track `NoSuchTrack` for 0. If the test harness wrote to the real meta save, `UnlockedPerkIDs` may hold a junk `NoSuchTrack` entry. It's harmless, since no row matches it, but reset the meta save slot if it shows up.
+  - **Flaky test.** `Test_Zombie_TargetsNearestDoorWhenOutside` failed once (BreachTarget=None) and passed on the next run. Phase 9 touched no zombie assets, so it's probably a timing or navigation flake. Watch for it recurring.
+  - **Autosave.** After the C++ rebuild, the editor's autosave-restore dialog was skipped, so any unsaved pre-rebuild edits to BP_SaveGame_Session, BP_FindBestShelfSlot, BP_GameState_ZombieStore and others were discarded. Committed versions are unaffected.
+
 ## Monolith-built Behavior Trees lose their root in cooked builds (RESOLVED 2026-09-29)
 
 - **Area:** `Plugins/Monolith/Source/MonolithAI/Private/MonolithAIBehaviorTreeActions.cpp` (`build_behavior_tree_from_spec`, `import_bt_spec`, `add_bt_node`, `add_bt_decorator`, `add_bt_service`).

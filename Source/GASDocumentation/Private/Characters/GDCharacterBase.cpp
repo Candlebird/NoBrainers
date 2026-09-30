@@ -216,6 +216,46 @@ float AGDCharacterBase::GetMoveSpeed() const
 	return 0.0f;
 }
 
+float AGDCharacterBase::GetFireRateMultiplier() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetFireRateMultiplier();
+	}
+
+	return 1.0f;
+}
+
+float AGDCharacterBase::GetWeaponDamageMultiplier() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetWeaponDamageMultiplier();
+	}
+
+	return 1.0f;
+}
+
+float AGDCharacterBase::GetReloadSpeedMultiplier() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetReloadSpeedMultiplier();
+	}
+
+	return 1.0f;
+}
+
+float AGDCharacterBase::GetMeleeDamageMultiplier() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetMeleeDamageMultiplier();
+	}
+
+	return 1.0f;
+}
+
 float AGDCharacterBase::GetMoveSpeedBaseValue() const
 {
 	if (AttributeSetBase.IsValid())
