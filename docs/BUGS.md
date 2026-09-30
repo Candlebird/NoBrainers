@@ -1,5 +1,14 @@
 # Known Bugs
 
+## Monolith-built Behavior Trees lose their root in cooked builds (RESOLVED 2026-09-29)
+
+- **Area:** `Plugins/Monolith/Source/MonolithAI/Private/MonolithAIBehaviorTreeActions.cpp` (`build_behavior_tree_from_spec`, `import_bt_spec`, `add_bt_node`, `add_bt_decorator`, `add_bt_service`).
+- **Repro:** Build or import a BT with Monolith, package, run. `UBehaviorTree::RootNode` is null in the cooked build, so `RunBehaviorTree` returns true but the tree never runs. PIE works.
+- **Actual:** Monolith creates `UBTNode` instances with the editor-only graph node as Outer (lines ~1147, 1215, 1256, 2284, 2511, 2644). Cooking strips them.
+- **Expected:** Outer is the `UBehaviorTree` asset, as the engine's BT editor does.
+- **Repair for old trees:** `UGSStatics::FixBehaviorTreeNodeOuters(Tree)` (Python: `unreal.GSStatics.fix_behavior_tree_node_outers`), then save. Run it after any Monolith BT edit. `BT_Zombie` was fixed this way on 2026-09-29 (found: zombies stood still in packaged builds).
+- **Status:** RESOLVED (2026-09-29). `BT_Zombie` fixed and verified in a packaged build (zombies move). The six Monolith sites now use the BT asset as Outer; a fresh Monolith-built BT reports `reparented=0`. `FixBehaviorTreeNodeOuters` is kept for repairing any older Monolith-built BT.
+
 ## Pistol deals no damage after a reload (`[SHOTDBG] REJECT noHitActor`)
 
 - **Area:** `/Game/Characters/Abilities/GA_BP_FireWeapon` (parent of `GA_BP_FirePistol`), FireShot client trace → `ProcessServerShot`.
@@ -42,6 +51,15 @@
 - **Actual:** Unknown. Each entry gap is filled by one `BP_BreachPoint` scaled non-uniformly (for example 0.3 × 7.2 × 3.0 on the front doors) so it seals the wall. The BP was authored as a 1 m cube. Its attack range, repair interaction, and navmesh obstacle and dynamic-update behavior haven't been tested at this scale.
 - **Expected:** Zombies path to the panel, damage it, and pass through once it breaks. Players can repair it.
 - **Status:** Open. Needs in-PIE confirmation. If scaling breaks it, split each gap into several unit-scale panels in `Tools/LevelView/store_layout.py` (`breach_panel`).
+- **Update 2026-09-29:** Paid hold-E repair now exists (Morning/Day/Dusk only). The repair trace box is a child of `BreachMesh`, so it scales with the panel. Include repairing a scaled panel, both damaged and fully broken, in this PIE check.
+
+## Test_CustomerSpawnerMaxConcurrent fails in the test bed
+
+- **Area:** `BP_CustomerSpawner`, `BP_TestController.Test_CustomerSpawnerMaxConcurrent`
+- **Repro:** Run the full automation test bed (L_AutomationTestBed).
+- **Actual:** FAIL (1 of 125 on 2026-09-29). This test previously passed. The run that found it touched no customer or spawner assets; it changed only breach repair.
+- **Expected:** PASS (`GetMaxConcurrent()==6` and `TrySpawnCustomer()` grows `ActiveCustomers`).
+- **Status:** Open. Not diagnosed. It could be a regression from an earlier commit, or it could depend on the order the tests run in.
 
 ## Customers never move from spawn after shelves are stocked (RESOLVED — needs in-PIE confirmation)
 

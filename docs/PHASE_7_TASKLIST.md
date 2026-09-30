@@ -396,6 +396,7 @@ User-confirmed design calls (don't re-litigate):
 **Follow-up decisions (2026-09-26 Q&A, round 5):**
 - **Dismantle refund:** 50% of the defense's price.
 - **Repair:** paid, any phase. Hold E on a damaged defense; the cost is proportional to missing health. The auto-restore at Day start stays.
+  - STATUS NOTE (2026-09-29): Breach points (`BP_BreachPoint`) now have the same paid hold-E repair, but only in Morning, Day, and Dusk (the server rejects it at Night). The cost is `ceil(missing × RepairCostPerHP)`, with a default of 1.0 per instance. A broken door is aimed at through a hidden `RepairTraceVolume`. Automation: the `Test_BreachRepair_*` tests (4) PASS. The PIE check is still pending; see docs/BUGS.md — "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
 - **Build menu polish:** show the aimed socket's type and grey out entries that don't fit it; a per-entry info tooltip (damage/HP/cost/description); icons/thumbnails instead of text-only tiles.
 - **Boss readability:** a top-of-screen boss health bar with a name (e.g. "Manager of the Dead") while it's alive. No tint, no accessory, no new attack. *(Superseded 2026-09-27 for the attack only: the user asked for a boss AOE slam. See the K6 follow-up below.)*
 
