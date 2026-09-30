@@ -1727,3 +1727,19 @@
 - **Actual:** Not verified. The leaf swings 90° around a hinge at the panel edge, and the wide Dock leaf has a large arc.
 - **Expected:** The leaf clears walls, shelves and props when open.
 - **Status:** Open, needs a PIE check. Possible fixes are a per-instance `OpenYawDegrees` or a split double door for the Dock.
+
+## Kiosk charged cash when fulfillment failed (Phase 8) (RESOLVED, needs in-PIE confirmation)
+
+- **Area:** `BP_PlayerController_ZombieStore::ExecuteKioskPurchase` (`docs/PHASE_8_TASKLIST.md` D.5)
+- **Repro:** With 6/6 inventory slots full, buy a kiosk Item entry. Or buy StockroomExpansion with no deposit box placed, or with the box at max capacity.
+- **Actual:** Cash was deducted before `FulfillKioskEntry`, and the fail branch didn't refund it.
+- **Expected:** No cash is lost when nothing is delivered.
+- **Status:** Fixed in the Phase 8 overnight run. The fail branch now calls `GS.Server_AddCash(Cost)`. Needs in-PIE confirmation.
+
+## Item pickups with Quantity > 1 only grant one item (Phase 8)
+
+- **Area:** `BP_ItemPickup` non-weapon pickup branch (`docs/PHASE_8_TASKLIST.md` C)
+- **Repro:** Spawn or place a `BP_ItemPickup` with Quantity 3 and walk over it.
+- **Actual:** One item goes into the inventory, and the pickup is destroyed.
+- **Expected:** Each unit takes a slot until the inventory is full, and the rest stays on the ground.
+- **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups.
