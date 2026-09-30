@@ -156,14 +156,35 @@ _Filled in as groups land. Each line is something that needs manual PIE confirma
 
 ## G. Tuning tools and tests
 
-- [ ] **G.1 Loot simulator.** Write `Tools/loot_sim.py`. It reads CSV/JSON exports of `DT_Items`,
+- [x] **G.1 Loot simulator.** Write `Tools/loot_sim.py`. It reads CSV/JSON exports of `DT_Items`,
   `DT_ZombieLoot` and `DT_LootNightCurve`, plus the per-night spawn mix (from the spawner's surge
   budget and type unlock nights). It mirrors B.1–B.6, including pity and elites, then simulates
   1000 runs of 10 nights. It reports mean, p10, p90, min and max loot value per night against the
   target band. The kill fraction and Ad level are CLI flags.
-- [ ] **G.2 Tune to band.** Iterate the tier weights, drop counts and tier bands until the sim
+- [x] **G.2 Tune to band.** Iterate the tier weights, drop counts and tier bands until the sim
   puts p10 and p90 inside ±30% of target for nights 1–10 at Ad level 0 and at max. Record the
   final values in a table in this file, as Phase 7 did.
+### G.2 tuning results
+
+Sim: 1000 runs, kill fraction 0.85, seed 42, luck 0. Band = p10 >= 70% and p90 <= 130% of target. All nights IN_BAND at Ad 1 and Ad 6. Values are per-night loot value.
+
+| Night | Target | Ad1 mean | Ad1 p10 | Ad1 p90 | Ad6 mean | Ad6 p10 | Ad6 p90 | Junk/Com/Unc/Rare/Tre | Bonus |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 700.0 | 612.7 | 559.0 | 665.1 | 742.3 | 661.9 | 831.0 | 0.718/0.282/0.0/0.0/0.0 | 0 |
+| 2 | 840.0 | 746.4 | 676.9 | 819.1 | 896.8 | 791.0 | 1008.0 | 0.562/0.34/0.098/0.0/0.0 | 0 |
+| 3 | 1008.0 | 901.4 | 808.0 | 1002.0 | 1095.2 | 942.0 | 1253.0 | 0.47/0.34/0.149/0.041/0.0 | 0 |
+| 4 | 1209.6 | 1069.9 | 957.0 | 1182.1 | 1267.9 | 1106.9 | 1450.3 | 0.34/0.327/0.27/0.064/0.0 | 0 |
+| 5 | 1451.5 | 1260.4 | 1118.0 | 1405.0 | 1527.6 | 1322.0 | 1764.2 | 0.384/0.379/0.1/0.074/0.063 | 0 |
+| 6 | 1741.8 | 1460.5 | 1351.0 | 1581.0 | 1881.1 | 1664.0 | 2119.0 | 0.402/0.401/0.166/0.024/0.006 | 0 |
+| 7 | 2090.2 | 1796.4 | 1637.0 | 1958.1 | 2214.1 | 1942.0 | 2493.0 | 0.357/0.261/0.257/0.086/0.039 | 0 |
+| 8 | 2508.2 | 2158.4 | 1969.0 | 2366.1 | 2618.3 | 2317.9 | 2939.1 | 0.286/0.252/0.223/0.168/0.071 | 0 |
+| 9 | 3009.9 | 2662.5 | 2392.9 | 2946.1 | 3163.7 | 2757.9 | 3583.0 | 0.253/0.218/0.188/0.184/0.157 | 0 |
+| 10 | 3611.8 | 3229.0 | 2952.0 | 3550.0 | 3920.7 | 3483.0 | 4386.3 | 0.32/0.208/0.194/0.168/0.111 | 2 |
+
+Final DT_ZombieLoot: MaxDrops 2 on all non-Boss rows. DropChance 0.14 (Default, Runner), 0.16 (Spitter, Screamer, Brute, Bloater). Boss row unchanged. DT_Items LootTier not changed. ExpectedNightValue and BaseSellPrice not changed. Piñata value is reported separately and excluded from the band. Pity does most of the Ad-level smoothing, so the base weights sit below target on purpose.
+
+StockroomExpansion price: 250, untuned.
+
 - [ ] **G.3 Automation tests.** Add `Test_*` checks in `BP_TestController`:
   - the tier roll respects the night weights
   - an elite shift gives a higher mean tier

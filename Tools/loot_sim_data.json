@@ -1,0 +1,524 @@
+{
+ "items": {
+  "CannedBeans": {
+   "price": 15,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1
+  },
+  "RifleAmmo": {
+   "price": 20,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 0.25
+  },
+  "Bandage": {
+   "price": 12,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1.1
+  },
+  "Nails": {
+   "price": 6,
+   "tier": "Junk",
+   "in_pool": true,
+   "drop_weight": 1
+  },
+  "GoldWatch": {
+   "price": 75,
+   "tier": "Treasure",
+   "in_pool": true,
+   "drop_weight": 0.2
+  },
+  "EnergyBar": {
+   "price": 10,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1.2
+  },
+  "SpoiledMeat": {
+   "price": 4,
+   "tier": "Junk",
+   "in_pool": true,
+   "drop_weight": 1.5
+  },
+  "PistolAmmo": {
+   "price": 20,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1
+  },
+  "ShotgunShells": {
+   "price": 30,
+   "tier": "Uncommon",
+   "in_pool": true,
+   "drop_weight": 0.7
+  },
+  "MedKit": {
+   "price": 45,
+   "tier": "Rare",
+   "in_pool": true,
+   "drop_weight": 0.4
+  },
+  "ScrapMetal": {
+   "price": 8,
+   "tier": "Junk",
+   "in_pool": true,
+   "drop_weight": 1.3
+  },
+  "DuctTape": {
+   "price": 6,
+   "tier": "Junk",
+   "in_pool": true,
+   "drop_weight": 1.4
+  },
+  "PipeWrench": {
+   "price": 20,
+   "tier": "Common",
+   "in_pool": false,
+   "drop_weight": 0.6
+  },
+  "VintageCoin": {
+   "price": 50,
+   "tier": "Rare",
+   "in_pool": true,
+   "drop_weight": 0.3
+  },
+  "LuckyCharm": {
+   "price": 22,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 0.5
+  },
+  "Pistol": {
+   "price": 30,
+   "tier": "Uncommon",
+   "in_pool": false,
+   "drop_weight": 0.3
+  },
+  "Rifle": {
+   "price": 90,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.2
+  },
+  "Bat": {
+   "price": 15,
+   "tier": "Common",
+   "in_pool": false,
+   "drop_weight": 0.5
+  },
+  "Shotgun": {
+   "price": 120,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.15
+  },
+  "SMG": {
+   "price": 100,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.2
+  },
+  "LongRifle": {
+   "price": 200,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.1
+  },
+  "Magnum": {
+   "price": 90,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.25
+  },
+  "BeefJerky": {
+   "price": 14,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1.1
+  },
+  "TrailMix": {
+   "price": 9,
+   "tier": "Junk",
+   "in_pool": true,
+   "drop_weight": 1.3
+  },
+  "CampCoffee": {
+   "price": 12,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1
+  },
+  "Painkillers": {
+   "price": 18,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 0.8
+  },
+  "InsectRepellent": {
+   "price": 10,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 1
+  },
+  "Flashlight": {
+   "price": 28,
+   "tier": "Uncommon",
+   "in_pool": true,
+   "drop_weight": 0.6
+  },
+  "ParacordBundle": {
+   "price": 12,
+   "tier": "Common",
+   "in_pool": true,
+   "drop_weight": 0.9
+  },
+  "BigfootFigurine": {
+   "price": 35,
+   "tier": "Uncommon",
+   "in_pool": true,
+   "drop_weight": 0.35
+  },
+  "AntlerTrophy": {
+   "price": 70,
+   "tier": "Treasure",
+   "in_pool": true,
+   "drop_weight": 0.2
+  },
+  "LeverAction": {
+   "price": 135,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.1
+  },
+  "SawedOff": {
+   "price": 105,
+   "tier": "Treasure",
+   "in_pool": false,
+   "drop_weight": 0.15
+  },
+  "Machete": {
+   "price": 45,
+   "tier": "Rare",
+   "in_pool": false,
+   "drop_weight": 0.3
+  },
+  "FireAxe": {
+   "price": 60,
+   "tier": "Rare",
+   "in_pool": false,
+   "drop_weight": 0.2
+  },
+  "CanoePaddle": {
+   "price": 15,
+   "tier": "Common",
+   "in_pool": false,
+   "drop_weight": 0.5
+  }
+ },
+ "zombie_loot": {
+  "Default": {
+   "MaxDrops": 2,
+   "GuaranteedDropCount": 0,
+   "DropChance": 0.14,
+   "TierOffset": 0,
+   "ThemedItemIDs": [],
+   "ThemedBias": 3,
+   "PinataBaseCount": 0,
+   "PinataPerBossNumber": 0,
+   "PinataMaxCount": 0,
+   "MinTreasureCount": 0
+  },
+  "Runner": {
+   "MaxDrops": 2,
+   "GuaranteedDropCount": 0,
+   "DropChance": 0.14,
+   "TierOffset": 0,
+   "ThemedItemIDs": [],
+   "ThemedBias": 3,
+   "PinataBaseCount": 0,
+   "PinataPerBossNumber": 0,
+   "PinataMaxCount": 0,
+   "MinTreasureCount": 0
+  },
+  "Spitter": {
+   "MaxDrops": 2,
+   "GuaranteedDropCount": 0,
+   "DropChance": 0.16,
+   "TierOffset": 0,
+   "ThemedItemIDs": [
+    "Bandage",
+    "MedKit",
+    "Painkillers"
+   ],
+   "ThemedBias": 3,
+   "PinataBaseCount": 0,
+   "PinataPerBossNumber": 0,
+   "PinataMaxCount": 0,
+   "MinTreasureCount": 0
+  },
+  "Screamer": {
+   "MaxDrops": 2,
+   "GuaranteedDropCount": 1,
+   "DropChance": 0.16,
+   "TierOffset": 0,
+   "ThemedItemIDs": [
+    "GoldWatch",
+    "VintageCoin",
+    "LuckyCharm",
+    "BigfootFigurine",
+    "AntlerTrophy"
+   ],
+   "ThemedBias": 3,
+   "PinataBaseCount": 0,
+   "PinataPerBossNumber": 0,
+   "PinataMaxCount": 0,
+   "MinTreasureCount": 0
+  },
+  "Brute": {
+   "MaxDrops": 2,
+   "GuaranteedDropCount": 1,
+   "DropChance": 0.16,
+   "TierOffset": 0,
+   "ThemedItemIDs": [
+    "Nails",
+    "ScrapMetal",
+    "DuctTape"
+   ],
+   "ThemedBias": 3,
+   "PinataBaseCount": 0,
+   "PinataPerBossNumber": 0,
+   "PinataMaxCount": 0,
+   "MinTreasureCount": 0
+  },
+  "Bloater": {
+   "MaxDrops": 2,
+   "GuaranteedDropCount": 1,
+   "DropChance": 0.16,
+   "TierOffset": 0,
+   "ThemedItemIDs": [
+    "SpoiledMeat",
+    "CannedBeans",
+    "BeefJerky"
+   ],
+   "ThemedBias": 3,
+   "PinataBaseCount": 0,
+   "PinataPerBossNumber": 0,
+   "PinataMaxCount": 0,
+   "MinTreasureCount": 0
+  },
+  "Boss": {
+   "MaxDrops": 0,
+   "GuaranteedDropCount": 0,
+   "DropChance": 0,
+   "TierOffset": 1,
+   "ThemedItemIDs": [
+    "GoldWatch",
+    "AntlerTrophy",
+    "VintageCoin"
+   ],
+   "ThemedBias": 2,
+   "PinataBaseCount": 8,
+   "PinataPerBossNumber": 1,
+   "PinataMaxCount": 12,
+   "MinTreasureCount": 1
+  }
+ },
+ "night_curve": {
+  "1": {
+   "weights": [
+    0.718,
+    0.282,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 700
+  },
+  "2": {
+   "weights": [
+    0.562,
+    0.34,
+    0.098,
+    0.0,
+    0.0
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 840
+  },
+  "3": {
+   "weights": [
+    0.47,
+    0.34,
+    0.149,
+    0.041,
+    0.0
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 1008
+  },
+  "4": {
+   "weights": [
+    0.34,
+    0.327,
+    0.27,
+    0.064,
+    0.0
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 1210
+  },
+  "5": {
+   "weights": [
+    0.384,
+    0.379,
+    0.1,
+    0.074,
+    0.063
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 1452
+  },
+  "6": {
+   "weights": [
+    0.402,
+    0.401,
+    0.166,
+    0.024,
+    0.006
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 1742
+  },
+  "7": {
+   "weights": [
+    0.357,
+    0.261,
+    0.257,
+    0.086,
+    0.039
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 2090
+  },
+  "8": {
+   "weights": [
+    0.286,
+    0.252,
+    0.223,
+    0.168,
+    0.071
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 2508
+  },
+  "9": {
+   "weights": [
+    0.253,
+    0.218,
+    0.188,
+    0.184,
+    0.157
+   ],
+   "bonus_max_drops": 0,
+   "expected_night_value": 3010
+  },
+  "10": {
+   "weights": [
+    0.32,
+    0.208,
+    0.194,
+    0.168,
+    0.111
+   ],
+   "bonus_max_drops": 2,
+   "expected_night_value": 3612
+  }
+ },
+ "zombie_types": {
+  "Shambler": {
+   "spawn_weight": 100,
+   "weight_per_night": 0,
+   "weight_per_ad_level": 0,
+   "unlock_night": 1,
+   "loot_row": "Default"
+  },
+  "Runner": {
+   "spawn_weight": 20,
+   "weight_per_night": 6,
+   "weight_per_ad_level": 4,
+   "unlock_night": 2,
+   "loot_row": "Runner"
+  },
+  "Brute": {
+   "spawn_weight": 8,
+   "weight_per_night": 3,
+   "weight_per_ad_level": 2,
+   "unlock_night": 6,
+   "loot_row": "Brute"
+  },
+  "Spitter": {
+   "spawn_weight": 12,
+   "weight_per_night": 4,
+   "weight_per_ad_level": 3,
+   "unlock_night": 4,
+   "loot_row": "Spitter"
+  },
+  "Screamer": {
+   "spawn_weight": 6,
+   "weight_per_night": 2,
+   "weight_per_ad_level": 2,
+   "unlock_night": 5,
+   "loot_row": "Screamer"
+  },
+  "Bloater": {
+   "spawn_weight": 8,
+   "weight_per_night": 3,
+   "weight_per_ad_level": 2,
+   "unlock_night": 6,
+   "loot_row": "Bloater"
+  },
+  "Boss": {
+   "spawn_weight": 0,
+   "weight_per_night": 0,
+   "weight_per_ad_level": 0,
+   "unlock_night": 999,
+   "loot_row": "Boss"
+  }
+ },
+ "spawner": {
+  "BaseHordeCount": 5,
+  "DifficultyMultiplier": 2,
+  "AdvertisementMultiplier": 3,
+  "BurstSize": 3,
+  "SpawnIntervalMin": 3,
+  "SpawnIntervalMax": 6,
+  "SurgesPerNight": 3,
+  "SurgeMinBudget": 6,
+  "FinaleBudgetScale": 1.5,
+  "BossSurgeBudgetScale": 1.5,
+  "AliveCapBase": 30,
+  "BossNightInterval": 3,
+  "BaseRunDifficulty": 1,
+  "night_length_seconds": 180,
+  "horde_size_multiplier": 1.0,
+  "player_factor": 1.0
+ },
+ "spawn_model": "horde_count = max(1, ceil((BaseHordeCount + BaseRunDifficulty*DifficultyMultiplier) * horde_size_multiplier * player_factor)) [CalculateHordeCount; player_factor=min(1,0.6+0.4*(players-1))]. normal = night_length/4.5 * min(BurstSize, horde_count); surge_i = max(SurgeMinBudget, horde_count) (x BossSurgeBudgetScale on boss nights), last surge x FinaleBudgetScale; spawns = normal + sum(surges). (fallback model; per-night totals not derivable from the tick-based ComputeSpawnAllocation)",
+ "constants": {
+  "treasure_cap": 0.35,
+  "pity_threshold": 0.15,
+  "pity_span": 0.35,
+  "pity_grace": 0.1,
+  "ad_per_level": 0.1,
+  "ad_max": 0.5,
+  "luck": 0.15,
+  "elite_shift": 1,
+  "elite_guaranteed": [
+   2,
+   3
+  ]
+ }
+}
