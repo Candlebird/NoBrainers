@@ -127,7 +127,7 @@ Spitter sits in between.
   Mirror them in `Test_Level_Zero`.
 - [x] **D.2 Horde surges.** **DONE:** spawner `ScheduleNextSurge` → `AnnounceSurge` (bumps replicated `GameState.SurgeSerial` / `bSurgeIsFinale`) → +3 s `BeginSurge` (queues `Max(6, HordeCount × 1.5 if finale)` into `PendingSurgeSpawns`, 3× tick rate) → `EndSurge` after 20–30 s (finale 60 s). Surges at 8% / 28% / 48% of night length + finale 63 s before end. `WBP_EventBanner.PollSurgeState` shows red "SURGE INCOMING" / "FINAL SURGE" banner + `SFX_SurgeGroan` when `SurgeSerial` changes. Original spec: About 3 surges per Night (3× spawn rate for 20–30 s) with calmer lulls
   between them, then a big finale wave in the last 60 s. A HUD banner plus groan cue gives ~3 s warning.
-- [x] **D.3 Flanking / surround.** **DONE:** `BTS_ZombieBreachDecision.UpdateFlankLocation` gives each zombie a persisted signed angle (15–55°, BB `FlankAngle`) and writes a navmesh flank point (BB `FlankLocation`) while > 7 m from its target; `BT_Zombie` `Sequence_Flank` (between breach and chase) moves there, aborting when the key clears. Original spec: Zombies are spread across multiple breach points and approach
+- [x] **D.3 Flanking / surround.** **DONE:** `BTS_ZombieBreachDecision.UpdateFlankLocation` gives each zombie a persisted signed angle (15–55°, BB `FlankAngle`) and writes a navmesh flank point (BB `FlankLocation`) while > 7 m from its target; `BT_Zombie` `Sequence_Flank` (between breach and chase) moves there, aborting when the key clears. (2026-09-29: outside zombies with an inside target now commit to their nearest door first; see N.1.) Original spec: Zombies are spread across multiple breach points and approach
   targets from assigned angles (slot-around-target), instead of forming a single conga line.
 - [x] **D.4 Alive cap.** **DONE:** spawner `ComputeAliveCap` (30 + 5 per extra player, max 45); `SpawnTick` only drains `PendingSurgeSpawns` while alive < cap (`ComputeSpawnAllocation`); Screamer `SpawnSummoned` clamped to the cap. Queued surge spawns are dropped at dawn (see checklist). Tests: `Test_ZombieSpawner_AliveCapFormula`, `Test_ZombieSpawner_SurgeQueueRespectsCap`. Original spec: 30 alive solo, +5 per extra player, 45 max. Surge spawns queue instead of
   overflowing the cap.
@@ -226,7 +226,7 @@ From the user's first playtest of A–E.
 - [x] **G.3 Weapon camera shake off.** Set every shake value to 0 for now (recoil kick stays). **DONE:** `DT_Weapons.CameraShakeScale` = 0 on all rows.
 - [ ] **G.4 Blank surge banner.** The horde/surge banner pops up with no text. **PARTIAL:** no defect found statically; the surge literals changed to "HORDE SURGE INCOMING!" / "FINAL SURGE INCOMING!". **USER TEST:** check whether it still shows blank. See docs/BUGS.md — "Surge warning banner shows no text (not reproduced statically)."
 - [ ] **G.5 Door fixation.** Zombies sometimes keep breaking doors after they have a clear path to
-  the player. **DONE:** in `BTS_ZombieBreachDecision.ReceiveTickAI`, the "breach point not yet broken" branch had no exec out, so the path re-check never ran mid-breach. It now re-checks every tick and clears BreachTarget once a full path exists (the BT decorator already aborts on change). **USER TEST:** open a second route mid-breach; the zombie should leave the door within ~1 s.
+  the player. **DONE:** in `BTS_ZombieBreachDecision.ReceiveTickAI`, the "breach point not yet broken" branch had no exec out, so the path re-check never ran mid-breach. It now re-checks every tick and clears BreachTarget once a full path exists (the BT decorator already aborts on change). **USER TEST:** open a second route mid-breach; the zombie should leave the door within ~1 s. (2026-09-29: this still applies to zombies inside the store or whose target is outside. An outside zombie with an inside target now sticks to its nearest door by design; see N.1.)
 - [x] **G.6 Run start.** The run starts at Dawn; starting cash 50; 4× starting pistol ammo. **DONE:** `BP_GameState_ZombieStore.StartingStoreCash` 250 → 50; `DT_AmmoTypes.PistolAmmo.DefaultStockpile` 48 → 192 (Max 500). Every new run already starts in Morning (= Dawn) via `BeginPlay → StartMorningPhase`. If a run didn't start at Dawn, that was most likely a resumed session save (`bResumeSessionOnStart`). **USER TEST:** start a new run with no save present: Morning phase, 50 cash, 192 pistol reserve.
 - [ ] **G.7 Ammo pickup.** A distinct walk-over pickup that zombies drop and that refills part of
   the ammo pool automatically (separate from the sellable "ammo box" loot item). **DONE:**
@@ -399,7 +399,7 @@ User-confirmed design calls (don't re-litigate):
   - STATUS NOTE (2026-09-29): Breach points (`BP_BreachPoint`) now have the same paid hold-E repair, but only in Morning, Day, and Dusk (the server rejects it at Night). The cost is `ceil(missing × RepairCostPerHP)`, with a default of 1.0 per instance. A broken door is aimed at through a hidden `RepairTraceVolume`. Automation: the `Test_BreachRepair_*` tests (4) PASS. The PIE check is still pending; see docs/BUGS.md — "Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE."
   - STATUS NOTE (2026-09-29, doors): Breach points are now doors (user request).
     - Tapping E (release within 0.25 s) opens or closes one in any phase via `Server_ToggleDoor`. Holding E still repairs.
-    - An open door ignores damage and zombies path through it (`IsPassable` in `BTS_ZombieBreachDecision`).
+    - An open door ignores damage and zombies path through it (`IsPassable` in `BTS_ZombieBreachDecision`). Superseded for outside zombies with an inside target: they now go to the nearest door (see N.1).
     - A breached door can't toggle, repair leaves it closed, and closing is refused while a pawn is in the doorway.
     - The HUD prompt comes from `GetAimedInteractPromptText`. Automation: `Test_Door_*` (5). The PIE check is pending. See docs/BUGS.md — "Open doors let players walk outside the store" and "Door leaf swing may clip nearby geometry."
     - Fixed along the way: `ApplyBreachDamage` re-evaluated the pure `Clamp(Health - Damage)` for its `<= 0` check after Health was already set, so damage was subtracted twice and any hit of at least half the remaining HP breached the door early. The check now reads the Set node's output.
@@ -653,6 +653,26 @@ All of this must be correct for a listen-server client, not just the host. Work 
     - Reload and weapon swap mid-burst don't desync the ammo count.
     - Shooting right next to a wall doesn't hit through it.
     - Shotgun pellets register on the client.
+
+## N. Door choice + indoor speed-up (2026-09-29, user request)
+
+Option #4 from the 2026-09-29 breach-repair design proposals ("pick which door you're fighting at"). User decisions:
+(a) zombies go to the nearest door whatever its state; (b) the only anti-kiting measure picked is "zombies speed up once inside" (not heavies-only-through-broken-doors, not runners); (c) players may walk outside through open doors (intended; see docs/BUGS.md).
+
+- [ ] **N.1 Pick which door you're fighting at.**
+  - **Nearest-door rule:** in `BTS_ZombieBreachDecision`, a zombie that is *outside* the store while its target is *inside* commits to the nearest `BP_BreachPoint` (straight-line, any state). If that door is passable it clears BreachTarget and walks through; if closed it attacks it. Re-evaluated every service tick. This supersedes the doors STATUS NOTE in K ("zombies path through open doors") for that case. Zombies already inside, or whose target is also outside, fall through to the existing path/corridor/detour logic unchanged, so D.3 flanking and the G.5 fixation fix still apply there.
+  - **Indoor speed-up:** `BP_ZombieBase.InsideStoreSpeedMultiplier` (1.3) applies while `bInsideStore` is true, via `ApplyCurrentSpeed` and the replicated MoveSpeed attribute. It reverts outside, and stacks with the Screamer buff, Elite Swift, and the Brute/Boss charge.
+  - **Inside detection:** new `/Game/Characters/AI/BP_StoreInteriorVolume` (data-only box, `ContainsLocation`), one placed in `Map_Store_Outdoors`. Maps without one behave as before.
+  - **Automation:** `Test_StoreInterior_ContainsLocation`, `Test_Zombie_InsideStoreSpeedBoost`, `Test_Zombie_InsideStateFromVolume`, `Test_Zombie_TargetsNearestDoorWhenOutside`, plus a G.5 regression check that a zombie inside the store clears BreachTarget.
+  - **STATUS NOTE (2026-09-29):** Built. All 5 tests PASS (suite 134/1, where the one failure is the known `Test_CustomerSpawnerMaxConcurrent`). The store test chain in `BP_TestController` must run `TargetsNearestDoorWhenOutside` before `Test_Zombie_RetargetsAfterTargetDies` kills the player, because `BTS_FindClosestPlayer` only targets living heroes. The `InsideStoreSpeedMultiplier` tooltip couldn't be set through Monolith. Waiting on the user PIE test below.
+  - **USER TEST (listen server, host + client, Night):**
+    - With one door open and the rest closed, a zombie spawning by a closed door attacks that door instead of detouring to the open one.
+    - Opening a door a zombie is hitting makes it walk straight through; closing or repairing a door zombies are using makes outside zombies attack it within ~0.5 s.
+    - Zombies inside are visibly faster (~1.3×) and slow back down if kited outside.
+    - On the client, fast indoor zombies move smoothly with no rubber-banding.
+    - A charging Brute or Boss indoors is fast but still dodgeable.
+    - With every player outside, zombies chase you in the parking lot as before.
+    - Scaled wall-panel breach points are also picked when they're nearest.
 
 ---
 

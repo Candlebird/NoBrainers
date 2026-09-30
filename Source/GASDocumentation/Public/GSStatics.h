@@ -4,6 +4,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GSStatics.generated.h"
 
+class UBehaviorTree;
+
 UCLASS()
 class GASDOCUMENTATION_API UGSStatics : public UBlueprintFunctionLibrary
 {
@@ -15,4 +17,8 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "GSHelpers|Utility")
 	static AActor* GetClosestActor(const TArray<AActor*>& ActorsToSearch, const AActor* SourceActor);
+
+	/** Editor-only: reparent BT node instances (Outer = editor graph node) to the UBehaviorTree asset so cooking keeps them. */
+	UFUNCTION(BlueprintCallable, Category = "Diagnostics")
+	static FString FixBehaviorTreeNodeOuters(UBehaviorTree* Tree);
 };

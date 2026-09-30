@@ -9,6 +9,15 @@
 - **Repair for old trees:** `UGSStatics::FixBehaviorTreeNodeOuters(Tree)` (Python: `unreal.GSStatics.fix_behavior_tree_node_outers`), then save. Run it after any Monolith BT edit. `BT_Zombie` was fixed this way on 2026-09-29 (found: zombies stood still in packaged builds).
 - **Status:** RESOLVED (2026-09-29). `BT_Zombie` fixed and verified in a packaged build (zombies move). The six Monolith sites now use the BT asset as Outer; a fresh Monolith-built BT reports `reparented=0`. `FixBehaviorTreeNodeOuters` is kept for repairing any older Monolith-built BT.
 
+## Customers stand at spawn and never run `BTT_FindBestShelfSlot` (RESOLVED 2026-09-30)
+
+- **Area:** `/Game/AI/Customer/BT_Customer`, "Browse Shelf" sequence (its two `ReadyToCheckout NotSet` Blackboard decorators).
+- **Repro:** PIE on `Map_Store_Outdoors`, run `Tools/dev_customer_test.py` (stocks all shelves, spawns 3 customers). Before the fix all customers sat in "Retarget Pause"; no "Slot check"/SUCCESS/FAILED prints.
+- **Actual:** Browse Shelf was skipped every time (`FailedFindAttempts` climbed through the Retarget branch only). The tree structure, BB keys, navmesh and node outers were all fine.
+- **Expected:** Customers run `BTT_FindBestShelfSlot`, walk to a shelf and take an item.
+- **Fix:** Removed the decorators from Browse Shelf and saved (the branch needs no guard: the three earlier siblings already handle every `ReadyToCheckout` Set case). Customers then found slots. Root cause of the decorator failure was not pinned down. It may have been a stale Monolith-built decorator, so treat Monolith-built decorators on this tree with suspicion.
+- **Status:** RESOLVED (2026-09-30), verified in PIE with the dev script. Needs a normal day-cycle playtest to confirm.
+
 ## Pistol deals no damage after a reload (`[SHOTDBG] REJECT noHitActor`)
 
 - **Area:** `/Game/Characters/Abilities/GA_BP_FireWeapon` (parent of `GA_BP_FirePistol`), FireShot client trace → `ProcessServerShot`.
@@ -1709,7 +1718,7 @@
 - **Repro:** Tap E on any breach-point door to open it, then walk through.
 - **Actual:** Players can leave the store. No doc says whether that's allowed, and nothing stops them.
 - **Expected:** Undecided. It's a design question: players could be allowed outside, or open doors could be zombie-only or player-blocking.
-- **Status:** Open. Flagged by the door plan. It will likely be settled by the door-choice (funneling) feature.
+- **Status:** Resolved as intended (2026-09-29). The user decided players may go outside through open doors, because it could become an interesting strategy. Revisit after playtests.
 
 ## Door leaf swing may clip nearby geometry (2026-09-29)
 

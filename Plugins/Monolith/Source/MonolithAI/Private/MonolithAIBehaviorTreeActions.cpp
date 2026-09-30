@@ -1144,7 +1144,8 @@ namespace
 		NewGraphNode->AllocateDefaultPins();
 
 		// Create the BT node instance
-		UBTNode* NewBTNode = NewObject<UBTNode>(NewGraphNode, BTNodeClass);
+		// Outer must be the UBehaviorTree asset, not the editor-only graph node, or cooking strips the instance.
+		UBTNode* NewBTNode = NewObject<UBTNode>(Ctx.BTGraph->GetOuter(), BTNodeClass);
 		NewGraphNode->NodeInstance = NewBTNode;
 
 		// Set custom name if provided
@@ -1212,7 +1213,8 @@ namespace
 				}
 
 				UBehaviorTreeGraphNode_Decorator* DecGraphNode = NewObject<UBehaviorTreeGraphNode_Decorator>(Ctx.BTGraph);
-				UBTDecorator* DecInstance = NewObject<UBTDecorator>(DecGraphNode, DecClass);
+				// Outer must be the UBehaviorTree asset, not the editor-only graph node, or cooking strips the instance.
+				UBTDecorator* DecInstance = NewObject<UBTDecorator>(Ctx.BTGraph->GetOuter(), DecClass);
 				DecGraphNode->NodeInstance = DecInstance;
 				NewGraphNode->AddSubNode(DecGraphNode, Ctx.BTGraph);
 
@@ -1253,7 +1255,8 @@ namespace
 				}
 
 				UBehaviorTreeGraphNode_Service* SvcGraphNode = NewObject<UBehaviorTreeGraphNode_Service>(Ctx.BTGraph);
-				UBTService* SvcInstance = NewObject<UBTService>(SvcGraphNode, SvcClass);
+				// Outer must be the UBehaviorTree asset, not the editor-only graph node, or cooking strips the instance.
+				UBTService* SvcInstance = NewObject<UBTService>(Ctx.BTGraph->GetOuter(), SvcClass);
 				SvcGraphNode->NodeInstance = SvcInstance;
 				NewGraphNode->AddSubNode(SvcGraphNode, Ctx.BTGraph);
 
@@ -2281,7 +2284,8 @@ FMonolithActionResult FMonolithAIBehaviorTreeActions::HandleAddBTNode(const TSha
 	NewGraphNode->AllocateDefaultPins();
 
 	// Create the BT node instance
-	UBTNode* NewBTNode = NewObject<UBTNode>(NewGraphNode, BTNodeClass);
+	// Outer must be the UBehaviorTree asset, not the editor-only graph node, or cooking strips the instance.
+	UBTNode* NewBTNode = NewObject<UBTNode>(BTGraph->GetOuter(), BTNodeClass);
 	NewGraphNode->NodeInstance = NewBTNode;
 
 	// Set a default position offset from parent so they don't stack
@@ -2508,7 +2512,8 @@ FMonolithActionResult FMonolithAIBehaviorTreeActions::HandleAddBTDecorator(const
 	UBehaviorTreeGraphNode_Decorator* DecGraphNode = NewObject<UBehaviorTreeGraphNode_Decorator>(BTGraph);
 
 	// Create the decorator instance
-	UBTDecorator* DecInstance = NewObject<UBTDecorator>(DecGraphNode, DecClass);
+	// Outer must be the UBehaviorTree asset, not the editor-only graph node, or cooking strips the instance.
+	UBTDecorator* DecInstance = NewObject<UBTDecorator>(BTGraph->GetOuter(), DecClass);
 	DecGraphNode->NodeInstance = DecInstance;
 
 	// AddSubNode handles: guid, pins, parent linkage, OnSubNodeAdded → Decorators[], UpdateAsset
@@ -2641,7 +2646,8 @@ FMonolithActionResult FMonolithAIBehaviorTreeActions::HandleAddBTService(const T
 	UBehaviorTreeGraphNode_Service* SvcGraphNode = NewObject<UBehaviorTreeGraphNode_Service>(BTGraph);
 
 	// Create the service instance
-	UBTService* SvcInstance = NewObject<UBTService>(SvcGraphNode, SvcClass);
+	// Outer must be the UBehaviorTree asset, not the editor-only graph node, or cooking strips the instance.
+	UBTService* SvcInstance = NewObject<UBTService>(BTGraph->GetOuter(), SvcClass);
 	SvcGraphNode->NodeInstance = SvcInstance;
 
 	// AddSubNode handles everything (guid, pins, parent linkage, OnSubNodeAdded → Services[], UpdateAsset)
