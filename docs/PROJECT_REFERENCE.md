@@ -166,9 +166,11 @@ all under `Content/GASDocumentation/Characters/Hero/Abilities/<AbilityName>/`:
   `AGDHeroCharacter::BindASCInput()` still exist but are inert with no
   matching Action Mapping. Note that an editor started before an ini change
   keeps the old mappings in memory until restarted.
-- `Content/Interactable/BP_DiscountKiosk` — the purchase kiosks (Weapon /
-  Upgrades / Advertising, via `WBP_KioskCatalog` + `DT_KioskCatalog`). The
-  legacy GASDocumentation `BP_ShopStation_Base` was deleted 2026-09-25.
+- `Content/Interactable/BP_DiscountKiosk` — the purchase kiosks (Upgrades /
+  Advertising, via `WBP_KioskCatalog` + `DT_KioskCatalog`). Since Phase 10
+  (2026-09-30), the instance with KioskCategory "Weapons" opens the daily
+  tiered weapon shop (`WBP_WeaponShop`, backed by `BP_WeaponShopComponent` on
+  the GameState) instead of the catalog. The legacy GASDocumentation `BP_ShopStation_Base` was deleted 2026-09-25.
 
 ## Maps
 

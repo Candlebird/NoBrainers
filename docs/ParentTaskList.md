@@ -6,6 +6,14 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-09-30, Phase 10): Phase 10 (Weapon Tiers & Daily Weapon Shop) is active.** See `docs/PHASE_10_TASKLIST.md`. Weapons now use the 5 loot tiers:
+- Stats are ×0.9 to ×1.3: damage, fire rate, magazine and reload for guns; damage and swing speed for melee.
+- Weapons show a HUD tier label and a replicated tier glow.
+- Zombies and elites drop tiered weapons, and the boss always drops one.
+- The Weapons kiosk now opens a shared daily shop: 4 tiered weapons rolled each Morning, doubling paid rerolls, and meta-shop weapon unlocks.
+
+Phases 8 and 9 are built and committed locally; their PIE testing is still outstanding.
+
 **UPDATE (2026-09-30, later): Phase 9 (Tiered Meta Progression) is built and waiting on PIE testing.** See `docs/PHASE_9_TASKLIST.md`. Ten per-player tracks now have 9 tiers each at ×1.5 price per tier:
 - Deep Pockets: 6 → 18 slots.
 - Health, stamina, both regens and armor: +5% per tier.
@@ -121,6 +129,7 @@ that can go stale (as it just did).**
 | 7 | Zombie Variety, Combat Depth & Balance | Distinct zombie types with full animation sets, horde surges/flanking, weapon fixes and feel, and an economy/balance pass to stop kiting from being dominant. |
 | 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Built 2026-09-30, needs PIE testing. |
 | 9 | Tiered Meta Progression | 9-tier per-player meta perk tracks (Deep Pockets slots, health/stamina/regen/armor, fire rate, weapon/melee damage, reload speed) with ×1.5 per-tier pricing. Built 2026-09-30, needs PIE testing. |
+| 10 | Weapon Tiers & Daily Weapon Shop | Weapons use the loot tiers (Junk ×0.9 to Treasure ×1.3 stats, HUD label, glow), tiered weapon drops, and a shared daily weapon shop: 1 primary, 2 secondary and 1 melee rolled each Morning from the players' meta weapon unlocks, with doubling paid rerolls. Active 2026-09-30. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's

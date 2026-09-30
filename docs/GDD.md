@@ -30,13 +30,13 @@ No Brainers is our first dip into the multiplayer genre. It's a test of how well
 A four-phase, time-based day/night cycle (updated 2026-09-24 — user-confirmed; previously wave-based, ending Night on a zombie-kill count rather than a timer):
 - **Night:** Zombies spawn continuously at random intervals from outside the store for the phase's full duration. Players fight to survive using weapons and placed defenses (turrets, spike traps, etc.) inside the store, and collect item drops from kills. Night ends on its timer regardless of how many zombies are still alive — surviving zombies are never forcibly despawned and can carry over into later phases.
 - **Morning:** A quiet buffer phase. Neither zombies nor customers spawn; players can regroup and build. Surviving defenses are automatically restored to full health at the start of Day; destroyed defenses must be rebought. (Updated 2026-09-26: players can also pay to repair a damaged defense in any phase, at a cost proportional to missing health, and dismantle one for a 50% refund. Updated 2026-09-29: breach points (doors/walls) can also be paid-repaired the same way, but only in Morning, Day, and Dusk, never at Night. Breach points are real doors: any player can tap Interact to open or close one in any phase, while holding Interact repairs it. An open door can't be damaged and lets zombies walk straight through; a broken door can't be closed until it's repaired, and repairing always leaves it closed.)
-- **Day:** Customers come and shop for stocked items, generating money; players place looted items on shelves to stock the store.
+- **Day:** Customers come and shop for stocked items, generating money; players place looted items on shelves to stock the store. (Updated 2026-09-30: the weapon kiosk sells a shared daily stock of 4 tiered weapons, rolled each Morning. It's open in Morning, Day and Dusk and closed at Night, and paid rerolls double in cost.)
 - **Dusk:** Customers stop spawning as the store closes; zombies still don't spawn. Another buffer for last-minute building/repair before Night returns.
 
 The cycle repeats Night → Morning → Day → Dusk → Night indefinitely. Because zombies can persist across phases, defeat (all players dead) can now trigger in any phase, not just Night.
 
 **Core Loop:**
-Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy weapons/ammo/defenses with employee discount -> Repeat
+Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy tiered weapons from the daily weapon shop, and ammo/defenses with employee discount -> Repeat
 
 ## 3. Progression
 
@@ -50,6 +50,26 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
 - All tracks are per-player: they affect only the buyer's own character.
 - QuickFeet (move speed) and Scavenger (loot luck) stay single unlocks.
 - The 5%-per-tier rule replaces the earlier single-unlock magnitudes. Detail is in `docs/PHASE_9_TASKLIST.md`.
+
+**Weapon tiers and daily weapon shop (user decision, 2026-09-30):** Weapons use the same 5 rarity tiers as loot drops.
+- **Tier multipliers:** Junk ×0.9, Common ×1.0, Uncommon ×1.1, Rare ×1.2, Treasure ×1.3.
+  - Guns: the multiplier applies to damage, fire rate, magazine size and reload speed. Magazine size rounds to the nearest whole number, gains at least +1 per tier above Common, and loses at least 1 at Junk.
+  - Melee: the multiplier applies to damage and swing speed.
+  - Tier multipliers stack (multiply) with the meta perk multipliers.
+- **Showing the tier:** the held weapon shows a HUD tier label and a tier-colored glow that teammates can see.
+- **Sources:**
+  - The starting loadout is Common.
+  - Zombie weapon drops roll a tier on the loot curve. They are rare and come mostly from elites; the boss always drops one.
+  - A replaced weapon drops on the floor, keeping its tier.
+- **Keeping weapons:** death keeps your weapons. A new run resets them, consistent with "gear resets each run". A mid-run save stores equipment tiers and the shop state.
+- **Weapon shop:**
+  - Every Morning it rolls 4 weapons: 1 primary, 2 secondary and 1 melee, with no duplicates. If a slot type has nothing available, the slot is filled from another type.
+  - Tiers come from the night loot curve for the current day.
+  - Stock is shared and first come first served, paid from shared StoreCash.
+  - Price = DT_Weapons.Price × 0.75 for Junk, and × 1.5 per tier above Common. The employee discount no longer applies to weapons; it still applies to kiosk defenses and marketing.
+  - Paid reroll: $50, doubling each use and resetting each Morning.
+- **Weapon unlocks:** weapons are one-time meta-shop unlocks. The shop draws from the union of all connected players' unlocks. The defaults are Pistol, Rifle, Magnum and Bat: the starter plus the cheapest weapon of each type.
+- Detail is in `docs/PHASE_10_TASKLIST.md`.
 
 ## 4. Enemies
 

@@ -1819,3 +1819,51 @@
 - **Actual:** It saves an empty list and capacity 12, a literal in the graph, not read from the `BP_DepositBox` default.
 - **Expected:** Works as-is. The 12 would drift if the box default ever changes.
 - **Status:** Open, cosmetic. Update both if the default capacity changes.
+
+## Re-picking a dropped weapon refills its magazine (Phase 10)
+
+- **Area:** `BP_EquipmentComponent.DropSlotAsPickup` / `BP_ItemPickup` (`docs/PHASE_10_TASKLIST.md` T15)
+- **Repro:** Fire some rounds from a gun, equip a different weapon of the same type so the first one drops, then pick the first one back up.
+- **Actual:** The pickup keeps the ItemID and tier but not the magazine count, so the weapon comes back with a full magazine.
+- **Expected:** Arguably, the magazine count should be kept. It's minor, because swapping costs time and the reserve ammo is shared.
+- **Status:** Known limitation.
+
+## Dropped weapons don't carry reserve ammo (Phase 10)
+
+- **Area:** `BP_EquipmentComponent.DropSlotAsPickup` (`docs/PHASE_10_TASKLIST.md` T15)
+- **Repro:** Drop a weapon by equipping over it, and have another player pick it up.
+- **Actual:** Only the weapon and its tier transfer. Reserve ammo stays with the ammo pool of the player who dropped it.
+- **Expected:** Matches the current per-player ammo pool design, so no change is planned.
+- **Status:** Known limitation.
+
+## Zombie weapon drops ignore elite/pity tier shifts (Phase 10)
+
+- **Area:** `BP_ZombieBase.Server_TryDropWeapon` (`docs/PHASE_10_TASKLIST.md` T22)
+- **Repro:** Kill elites and the boss, and compare the tiers of their weapon drops with normal item drops.
+- **Actual:** The weapon's tier rolls on the plain night curve for the current day. The elite and pity tier shifts that item loot uses don't apply, so an elite's weapon isn't more likely to be high-tier.
+- **Expected:** Matches the chosen design ("plain night curve only"). Revisit if boss drops feel unrewarding.
+- **Status:** Known limitation.
+
+## Weapon shop purchases after the Day save are lost on quit (Phase 10)
+
+- **Area:** `BP_GameInstance_NoBrainers.GatherSessionState` / the session save points (`docs/PHASE_10_TASKLIST.md` T19–T21)
+- **Repro:** Buy a weapon or reroll during Day or Dusk, after the Day autosave, then have the host quit and reload.
+- **Actual:** The shop state and the buyer's equipment reload as they were at the last save point. The SOLD flag, the reroll count, the new weapon and the cash deduction are all undone.
+- **Expected:** Consistent with all other mid-phase changes, since the session only saves at phase save points.
+- **Status:** Known limitation.
+
+## Weapon shop charges even if the equip fails (Phase 10)
+
+- **Area:** `/Game/Core/Shop/BP_WeaponShopComponent.TryPurchaseSlot` (`docs/PHASE_10_TASKLIST.md` T18)
+- **Repro:** Buy a weapon when `EquipWeaponWithTier` would fail. One example is a buyer pawn with no valid equipment component.
+- **Actual:** StoreCash is deducted and the slot is marked SOLD before the equip runs. The equip's `bSuccess` is ignored, so the buyer pays and gets nothing.
+- **Expected:** Either equip first and charge only on success, or refund and unmark the slot on failure.
+- **Status:** Open. Low risk, because the checks before the equip make failure unlikely in normal play.
+
+## Closing the deposit box doesn't remove its mapping context (pre-existing)
+
+- **Area:** `BP_PlayerController_ZombieStore.CloseDepositBoxUI`
+- **Repro:** Inspect the graph. The RemoveMappingContext node's MappingContext pin is unset.
+- **Actual:** The call is a no-op. Found during Phase 10 T24.
+- **Expected:** It removes the context that OpenDepositBoxUI added, or the node is deleted if no context is needed.
+- **Status:** Open. Minor.
