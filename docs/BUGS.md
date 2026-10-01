@@ -9,7 +9,7 @@
   - At t=8 s, a heal with the same GE also leaves the hero dead.
   - Earlier runs read health while concurrent tests were damaging and healing the hero, with live-AI zombies nearby.
 - **Expected:** An isolated, living hero. The test passes when V1==V2 (no damage while dodged) and V4<V3 (damage while standing still).
-- **Status:** Open. The test is test-side; it was retried twice and the architect's replacement packet also failed.
+- **Status:** RESOLVED 2026-10-01 by the per-suite test split (see the update at the end of this entry). Originally a test-side issue: it was retried twice and the architect's replacement packet also failed.
   - **Fix options:**
     - Have the test respawn or revive the hero with the game's real respawn path. This must clear the death state, not just restore health.
     - Or run the apex test on a dedicated spawned dummy target that the zombie can hit.
@@ -88,7 +88,7 @@
 - **Repro:** Fire any gun.
 - **Actual:** K2 made the flash a short, bright yellow burst (7 sprites, 0.07 s), but the sprites don't move, so it may read as a static blob.
 - **Expected:** A small omnidirectional pop. Add an AddVelocity or cone velocity module if playtesting shows it looks flat.
-- **Status:** Open (optional polish). Scheduled: Phase 12 A3.
+- **Status:** Fixed in Phase 12 A3 (velocity added to the flash sprites); needs a look in PIE.
 
 
 ## Old `ZombieTest` walk/idle clips are corrupt; `SK_Zombie` has no physics asset
@@ -382,8 +382,7 @@
 - **Actual:** The 12 perk rows and the weapon-unlock rows show a plain white 48x48 square. Only
   the trap-unlock rows (Barricade, Slow Strip, Gas Trap, Turret) show real icons.
 - **Expected:** Every row shows an icon, or the image is collapsed when no texture is set.
-- **Status:** Open, cosmetic. No icon textures exist yet for perks/weapons; the image brush
-  draws white when its texture is null. Scheduled: Phase 12 A3.
+- **Status:** Fixed in Phase 12 A3 (rows without a texture no longer draw a white square); needs a look in PIE. Real perk/weapon icon art is still to come.
 
 ## `ui.set_widget_property` writes zeros for color strings
 
@@ -1638,7 +1637,7 @@
 - **Repro:** Kill a Bloater, or let it explode, near a player.
 - **Actual:** the blast deals damage and plays `SFX_BloaterPop`, but it has no VFX and `GE_BloaterBlast` has no GameplayCue. Nobody can see the blast radius, host or client.
 - **Expected:** a visible burst (a GameplayCue or a multicast Niagara effect) that every player sees.
-- **Status:** open. This is a design/content gap, not a replication bug.
+- **Status:** Fixed 2026-10-01. New `/Game/VFX/NS_BloaterBlast` (a green ring sized to the 400 uu radius, goo blobs and fading mist, 1.5 s). Explode calls a new NetMulticast `Multicast_BloaterBlastFX` right after the pop sound. Needs PIE: host and client both see the burst.
 
 
 ## Multiplayer audit: low-risk hardening items
@@ -1770,7 +1769,7 @@
 - **Repro:** Run the automation test bed several times in one editor session.
 - **Actual:** It FAILED once (05:47:24) and PASSED in the 4 other runs that night. No code touching the Brute changed between those runs.
 - **Expected:** A consistent PASS.
-- **Status:** Open, low priority. The likely cause is timing or test-order sensitivity in an async movement check. Not investigated.
+- **Status:** Resolved 2026-10-01. See "Flaky tests: `Test_Brute_ChargeUsesCharacterMovement` and `Test_Zombie_TargetsNearestDoorWhenOutside`".
 
 ## Orphaned nodes in GASDocumentation sample abilities GA_AimDownSight_BP and GA_Meteor_BP (2026-09-29)
 
@@ -1853,7 +1852,7 @@
 - **Repro:** As a client, look at a Junk drop.
 - **Actual (expected from code):** Junk is enum value 0, the same as the default, so `OnRep_LootTier` never fires on clients. The light keeps its default color and there's no overlay.
 - **Expected:** No glow on Junk, on host or client (GDD §3: only Common and above glow).
-- **Status:** Open, needs a PIE check. Fix: call `ApplyTierVisuals` from `BeginPlay` on clients too. Scheduled: Phase 12 A3.
+- **Status:** Fixed in Phase 12 A3 (`ApplyTierVisuals` now also runs on clients at BeginPlay); needs a client PIE check.
 
 ## Flaky tests: `Test_Brute_ChargeUsesCharacterMovement` and `Test_Zombie_TargetsNearestDoorWhenOutside`
 
@@ -1861,7 +1860,7 @@
 - **Repro:** Run the full test bed several times in a row.
 - **Actual:** Each test fails in some runs and passes in others, with no asset changes between runs. Brute run on 2026-09-30 07:14: `[AUTOTEST-DIAG] phase1` sampled movement mode 5 with velocity 0 while `bCharging=true`, even though the Brute had moved ~330 units. It passed at 06:47 and 07:03.
 - **Expected:** A stable pass.
-- **Status:** Open. Probably a timing or sampling race in the test, not a gameplay bug. The Brute test probably needs to sample velocity on a tick while charging, not at a fixed delay.
+- **Status:** Resolved 2026-10-01. Both were test-side races on a single fixed-delay sample: the Brute's velocity was read once at 0.3 s, and the zombie's BreachTarget once at 1.0 s. Both now poll (every 0.1 s and 0.25 s) until the condition holds, timing out after about 3 s. The Zombie suite passed 24/24 in two back-to-back runs. The poll counters (`AsyncBruteChargeTest_Polls`, `AsyncStore_Polls`) aren't reset per run, which is fine for one run per PIE session.
 
 ## `GatherSessionState` hardcodes the deposit box capacity fallback (Phase 8)
 
@@ -1909,7 +1908,7 @@
 - **Repro:** Buy a weapon when `EquipWeaponWithTier` would fail. One example is a buyer pawn with no valid equipment component.
 - **Actual:** StoreCash is deducted and the slot is marked SOLD before the equip runs. The equip's `bSuccess` is ignored, so the buyer pays and gets nothing.
 - **Expected:** Either equip first and charge only on success, or refund and unmark the slot on failure.
-- **Status:** Open. Low risk, because the checks before the equip make failure unlikely in normal play. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Fixed 2026-10-01. `Server_DeductCash` stays the affordability gate. The slot is marked SOLD only after `EquipWeaponWithTier` succeeds; on failure the price is refunded with `Server_AddCash` and the slot stays unsold. Needs a PIE purchase check.
 
 ## Closing the deposit box doesn't remove its mapping context (pre-existing)
 
@@ -1917,7 +1916,7 @@
 - **Repro:** Inspect the graph. The RemoveMappingContext node's MappingContext pin is unset.
 - **Actual:** The call is a no-op. Found during Phase 10 T24.
 - **Expected:** It removes the context that OpenDepositBoxUI added, or the node is deleted if no context is needed.
-- **Status:** Open. Minor.
+- **Status:** Fixed 2026-10-01. The RemoveMappingContext pin is now set to `IMC_Inventory`, the same context OpenDepositBoxUI adds. Needs PIE: open and close the box with Tab, Esc and E, then check that movement, shooting and the inventory keys behave normally.
 
 ## Trap upgrades and blueprint purchases after the last save are lost on quit (Phase 11)
 
@@ -1989,7 +1988,7 @@
 - **Repro:** Inspect the graphs.
 - **Actual:** The RepairSellBox removal (T18) and the trap panel routing (T20) left these unused.
 - **Expected:** Removed in a cleanup pass.
-- **Status:** Open. Cleanup only, with no gameplay effect.
+- **Status:** Resolved 2026-10-01. `TrackedSocket` turned out not to be dead: `RebuildMenu` reads it, so it stays. The PC's `IfThenElse_18` → RepairHold branch was provably unreachable, because `GetAimedDamagedDefense` returns a subset of what `GetAimedPlacedDefense` already catches one branch earlier. Its 11 nodes were removed and `IfThenElse_28.else` now goes straight to the door-toggle set. The breach-point hold-E repair path is untouched. Possible follow-up: `CompleteRepairHold`'s defense branch, `GetAimedDamagedDefense` and the `RepairHold*` variables may now be unused, but they weren't reference-checked, so they were left in place. Needs PIE: tap E on a trap opens its panel, hold E repairs a breach point, tap E toggles a door.
 
 ## Placed traps show no E prompt and can't be upgraded (Phase 11)
 
@@ -2081,7 +2080,7 @@
 - **Repro:** Spawn the Final Boss in PIE and compare it with the Swamp boss.
 - **Actual:** `M_Zombie_PBR` exposes only `EmissiveStrength` and texture parameters, with no color or tint vectors. So the instance only raises EmissiveStrength to 3, and the vein color still comes from `T_Zombie_Swamp_Emissive`. Both Niagara systems borrow `M_VFX_GooBlob` for their sprites and have not been viewed.
 - **Expected:** The body is about 40% darker, with red glowing veins (1.0, 0.1, 0.05) × 3. The aura and burst read as red mist and a red shockwave.
-- **Status:** Open. Fix: add `BaseColorTint` and `EmissiveTint` vector parameters to `M_Zombie_PBR` (default white, so other zombies are unchanged), or make a boss master material. Then set the overrides on the instance. Check the VFX look in PIE.
+- **Status:** Material fixed 2026-10-01. `M_Zombie_PBR` has `BaseColorTint`/`EmissiveTint` vector parameters (default white); `MI_Zombie_FinalBoss` overrides them to (0.6,0.6,0.6) and (1.0,0.1,0.05) with EmissiveStrength 3. Still open: check the body tint and the aura/burst VFX look in PIE.
 
 ## Endless boss charge damage doesn't ramp (Phase 12, known limitation)
 
@@ -2089,7 +2088,7 @@
 - **Repro:** Continue into Endless and compare a boss charge hit on endless night 1 and night 5.
 - **Actual:** InitBoss scales boss health (×`EndlessBossHealthBase`^N, 1.15) and `SlamDamage` (×`EndlessBossDamageBase`^N, 1.12). The Brute-inherited `ChargeDamage` (40) and `ChargeBreachDamage` (100) stay flat.
 - **Expected:** Every boss damage source ramps the same way, so bosses eventually outpace player growth.
-- **Status:** Open, low priority. Fix: cache and scale both variables in InitBoss the same way as `BaseBossDamage`/`SlamDamage`. Also unverified: that `BP_ZombieBase.ServerInitZombie` reads `TypeMaxHealth` after InitBoss sets it. Check boss current health equals max on an endless night in PIE.
+- **Status:** Fixed 2026-10-01. InitBoss caches `BaseChargeDamage`/`BaseChargeBreachDamage` once and scales both by the same `ComputeEndlessBossScale` result as `SlamDamage`. Still unverified: `ServerInitZombie` does read `TypeMaxHealth`, but the call order relative to InitBoss (set by the spawner) wasn't traced. Check boss current health equals max on an endless night in PIE.
 
 ## Per-player run stats are restored by player index (Phase 12, known limitation)
 
