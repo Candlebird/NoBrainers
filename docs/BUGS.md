@@ -1996,6 +1996,7 @@
 - **Actual:** Item cells are tiny and their names overlap each other. Panels don't fit their contents (the stock UI is mostly empty space, and the inventory's item row overflows its cells).
 - **Expected:** Cells with a minimum size, names that fit, and panels sized to their contents.
 - **Status:** Fixed (2026-09-30), needs PIE confirmation. `WBP_DepositEntry` (240×60) and `WBP_InventorySlot` (170×64) use fixed-size SizeBoxes. `WBP_DepositBox` and `WBP_Inventory` are centered dark panels with minimum sizes and scroll areas.
+- **Follow-up (2026-09-30, user PIE: partial pass):** the centered `WBP_Inventory` panel broke shelf stocking, because it overlapped `WBP_ShelfPanel`. `WBP_Inventory` is reverted to its pre-87e57a7 left-half panel, and only the slot fix (`WBP_InventorySlot` 170×64) is kept. `WBP_DepositBox` is restyled to copy the shelf-stocking layout: the backpack on the left half and the Stockroom box on the right half, each with an X button. Both need PIE confirmation.
 
 ## TrySpendMetaCurrency can return false after a successful spend (fixed 2026-09-30)
 
