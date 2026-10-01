@@ -26,12 +26,12 @@
   - **Purchase order:** validate, then afford, then grant, then deduct. A failed deduct rolls back the grant through `Server_RevokeBlueprint`.
 - **Terminal:** the `BP_DiscountKiosk` instance with `KioskCategory = "Defense"` opens the blueprint shop. Blueprint rows are removed from `DT_KioskCatalog`.
 - **Trap tiers:**
-  - Each placed trap has an `E_LootTier`, starting at Common. Upgrades go Common → Uncommon → Rare → Treasure at ×1.0 / ×1.25 / ×1.5 / ×1.75.
-  - An upgrade costs `Cost × 1.5^(new tier − Common)`. For Spike that's 90, 135 and 203.
+  - Each placed trap has an `E_LootTier`, starting at Junk (Junk-start follow-up). Upgrades go Junk → Common → Uncommon → Rare → Treasure at ×1.0 / ×1.25 / ×1.5 / ×1.75 / ×2.0.
+  - An upgrade costs `Cost × 1.5^(new tier − Common)`, so Junk→Common costs the trap's price. For Spike that's 60, 90, 135, 203.
   - The multiplier scales damage and effect, max health (Health rises by the same amount), attack rate, and range: pulse radius, turret detection sphere, and trap trigger volumes.
   - Stats that don't apply are skipped, so the Barricade gets health only.
-  - The slow is `1 − 0.5 × mult` through the new `GE_TrapSlow`.
-  - The tier replicates. Uncommon and above get a tier-colored `M_LootTierOverlay` glow.
+  - The slow goes through the new `GE_TrapSlow` at `SlowPercent = 90 − 40 × (2 − mult)²`: Junk 50, Common 67.5, Uncommon 80, Rare 87.5, Treasure 90%. It's diminishing and capped at 90% (user decision).
+  - The tier replicates. Common and above get a tier-colored `M_LootTierOverlay` glow; Junk has none.
 - **Selling:** refunds 50% of the total spent (placement plus upgrades). Selling or losing the trap loses the upgrade.
 - **Trap panel:**
   - Outside Build Mode, pressing E while aiming at a placed trap opens `WBP_TrapPanel`.
@@ -106,6 +106,8 @@
 
 ## Status notes
 
+- **Junk-start follow-up (2026-09-30):** traps and weapons now start at Junk. The trap ladder shifted down to ×1.0–×2.0 with a Junk→Common upgrade step, the six trap CDOs default to Junk, the SlowStrip formula changed (above), and the trap tests were updated to match.
+- See docs/BUGS.md — "SlowStrip slow curve: Treasure slows zombies to 10% speed; watch balance (Phase 11)."
 - See docs/BUGS.md — "Trap upgrades and blueprint purchases after the last save are lost on quit (Phase 11)."
 - See docs/BUGS.md — "Blueprint shop reroll availability doesn't refresh when a player with new meta unlocks joins mid-day (Phase 11)."
 - See docs/BUGS.md — "Saved traps are matched to sockets by actor name; renamed sockets drop old saved traps (Phase 11)."
@@ -130,7 +132,7 @@
    - You can place in Morning, Day and Dusk. Unowned entries are locked.
 4. **Trap panel:**
    - Outside Build Mode, E on a placed trap opens it, showing the name, the tier color, the health bar and the current → next stats. Check that the panel background isn't transparent.
-   - Upgrading raises the glow color for both players, raises MaxHealth and Health by the same amount, and charges the right amount (Spike: 90 / 135 / 203).
+   - Upgrading raises the glow color for both players, raises MaxHealth and Health by the same amount, and charges the right amount (Spike: 60 / 90 / 135 / 203). A fresh Junk trap has no glow.
    - Repair works at Night. Upgrade and Sell are disabled at Night.
    - Sell refunds half of everything spent on that trap.
    - It closes on Tab, Esc and E, and closes by itself if the trap is destroyed.

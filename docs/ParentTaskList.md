@@ -9,7 +9,7 @@ active before opening a phase file — don't guess from git history or Content/ 
 **UPDATE (2026-09-30, Phase 11): Phase 11 (Trap Unlocks, Daily Blueprint Shop & Trap Upgrades) is active.** See `docs/PHASE_11_TASKLIST.md`.
 - Traps beyond Spike and Swinging are now meta-shop unlocks.
 - In a run, the team buys trap blueprints from a shared 3-card daily shop at the Defense kiosk.
-- Placed traps upgrade Common → Treasure (×1.0 to ×1.75), with a tier glow.
+- Placed traps start at Junk and upgrade Junk → Treasure (×1.0 to ×2.0), with a tier glow from Common up. Weapons also start at Junk (Junk-start follow-up, 2026-09-30).
 - Outside Build Mode, pressing E on a trap opens one panel for upgrade, repair and sell.
 - In Build Mode, LMB places and RMB exits.
 - Built unattended, so PIE testing is outstanding. Start with that file's "PIE test checklist".
@@ -140,7 +140,7 @@ that can go stale (as it just did).**
 | 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Built 2026-09-30, needs PIE testing. |
 | 9 | Tiered Meta Progression | 9-tier per-player meta perk tracks (Deep Pockets slots, health/stamina/regen/armor, fire rate, weapon/melee damage, reload speed) with ×1.5 per-tier pricing. Built 2026-09-30, needs PIE testing. |
 | 10 | Weapon Tiers & Daily Weapon Shop | Weapons use the loot tiers (Junk ×0.9 to Treasure ×1.3 stats, HUD label, glow), tiered weapon drops, and a shared daily weapon shop: 1 primary, 2 secondary and 1 melee rolled each Morning from the players' meta weapon unlocks, with doubling paid rerolls. Built 2026-09-30, needs PIE testing. |
-| 11 | Trap Unlocks, Daily Blueprint Shop & Trap Upgrades | Meta-shop trap unlocks, a shared 3-card daily blueprint shop for in-run ownership, per-trap tier upgrades (×1.0 to ×1.75, glow), an E trap panel for upgrade, repair and sell, and LMB-place / RMB-exit in Build Mode. Active 2026-09-30. |
+| 11 | Trap Unlocks, Daily Blueprint Shop & Trap Upgrades | Meta-shop trap unlocks, a shared 3-card daily blueprint shop for in-run ownership, per-trap tier upgrades (Junk → Treasure, ×1.0 to ×2.0, glow), an E trap panel for upgrade, repair and sell, and LMB-place / RMB-exit in Build Mode. Active 2026-09-30. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's

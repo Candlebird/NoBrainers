@@ -16,14 +16,14 @@
 - **Magazine size** is `round(Base × mult)`, with at least +1 per tier above Common and at least −1 at Junk. It never drops below 1, and melee (magazine ≤ 0) is unchanged.
 - **Showing the tier:** the HUD shows a tier label for the held weapon. The held weapon also has a tier-colored overlay glow, driven by the replicated equipment slots, so teammates see it too.
 - **Sources:**
-  - The starting loadout is Common.
+  - The starting loadout is Junk (Junk-start follow-up, 2026-09-30).
   - Zombie weapon drops are rare: 1% for normal zombies and 20% for elites. The boss drops one 100% of the time. The tier rolls on the night loot curve for the current day.
   - Equipping over an occupied slot drops the old weapon on the floor, keeping its tier.
 - **Ownership:** weapons are kept on death and respawn. A new run resets them. The mid-run save stores equipment tiers and the shop state.
 - **Weapon shop:**
   - It rolls every Morning: 1 primary, 2 secondary and 1 melee, with no duplicate weapons. If a type has no candidates, the slot is filled from another type.
   - The pool is the union of all connected players' meta weapon unlocks. The defaults are Pistol, Rifle, Magnum and Bat.
-  - Each slot's tier rolls on the plain night curve for `CurrentDayNumber`.
+  - Each slot's tier rolls on `DT_WeaponShopTierCurve` for `CurrentDayNumber` (via `BFL_LootMath.GetWeaponShopCurveRow`; Junk-start follow-up, 2026-09-30).
   - Price = `DT_Weapons.Price × 0.75` at Junk, and `× 1.5^(tier − Common)` at Common and above. The employee discount doesn't apply to weapons.
   - Purchases are paid from the shared StoreCash. Stock is shared and first come first served, and a sold slot shows SOLD.
   - It's open in Morning, Day and Dusk, and closed at Night.
@@ -98,6 +98,8 @@
 
 ## Status notes
 
+- **Junk-start follow-up (2026-09-30):** the starting pistol is now Junk (`GrantStartingLoadoutIfEmpty` calls `EquipWeaponWithTier(Pistol, Junk)`), and the weapon shop rolls tiers on its own curve, `DT_WeaponShopTierCurve` via `BFL_LootMath.GetWeaponShopCurveRow(CurrentDayNumber)`. Day 1 is 80% Junk / 20% Common. Zombie drops keep the night curve.
+
 - See docs/BUGS.md — "Re-picking a dropped weapon refills its magazine (Phase 10)."
 - See docs/BUGS.md — "Dropped weapons don't carry reserve ammo (Phase 10)."
 - See docs/BUGS.md — "Zombie weapon drops ignore elite/pity tier shifts (Phase 10)."
@@ -107,7 +109,7 @@
 ## PIE test checklist
 
 1. **Tiers on held weapons:**
-   - The starting pistol shows "Common" on the HUD, with no glow or a Common-colored glow.
+   - The starting pistol shows "Junk" on the HUD with the Junk glow, and does slightly less damage (×0.9).
    - Pick up a Rare or Treasure weapon. The HUD label and the glow color change, and a second player sees the same glow.
    - A higher tier does more damage, fires faster, reloads faster and has a bigger magazine: a Rare pistol has 8 rounds instead of 6.
    - A Junk weapon is weaker and has 1 fewer round.
@@ -128,9 +130,9 @@
    - Can't afford: the button is disabled and no cash is taken.
 5. **Reroll:** the first reroll costs $50, then $100 and $200. The cost resets to $50 the next Morning, and every Morning gives a fresh stock.
 6. **Phases:** the shop can be used in Morning, Day and Dusk. At Night it shows Closed and purchases fail.
-7. **Tier progression:** stock tiers trend upward on later days (for example, day 1 vs day 8 or later).
+7. **Tier progression:** the day 1 shop shows only Junk and Common, mostly Junk. Uncommon starts appearing a few days in, and stock tiers trend upward on later days (for example, day 1 vs day 8 or later).
 8. **Pool:** unlock a new weapon in the meta shop. It can then appear in the stock, and with 2 players the pool is the union of both players' unlocks.
 9. **Respawn and save:**
    - Die at Night. After respawning in Morning you still hold the same weapons and tiers.
    - Save and quit mid-run, then load. Equipment tiers, the shop stock (including SOLD slots) and the reroll cost are restored.
-   - Start a new run: back to a Common starter pistol only.
+   - Start a new run: back to a Junk starter pistol only.

@@ -58,13 +58,13 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
   - Tier multipliers stack (multiply) with the meta perk multipliers.
 - **Showing the tier:** the held weapon shows a HUD tier label and a tier-colored glow that teammates can see.
 - **Sources:**
-  - The starting loadout is Common.
+  - The starting loadout is Junk (updated 2026-09-30: everything starts at Junk).
   - Zombie weapon drops roll a tier on the loot curve. They are rare and come mostly from elites; the boss always drops one.
   - A replaced weapon drops on the floor, keeping its tier.
 - **Keeping weapons:** death keeps your weapons. A new run resets them, consistent with "gear resets each run". A mid-run save stores equipment tiers and the shop state.
 - **Weapon shop:**
   - Every Morning it rolls 4 weapons: 1 primary, 2 secondary and 1 melee, with no duplicates. If a slot type has nothing available, the slot is filled from another type.
-  - Tiers come from the night loot curve for the current day.
+  - Tiers come from a dedicated weapon-shop curve for the current day (`DT_WeaponShopTierCurve`): day 1 is 80% Junk / 20% Common, rising toward Uncommon and Rare by day 10. Zombie weapon drops keep the night loot curve.
   - Stock is shared and first come first served, paid from shared StoreCash.
   - Price = DT_Weapons.Price × 0.75 for Junk, and × 1.5 per tier above Common. The employee discount no longer applies to weapons; it still applies to trap blueprints and marketing. For blueprints it's baked into `BlueprintPrice` (updated 2026-09-30).
   - Paid reroll: $50, doubling each use and resetting each Morning.
@@ -80,8 +80,10 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
   - Paid reroll: $50, doubling each use and resetting each Morning.
   - It's closed at Night.
 - **Trap tiers:**
-  - Each placed trap starts at Common and can be upgraded to Uncommon, Rare and Treasure (×1.0 / ×1.25 / ×1.5 / ×1.75).
-  - An upgrade costs `Cost × 1.5^(new tier − Common)`.
+  - Each placed trap starts at Junk and can be upgraded to Common, Uncommon, Rare and Treasure (×1.0 / ×1.25 / ×1.5 / ×1.75 / ×2.0). (Updated 2026-09-30: everything starts at Junk.)
+  - An upgrade costs `Cost × 1.5^(new tier − Common)`, so Junk→Common costs the trap's price. A Spike (60) upgrades for 60, 90, 135, then 203.
+  - SlowStrip slow is diminishing, capped at 90%: `SlowPercent = 90 − 40 × (2 − mult)²` (Junk 50, Common 67.5, Uncommon 80, Rare 87.5, Treasure 90).
+  - Only Common and above glow; Junk has no glow.
   - The multiplier scales damage and effect, health, attack rate, and range or area, wherever each applies.
   - The tier shows as a colored glow, and selling or losing the trap loses it.
 - **Selling:** refunds 50% of everything spent on the trap.

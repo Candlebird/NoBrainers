@@ -1900,11 +1900,19 @@
 - **Expected:** By design: trap management lives in one panel.
 - **Status:** Known limitation (by design).
 
-## Treasure SlowStrip slows zombies to 12.5% speed; watch balance (Phase 11)
+## Mid-run saves from before the Junk-start change load traps at Common ×1.25 (Phase 11)
 
-- **Area:** `BP_DefenseBase.ApplyTrapHit` / `GE_TrapSlow` (SlowMultiplier = 1 − 0.5 × tier mult)
-- **Repro:** Upgrade a SlowStrip to Treasure (×1.75).
-- **Actual:** Zombies on it move at 12.5% speed (a 50% slow at Common).
+- **Area:** `BP_GameState_ZombieStore.RestorePlacedDefenses` / `BP_DefenseBase.RestoreTierState`
+- **Repro:** Load a mid-run save made before the 2026-09-30 Junk-start change, with traps placed.
+- **Actual:** Saved traps keep their stored tier (Common), which now means ×1.25 instead of ×1.0. They also keep their old TotalSpent. No migration is done.
+- **Expected:** Acceptable: only affects saves from the dev period.
+- **Status:** Known limitation.
+
+## SlowStrip slow curve: Treasure slows zombies to 10% speed; watch balance (Phase 11)
+
+- **Area:** `BP_DefenseBase.GetTierStats` / `GE_TrapSlow` (SlowPercent = 90 − 40 × (2 − tier mult)², diminishing, capped at 90% by user decision)
+- **Repro:** Upgrade a SlowStrip to Treasure (×2.0).
+- **Actual:** Zombies on it move at 10% speed (a 50% slow at Junk, 67.5% at Common).
 - **Expected:** Could be too strong. Tune it after PIE.
 - **Status:** Known limitation (balance watch).
 
