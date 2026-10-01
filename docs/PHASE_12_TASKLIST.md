@@ -8,7 +8,7 @@
 - Two new melee weapons: the Sledgehammer and the Katana.
 - BUGS.md gets audited, so it matches the game again.
 
-**Status (2026-09-30).** Overnight run in progress. Group A built (needs PIE).
+**Status (2026-09-30).** Overnight run in progress. Groups A and B built (need PIE).
 
 **Group order is the cut order.** Groups land A → E. If the night runs short, cut from the end (E first).
 
@@ -89,12 +89,12 @@ The architect turns these into dispatch-ready packets. The numbers are for track
 - [x] **A5.** `DT_Weapons.Magnum.BaseDamage` = 65.
 
 ### Group B — Combat feel
-- [ ] **B1.** Zombie apex notify: add an attack-apex notify to every melee zombie attack montage and both bosses. Damage applies at the notify with a range re-check. Remove the damage that applies immediately when in range.
-- [ ] **B2.** Zombie stagger: a replicated stagger on `BP_ZombieBase` (stops movement, pauses the AI, cancels the wind-up). It's driven by the player melee hit, uses 0.35 × the effective interval clamped to 0.25–0.8 s, is halved for Brutes, and bosses are immune.
-- [ ] **B3.** Hit feedback: a green goo splat Niagara system plus a white flash on the zombie mesh, multicast on every damaging player hit.
-- [ ] **B4.** Blender: the one-handed swing and the two-handed heavy swing for the player skeleton. One solid swing with follow-through, with a hit notify at contact.
-- [ ] **B5.** `DT_Weapons`: a melee-class (or attack-montage) column, filled for each melee row by the 1H/2H grouping above.
-- [ ] **B6.** `GA_BP_MeleeAttack`: pick the montage by class, set the play rate from the effective swing interval, and apply damage once at the hit notify (fixes the double hit).
+- [x] **B1.** Zombie apex notify: add an attack-apex notify to every melee zombie attack montage and both bosses. Damage applies at the notify with a range re-check. Remove the damage that applies immediately when in range.
+- [x] **B2.** Zombie stagger: a replicated stagger on `BP_ZombieBase` (stops movement, pauses the AI, cancels the wind-up). It's driven by the player melee hit, uses 0.35 × the effective interval clamped to 0.25–0.8 s, is halved for Brutes, and bosses are immune.
+- [x] **B3.** Hit feedback: a green goo splat Niagara system plus a white flash on the zombie mesh, multicast on every damaging player hit.
+- [x] **B4.** Blender: the one-handed swing and the two-handed heavy swing for the player skeleton. One solid swing with follow-through, with a hit notify at contact.
+- [x] **B5.** `DT_Weapons`: a melee-class (or attack-montage) column, filled for each melee row by the 1H/2H grouping above.
+- [x] **B6.** `GA_BP_MeleeAttack`: pick the montage by class, set the play rate from the effective swing interval, and apply damage once at the hit notify (fixes the double hit). The montage start section check is in docs/BUGS.md — "Melee swing montages: length and start section unverified."
 
 ### Group C — Night 9 victory
 - [ ] **C1.** Run stats tracking: per-player and team counters, replicated, and kept in the mid-run save.

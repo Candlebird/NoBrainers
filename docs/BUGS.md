@@ -2039,3 +2039,11 @@
 - **Actual:** Monolith can't set a Fill slot size, so the meta shop scroll area may not fill its panel and the inventory close button may not sit right-aligned. `GetInteractKeyText` has no Action set, so the prompt may show fallback key text.
 - **Expected:** The scroll area fills the panel, the close button is right-aligned, and the prompt shows the bound key.
 - **Status:** Open. Check in PIE, and fix by hand in the designer if needed.
+
+## Melee swing montages: length and start section unverified (Phase 12)
+
+- **Area:** `/Game/Characters/Hero/Animations/AM_MeleeSwing` (old), `AM_MeleeSwing_1H` / `AM_MeleeSwing_2H`, `GA_BP_MeleeAttack` (`SwingSectionName`, play-rate clamp)
+- **Repro:** Swing the Bat, then the Fire Axe, in PIE.
+- **Actual:** Unverified. The old `AM_MeleeSwing` reports 1.4 s, but its source `A_MeleeSwing` is 0.7 s, so it probably has a doubled segment (it is now only the fallback when a weapon row has no montage). `PlayMontageAndWait.StartSection` still comes from the `SwingSectionName` variable. The new montages name their section "Swing", so if the variable holds another name, the montage starts from the beginning. The play-rate clamp max is now 3.0.
+- **Expected:** One swing per attack, the hit notify fires once at contact, and the play rate matches the weapon's swing interval.
+- **Status:** Open. Check in PIE.

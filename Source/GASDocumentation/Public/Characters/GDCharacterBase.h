@@ -32,6 +32,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GASDocumentation|GDCharacter")
 	FCharacterDiedDelegate OnCharacterDied;
 
+	// Server-side: fired when this character loses health (including the killing blow).
+	UFUNCTION(BlueprintImplementableEvent, Category = "NoBrainers|Damage")
+	void OnDamageTakenFrom(float AppliedDamage, AController* SourceController, FVector HitLocation);
+
 	// Server-only: controller that last damaged this character (excludes self-damage)
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "NoBrainers|Loot")
 	TObjectPtr<AController> LastDamageSourceController;

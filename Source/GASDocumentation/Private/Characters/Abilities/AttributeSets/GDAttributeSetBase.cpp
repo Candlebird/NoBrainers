@@ -140,8 +140,16 @@ void UGDAttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectModCall
 			}
 
 			// Apply the health change and then clamp it
+			const float OldHealth = GetHealth();
+			const bool bWasAlive = TargetCharacter && TargetCharacter->IsAlive();
 			const float NewHealth = GetHealth() - LocalDamageDone;
 			SetHealth(FMath::Clamp(NewHealth, 0.0f, GetMaxHealth()));
+			const float Applied = OldHealth - GetHealth();
+			if (bWasAlive && Applied > 0.f)
+			{
+				const FVector HitLoc = Context.GetHitResult() ? FVector(HitResult.ImpactPoint) : FVector::ZeroVector;
+				TargetCharacter->OnDamageTakenFrom(Applied, SourceController, HitLoc);
+			}
 
 			if (TargetCharacter && WasAlive)
 			{
