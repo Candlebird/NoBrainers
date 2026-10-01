@@ -6,7 +6,17 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
-**UPDATE (2026-09-30, Phase 10): Phase 10 (Weapon Tiers & Daily Weapon Shop) is active.** See `docs/PHASE_10_TASKLIST.md`. Weapons now use the 5 loot tiers:
+**UPDATE (2026-09-30, Phase 11): Phase 11 (Trap Unlocks, Daily Blueprint Shop & Trap Upgrades) is active.** See `docs/PHASE_11_TASKLIST.md`.
+- Traps beyond Spike and Swinging are now meta-shop unlocks.
+- In a run, the team buys trap blueprints from a shared 3-card daily shop at the Defense kiosk.
+- Placed traps upgrade Common → Treasure (×1.0 to ×1.75), with a tier glow.
+- Outside Build Mode, pressing E on a trap opens one panel for upgrade, repair and sell.
+- In Build Mode, LMB places and RMB exits.
+- Built unattended, so PIE testing is outstanding. Start with that file's "PIE test checklist".
+
+**Phase 10 is done** (built and committed locally as 7b457f7). Its PIE testing is still outstanding, along with Phases 8 and 9.
+
+**UPDATE (2026-09-30, Phase 10): Phase 10 (Weapon Tiers & Daily Weapon Shop) is built.** See `docs/PHASE_10_TASKLIST.md`. Weapons now use the 5 loot tiers:
 - Stats are ×0.9 to ×1.3: damage, fire rate, magazine and reload for guns; damage and swing speed for melee.
 - Weapons show a HUD tier label and a replicated tier glow.
 - Zombies and elites drop tiered weapons, and the boss always drops one.
@@ -129,7 +139,8 @@ that can go stale (as it just did).**
 | 7 | Zombie Variety, Combat Depth & Balance | Distinct zombie types with full animation sets, horde surges/flanking, weapon fixes and feel, and an economy/balance pass to stop kiting from being dominant. |
 | 8 | Loot Economy & Inventory | Day-scaled tiered loot tables (elite shift, boss loot piñata, soft pity), visible item tiers and prices, no inventory stacking, a 6-slot loot cap, and a stockroom deposit box. Built 2026-09-30, needs PIE testing. |
 | 9 | Tiered Meta Progression | 9-tier per-player meta perk tracks (Deep Pockets slots, health/stamina/regen/armor, fire rate, weapon/melee damage, reload speed) with ×1.5 per-tier pricing. Built 2026-09-30, needs PIE testing. |
-| 10 | Weapon Tiers & Daily Weapon Shop | Weapons use the loot tiers (Junk ×0.9 to Treasure ×1.3 stats, HUD label, glow), tiered weapon drops, and a shared daily weapon shop: 1 primary, 2 secondary and 1 melee rolled each Morning from the players' meta weapon unlocks, with doubling paid rerolls. Active 2026-09-30. |
+| 10 | Weapon Tiers & Daily Weapon Shop | Weapons use the loot tiers (Junk ×0.9 to Treasure ×1.3 stats, HUD label, glow), tiered weapon drops, and a shared daily weapon shop: 1 primary, 2 secondary and 1 melee rolled each Morning from the players' meta weapon unlocks, with doubling paid rerolls. Built 2026-09-30, needs PIE testing. |
+| 11 | Trap Unlocks, Daily Blueprint Shop & Trap Upgrades | Meta-shop trap unlocks, a shared 3-card daily blueprint shop for in-run ownership, per-trap tier upgrades (×1.0 to ×1.75, glow), an E trap panel for upgrade, repair and sell, and LMB-place / RMB-exit in Build Mode. Active 2026-09-30. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's

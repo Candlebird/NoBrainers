@@ -1867,3 +1867,67 @@
 - **Actual:** The call is a no-op. Found during Phase 10 T24.
 - **Expected:** It removes the context that OpenDepositBoxUI added, or the node is deleted if no context is needed.
 - **Status:** Open. Minor.
+
+## Trap upgrades and blueprint purchases after the last save are lost on quit (Phase 11)
+
+- **Area:** `BP_GameState_ZombieStore.GetSaveSnapshot` / the session save points (`docs/PHASE_11_TASKLIST.md` T12)
+- **Repro:** After the last autosave, buy a blueprint, upgrade a trap or reroll the shop. Then have the host quit and reload.
+- **Actual:** Owned blueprints, the shop stock, trap tiers and cash reload as they were at the last save point.
+- **Expected:** Consistent with all other mid-phase changes, since the session only saves at phase save points.
+- **Status:** Known limitation.
+
+## Blueprint shop reroll availability doesn't refresh when a player with new meta unlocks joins mid-day (Phase 11)
+
+- **Area:** `/Game/Core/Shop/BP_BlueprintShopComponent` (`bRerollAvailable`, computed on the server at roll and purchase time)
+- **Repro:** When nothing new is left to roll, a client whose meta unlocks add new trap blueprints joins mid-day.
+- **Actual:** The reroll stays disabled ("Nothing new to roll") until the next roll or purchase recomputes it.
+- **Expected:** The candidate pool is recomputed when a player joins.
+- **Status:** Known limitation.
+
+## Saved traps are matched to sockets by actor name; renamed sockets drop old saved traps (Phase 11)
+
+- **Area:** `BP_GameState_ZombieStore.GatherPlacedDefenses` / `RestorePlacedDefenses` (`S_SavedDefense.SocketName`, from `GetObjectName`)
+- **Repro:** Save mid-run with traps placed, rename or replace a `BP_DefenseSocket` in the map, then load that save.
+- **Actual:** A trap whose socket name no longer matches is silently not restored.
+- **Expected:** Acceptable for now. A stable socket ID would fix it.
+- **Status:** Known limitation.
+
+## Hold-E repair on placed traps is replaced by the trap panel's instant Repair button (Phase 11)
+
+- **Area:** `BP_PlayerController_ZombieStore` IA_Interact (`docs/PHASE_11_TASKLIST.md` T20)
+- **Repro:** Outside Build Mode, press or hold E on a damaged placed trap.
+- **Actual:** The trap panel opens, and repair happens through its Repair button. The old hold-E defense repair path (`GetAimedDamagedDefense` → RepairHold) is now unreachable for defenses. Breach-door hold-repair is unchanged.
+- **Expected:** By design: trap management lives in one panel.
+- **Status:** Known limitation (by design).
+
+## Treasure SlowStrip slows zombies to 12.5% speed; watch balance (Phase 11)
+
+- **Area:** `BP_DefenseBase.ApplyTrapHit` / `GE_TrapSlow` (SlowMultiplier = 1 − 0.5 × tier mult)
+- **Repro:** Upgrade a SlowStrip to Treasure (×1.75).
+- **Actual:** Zombies on it move at 12.5% speed (a 50% slow at Common).
+- **Expected:** Could be too strong. Tune it after PIE.
+- **Status:** Known limitation (balance watch).
+
+## Trap panel and blueprint shop give no failure feedback from the server (Phase 11)
+
+- **Area:** `WBP_TrapPanel`, `WBP_BlueprintShop`, and the PC server RPCs `Server_UpgradeDefense`, `Server_BuyBlueprintShopSlot` and `Server_RerollBlueprintShop`
+- **Repro:** Click Upgrade or Buy when the server rejects it, for example because another player bought the slot first or cash dropped in between.
+- **Actual:** Nothing visible happens beyond the UI refreshing to the replicated state. The panel shows no error message.
+- **Expected:** A short failure toast or status text.
+- **Status:** Known limitation.
+
+## Turret only targets the first overlapped zombie (pre-existing)
+
+- **Area:** `BP_Turret_Automated.ScanAndFire`
+- **Repro:** Put several zombies inside a turret's detection sphere.
+- **Actual:** It shoots the first overlapped actor, not the nearest or the most threatening.
+- **Expected:** Nearest-target selection.
+- **Status:** Known limitation (pre-existing; noted during Phase 11 T8).
+
+## Dead Phase 11 leftovers: WBP_BuildMenu.TrackedSocket and the PC's defense hold-repair path (Phase 11)
+
+- **Area:** `WBP_BuildMenu` (the `TrackedSocket` variable, still set in `HandleTargetSocketChanged`), and the `BP_PlayerController_ZombieStore` IA_Interact `IfThenElse_18` → RepairHold branch for defenses.
+- **Repro:** Inspect the graphs.
+- **Actual:** The RepairSellBox removal (T18) and the trap panel routing (T20) left these unused.
+- **Expected:** Removed in a cleanup pass.
+- **Status:** Open. Cleanup only, with no gameplay effect.

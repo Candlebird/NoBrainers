@@ -29,14 +29,14 @@ No Brainers is our first dip into the multiplayer genre. It's a test of how well
 **Session Structure:**
 A four-phase, time-based day/night cycle (updated 2026-09-24 — user-confirmed; previously wave-based, ending Night on a zombie-kill count rather than a timer):
 - **Night:** Zombies spawn continuously at random intervals from outside the store for the phase's full duration. Players fight to survive using weapons and placed defenses (turrets, spike traps, etc.) inside the store, and collect item drops from kills. Night ends on its timer regardless of how many zombies are still alive — surviving zombies are never forcibly despawned and can carry over into later phases.
-- **Morning:** A quiet buffer phase. Neither zombies nor customers spawn; players can regroup and build. Surviving defenses are automatically restored to full health at the start of Day; destroyed defenses must be rebought. (Updated 2026-09-26: players can also pay to repair a damaged defense in any phase, at a cost proportional to missing health, and dismantle one for a 50% refund. Updated 2026-09-29: breach points (doors/walls) can also be paid-repaired the same way, but only in Morning, Day, and Dusk, never at Night. Breach points are real doors: any player can tap Interact to open or close one in any phase, while holding Interact repairs it. An open door can't be damaged and lets zombies walk straight through; a broken door can't be closed until it's repaired, and repairing always leaves it closed.)
-- **Day:** Customers come and shop for stocked items, generating money; players place looted items on shelves to stock the store. (Updated 2026-09-30: the weapon kiosk sells a shared daily stock of 4 tiered weapons, rolled each Morning. It's open in Morning, Day and Dusk and closed at Night, and paid rerolls double in cost.)
+- **Morning:** A quiet buffer phase. Neither zombies nor customers spawn; players can regroup and build. Surviving defenses are automatically restored to full health at the start of Day; destroyed defenses must be rebought. (Updated 2026-09-26: players can also pay to repair a damaged defense in any phase, at a cost proportional to missing health, and dismantle one for a 50% refund. Updated 2026-09-29: breach points (doors/walls) can also be paid-repaired the same way, but only in Morning, Day, and Dusk, never at Night. Breach points are real doors: any player can tap Interact to open or close one in any phase, while holding Interact repairs it. An open door can't be damaged and lets zombies walk straight through; a broken door can't be closed until it's repaired, and repairing always leaves it closed. Updated 2026-09-30: traps can be placed in Morning, Day and Dusk. Dismantling refunds 50% of everything spent on the trap, placement plus upgrades. Upgrading and selling are closed at Night, while repair works in any phase. Players manage a placed trap by pressing E on it.)
+- **Day:** Customers come and shop for stocked items, generating money; players place looted items on shelves to stock the store. (Updated 2026-09-30: the weapon kiosk sells a shared daily stock of 4 tiered weapons, rolled each Morning. It's open in Morning, Day and Dusk and closed at Night, and paid rerolls double in cost. The Defense kiosk likewise sells a shared daily stock of 3 trap blueprints, and is also closed at Night.)
 - **Dusk:** Customers stop spawning as the store closes; zombies still don't spawn. Another buffer for last-minute building/repair before Night returns.
 
 The cycle repeats Night → Morning → Day → Dusk → Night indefinitely. Because zombies can persist across phases, defeat (all players dead) can now trigger in any phase, not just Night.
 
 **Core Loop:**
-Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy tiered weapons from the daily weapon shop, and ammo/defenses with employee discount -> Repeat
+Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy tiered weapons from the daily weapon shop and trap blueprints from the daily blueprint shop, place and upgrade traps, buy ammo with employee discount -> Repeat
 
 ## 3. Progression
 
@@ -66,10 +66,29 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
   - Every Morning it rolls 4 weapons: 1 primary, 2 secondary and 1 melee, with no duplicates. If a slot type has nothing available, the slot is filled from another type.
   - Tiers come from the night loot curve for the current day.
   - Stock is shared and first come first served, paid from shared StoreCash.
-  - Price = DT_Weapons.Price × 0.75 for Junk, and × 1.5 per tier above Common. The employee discount no longer applies to weapons; it still applies to kiosk defenses and marketing.
+  - Price = DT_Weapons.Price × 0.75 for Junk, and × 1.5 per tier above Common. The employee discount no longer applies to weapons; it still applies to trap blueprints and marketing. For blueprints it's baked into `BlueprintPrice` (updated 2026-09-30).
   - Paid reroll: $50, doubling each use and resetting each Morning.
 - **Weapon unlocks:** weapons are one-time meta-shop unlocks. The shop draws from the union of all connected players' unlocks. The defaults are Pistol, Rifle, Magnum and Bat: the starter plus the cheapest weapon of each type.
 - Detail is in `docs/PHASE_10_TASKLIST.md`.
+
+**Trap unlocks, blueprint shop and trap upgrades (user decision, 2026-09-30):** Traps follow the weapon model.
+- **Unlocks:** Spike and Swinging traps are available from the start. The others are one-time meta-shop unlocks: Barricade 120, SlowStrip 150, GasTrap 200, Turret 300.
+- **Blueprint shop:**
+  - In a run, the team has to buy a trap's blueprint once before anyone can place it. Placing each trap still costs its normal price.
+  - The Defense kiosk sells a shared daily stock of 3 blueprints, rolled each Morning. It draws from the union of all connected players' meta unlocks, minus blueprints the team already owns, with no duplicates.
+  - Stock is first come first served, paid from shared StoreCash at `BlueprintPrice`.
+  - Paid reroll: $50, doubling each use and resetting each Morning.
+  - It's closed at Night.
+- **Trap tiers:**
+  - Each placed trap starts at Common and can be upgraded to Uncommon, Rare and Treasure (×1.0 / ×1.25 / ×1.5 / ×1.75).
+  - An upgrade costs `Cost × 1.5^(new tier − Common)`.
+  - The multiplier scales damage and effect, health, attack rate, and range or area, wherever each applies.
+  - The tier shows as a colored glow, and selling or losing the trap loses it.
+- **Selling:** refunds 50% of everything spent on the trap.
+- **Managing a trap:** outside Build Mode, press E on a placed trap to open its panel: stats, Upgrade, Repair and Sell.
+- **Build Mode controls:** left click places and right click exits. Weapons can't fire or aim in Build Mode.
+- **Save:** the mid-run save stores owned blueprints, the shop state, and every placed trap's tier, total spent and health. A new run resets them.
+- Detail is in `docs/PHASE_11_TASKLIST.md`.
 
 ## 4. Enemies
 
