@@ -8,7 +8,7 @@
 - Two new melee weapons: the Sledgehammer and the Katana.
 - BUGS.md gets audited, so it matches the game again.
 
-**Status (2026-09-30).** Overnight run in progress. Groups A and B built (need PIE).
+**Status (2026-09-30).** Overnight run in progress. Groups A, B and C built (need PIE). C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
 
 **Group order is the cut order.** Groups land A → E. If the night runs short, cut from the end (E first).
 
@@ -97,12 +97,12 @@ The architect turns these into dispatch-ready packets. The numbers are for track
 - [x] **B6.** `GA_BP_MeleeAttack`: pick the montage by class, set the play rate from the effective swing interval, and apply damage once at the hit notify (fixes the double hit). The montage start section check is in docs/BUGS.md — "Melee swing montages: length and start section unverified."
 
 ### Group C — Night 9 victory
-- [ ] **C1.** Run stats tracking: per-player and team counters, replicated, and kept in the mid-run save.
-- [ ] **C2.** `BP_Zombie_FinalBoss`: the 3 phases, the summons, faster movement in phase 2, and enrage in phase 3.
-- [ ] **C3.** Final boss look: the material instance, the aura Niagara, and the phase-change burst.
-- [ ] **C4.** GameMode/GameState: Night 9 is the final night with no timer and a Final Boss spawn. The boss's death sets the Victory state, which replaces the normal Night → Morning flow.
-- [ ] **C5.** Payout: the +300 victory bonus and the endless multiplier hook.
-- [ ] **C6.** `WBP_RunSummary`: per-player and team stats, the meta-currency count-up, and host-only Continue / Cash Out buttons (clients see a waiting state). It is used for victory, cash-out and defeat.
+- [x] **C1.** Run stats tracking: per-player and team counters, replicated, and kept in the mid-run save.
+- [x] **C2.** `BP_Zombie_FinalBoss`: the 3 phases, the summons, faster movement in phase 2, and enrage in phase 3.
+- [x] **C3.** Final boss look: the material instance, the aura Niagara, and the phase-change burst.
+- [x] **C4.** GameMode/GameState: Night 9 is the final night with no timer and a Final Boss spawn. The boss's death sets the Victory state, which replaces the normal Night → Morning flow.
+- [x] **C5.** Payout: the +300 victory bonus and the endless multiplier hook.
+- [x] **C6.** `WBP_RunSummary`: per-player and team stats, the meta-currency count-up, and host-only Continue / Cash Out buttons (clients see a waiting state). It is used for victory, cash-out and defeat.
 
 ### Group D — Endless mode and death screen
 - [ ] **D1.** Endless state: the flag and night count, the ramp multipliers applied at spawn, and the boss on every night (the Final Boss on nights divisible by 3). Saved and restored.

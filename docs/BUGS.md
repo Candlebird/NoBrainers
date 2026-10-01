@@ -2047,3 +2047,27 @@
 - **Actual:** Unverified. The old `AM_MeleeSwing` reports 1.4 s, but its source `A_MeleeSwing` is 0.7 s, so it probably has a doubled segment (it is now only the fallback when a weapon row has no montage). `PlayMontageAndWait.StartSection` still comes from the `SwingSectionName` variable. The new montages name their section "Swing", so if the variable holds another name, the montage starts from the beginning. The play-rate clamp max is now 3.0.
 - **Expected:** One swing per attack, the hit notify fires once at contact, and the play rate matches the weapon's swing interval.
 - **Status:** Open. Check in PIE.
+
+## Final Boss material is not darkened or red-tinted (Phase 12)
+
+- **Area:** `/Game/Characters/Zombie/Materials/MI_Zombie_FinalBoss` (child of `MI_Zombie_Swamp` → `M_Zombie_PBR`); VFX `NS_FinalBossAura`, `NS_FinalBossPhaseBurst`
+- **Repro:** Spawn the Final Boss in PIE and compare it with the Swamp boss.
+- **Actual:** `M_Zombie_PBR` exposes only `EmissiveStrength` and texture parameters, with no color or tint vectors. So the instance only raises EmissiveStrength to 3, and the vein color still comes from `T_Zombie_Swamp_Emissive`. Both Niagara systems borrow `M_VFX_GooBlob` for their sprites and have not been viewed.
+- **Expected:** The body is about 40% darker, with red glowing veins (1.0, 0.1, 0.05) × 3. The aura and burst read as red mist and a red shockwave.
+- **Status:** Open. Fix: add `BaseColorTint` and `EmissiveTint` vector parameters to `M_Zombie_PBR` (default white, so other zombies are unchanged), or make a boss master material. Then set the overrides on the instance. Check the VFX look in PIE.
+
+## Endless bosses don't get the +12% health/damage ramp (Phase 12)
+
+- **Area:** `BP_Zombie_Boss.InitBoss`, `BP_GameState_ZombieStore.ComputeBossMaxHealth`, `BP_StoreEscalationComponent.GetZombieStatMultiplier`
+- **Repro:** Continue into Endless and compare the Swamp boss's health on Night 10 and Night 15.
+- **Actual:** Neither InitBoss nor ComputeBossMaxHealth reads GetZombieStatMultiplier, so bosses keep their normal health. The ramp only reaches regular zombies.
+- **Expected:** Per the Phase 12 design, endless bosses (Swamp and Final) scale with the ramp: ×1.12^N health and damage.
+- **Status:** Open. Accepted for the Phase 12 night run. Fix: multiply ComputeBossMaxHealth (and the boss melee damage) by GetZombieStatMultiplier.
+
+## Mid-run save dropped owned blueprints, the blueprint shop and placed traps (Phase 11, fixed 2026-09-30)
+
+- **Area:** `BP_GameInstance_NoBrainers.GatherSessionState` (Make S_SaveSession)
+- **Repro:** Own trap blueprints, place and upgrade traps, let the session save, quit, then resume.
+- **Actual:** The Make S_SaveSession node left SavedUnlockedBlueprintIDs, BlueprintShopRerollCount, BlueprintShopRolledDay, BlueprintShopSlots and PlacedDefenses unwired, so the save held empty or zero values. Found in Phase 12 Task 23.
+- **Expected:** The GameState snapshot values pass through to the save.
+- **Status:** Fixed 2026-09-30 by wiring Break→Make for the five pins. Not yet verified in PIE.
