@@ -348,6 +348,28 @@
 - **Status:** Open, low priority — cosmetic only, no logic/compile impact. Only graph seen
   to hit this in the full-project sweep; other 2-node graphs elsewhere laid out fine.
 
+## Meta shop: perk and weapon-unlock rows show blank white icons
+
+- **Area:** `WBP_MetaShopEntry` icon image, fed from the perk / weapon-unlock definitions.
+- **Repro:** PIE Map_MainMenu → Meta Shop. Scroll through the list.
+- **Actual:** The 12 perk rows and the weapon-unlock rows show a plain white 48x48 square. Only
+  the trap-unlock rows (Barricade, Slow Strip, Gas Trap, Turret) show real icons.
+- **Expected:** Every row shows an icon, or the image is collapsed when no texture is set.
+- **Status:** Open, cosmetic. No icon textures exist yet for perks/weapons; the image brush
+  draws white when its texture is null.
+
+## `ui.set_widget_property` writes zeros for color strings
+
+- **Area:** Monolith `ui.set_widget_property` (and likely `set_slot_property`) on LinearColor
+  properties such as `BrushColor`, `BackgroundColor`, `ColorAndOpacity`.
+- **Repro:** Pass a color as an Unreal text string, e.g. `"(R=0.02,G=0.02,B=0.03,A=0.85)"`.
+- **Actual:** The call reports success but the property is stored as (0,0,0,0), so panels end
+  up invisible (alpha 0). Likely the cause of the original Phase 11 shop/trap panel backgrounds
+  being invisible.
+- **Expected:** The string parses, or the call fails loudly.
+- **Status:** Open (tool-side). Workaround: pass colors as JSON arrays `[r,g,b,a]` and read
+  the value back after writing.
+
 ## Reload doesn't replenish magazine — GAS tag removal warning (RESOLVED 2026-09-24)
 
 - **Area:** Weapon reload (`BP_EquipmentComponent`, `docs/PHASE_3_TASKLIST.md` ammo & reload
