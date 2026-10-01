@@ -30,4 +30,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "NoBrainers|Abilities")
 	static bool IsAbilityLocalPredicted(TSubclassOf<UGameplayAbility> AbilityClass);
 
+	/** Test-harness only (automation test bed); not for gameplay use.
+	 *  Calls a zero-input-parameter function on Target by name. Returns false if not found or it takes inputs. */
+	UFUNCTION(BlueprintCallable, Category = "NoBrainers|Testing", meta = (DefaultToSelf = "Target"))
+	static bool CallFunctionByName(UObject* Target, FName FunctionName);
+
+	/** Test-harness only (automation test bed); not for gameplay use.
+	 *  Returns sorted, de-duplicated names of Target's functions (incl. inherited) starting with Prefix (case-sensitive). */
+	UFUNCTION(BlueprintCallable, Category = "NoBrainers|Testing", meta = (DefaultToSelf = "Target"))
+	static TArray<FName> GetFunctionNamesWithPrefix(UObject* Target, const FString& Prefix);
+
 };

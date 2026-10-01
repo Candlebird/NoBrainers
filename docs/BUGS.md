@@ -1,6 +1,6 @@
 # Known Bugs
 
-## Test_ZombieApexDodge fails because the hero is dead (Phase 12, test harness)
+## Test_ZombieApexDodge fails because the hero is dead (Phase 12, test harness) (RESOLVED 2026-10-01)
 
 - **Area:** `/Game/Tests/Automation/Blueprints/BP_TestController`, EventGraph chain `ApexDodgeTest_Run`. This is the test only. The game's apex logic was checked by the architect and is correct: `BP_ZombieBase.ResolveAttackApex` → `BP_ZombieAttackComponent.PerformMeleeAttack` box-traces at apex time, so a target out of range is not hit.
 - **Repro:** Run the full test bed.
@@ -19,6 +19,12 @@
     - The runner counted 388 passes. `Test_CustomerSpawnerMaxConcurrent` FAIL appears twice (08.10.34 and 08.10.44), so `RunAllTests` may have run twice within the same PIE session.
     - The pass/fail set is the same as the 07.58 run (197/3).
   - **PIE check:** PIE test checklist item 2 in `docs/PHASE_12_TASKLIST.md` covers the dodge in real play.
+- **Update 2026-10-01: RESOLVED.** The fix was the suite split (`docs/TEST_SUITES.md`):
+  - The retarget test moved to the Zombie suite.
+  - `RunSuite` calls `Hero_EnsureAlive` at the start of every suite.
+  - The no-damage check is now `V2 >= V1`, because health regen made the strict equality fail.
+  - Passing result in BossNight: `PASS: Test_ZombieApexDodge` with V1=37.87, V2=40.87, V3=40.87, V4=15.22.
+  - Related test-side fix: `ZombieRetargetTest_Trigger` clears the game mode's `ReturnToMainMenu` timer after killing the hero. Hero death ends the run, and that timer would leave PIE about 13 s later.
 
 ## Phase 9: tiered perks unverified in PIE (needs PIE testing)
 
@@ -102,13 +108,14 @@
 - **Status:** Open. Needs in-PIE confirmation. If scaling breaks it, split each gap into several unit-scale panels in `Tools/LevelView/store_layout.py` (`breach_panel`).
 - **Update 2026-09-29:** Paid hold-E repair now exists (Morning/Day/Dusk only). The repair trace box is a child of `BreachMesh`, so it scales with the panel. Include repairing a scaled panel, both damaged and fully broken, in this PIE check.
 
-## Test_CustomerSpawnerMaxConcurrent fails in the test bed
+## Test_CustomerSpawnerMaxConcurrent fails in the test bed (RESOLVED 2026-10-01: depended on test order)
 
 - **Area:** `BP_CustomerSpawner`, `BP_TestController.Test_CustomerSpawnerMaxConcurrent`
 - **Repro:** Run the full automation test bed (L_AutomationTestBed).
 - **Actual:** FAIL (1 of 125 on 2026-09-29). This test previously passed. The run that found it touched no customer or spawner assets; it changed only breach repair.
 - **Expected:** PASS (`GetMaxConcurrent()==6` and `TrySpawnCustomer()` grows `ActiveCustomers`).
 - **Status:** Open. Not diagnosed. It could be a regression from an earlier commit, or it could depend on the order the tests run in.
+- **Update 2026-10-01:** PASSes in the isolated Retail suite (`L_Test_Retail`, `SUITE_DONE:Retail pass=25 fail=0`). So the failure depended on the order tests ran in the old full run. It is not a spawner regression. RESOLVED by the suite split (`docs/TEST_SUITES.md`). It may still fail in the legacy `L_AutomationTestBed` "All" run.
 
 ## Customers never move from spawn after shelves are stocked (RESOLVED — needs in-PIE confirmation)
 
