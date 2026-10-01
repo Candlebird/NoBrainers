@@ -8,7 +8,7 @@
 - Two new melee weapons: the Sledgehammer and the Katana.
 - BUGS.md gets audited, so it matches the game again.
 
-**Status (2026-09-30).** Overnight run in progress. Groups A–D built (need PIE). C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
+**Status (2026-09-30).** Overnight run in progress. Groups A–E built (need PIE). C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
 
 **Group order is the cut order.** Groups land A → E. If the night runs short, cut from the end (E first).
 
@@ -110,8 +110,8 @@ The architect turns these into dispatch-ready packets. The numbers are for track
 - [x] **D3.** Death screen: the styled overlay with the respawn timer and the spectated name. Fire switches to the next teammate and Aim to the previous one while spectating.
 
 ### Group E — New melee weapons
-- [ ] **E1.** Blender: the Sledgehammer and Katana meshes, sized correctly at the source, imported to `/Game/Weapons/Meshes/`.
-- [ ] **E2.** `DT_Weapons` rows for both (stats above, plus the melee class), the `DT_MetaPerks` unlock rows (250 / 300), and entry into the shop's melee pool.
+- [x] **E1.** Blender: the Sledgehammer and Katana meshes, sized correctly at the source, imported to `/Game/Weapons/Meshes/`.
+- [x] **E2.** `DT_Weapons` rows for both (stats above, plus the melee class), the `DT_MetaPerks` unlock rows (250 / 300), and entry into the shop's melee pool.
 
 ### Group F — Tests and wrap-up
 - [ ] **F1.** Tests: apex dodge (out of range at the notify means no damage), stagger duration and the Brute/boss rules, the loot clamp on Night 1, the Magnum damage, the final-night flag and the victory trigger, the endless ramp multiplier, and the payout math.
