@@ -46,7 +46,7 @@
 - **Expected:** Shots at a zombie hit it and apply damage, before and after a reload.
 - **Findings (2026-09-29):** The server always validated the same hit result: the first shot of the session, at `ShotTargetData` index 0. If that shot was a hit, `REJECT validate2` fired once the zombie died or moved (`act`/`len` were identical on every shot and `org` kept growing). If it was a miss, `REJECT noHitActor` fired from the first shot on. So `ShotTargetData` was accumulating across shots. The unwired "Set ShotTargetData" (`K2Node_VariableSet_16`) wasn't clearing it.
 - **Fix:** `K2Node_VariableSet_16` now copies from a new, never-written member `EmptyShotTargetData`, so each shot sends only its own hit (log confirmed `n=1`).
-- **Status:** RESOLVED (2026-09-29). User-tested: kills work before and after a reload. The temporary debug prints and trace debug draw were removed.
+- **Status:** RESOLVED (2026-09-29). User-tested: kills work before and after a reload. The temporary debug prints and trace debug draw were removed. (audit 2026-09-30: verified) 2026-09-29 user-tested.
 
 ## `Multicast_FireTracer`: the TracerFX Niagara branch never runs
 
@@ -62,7 +62,7 @@
 - **Repro:** Fire any gun.
 - **Actual:** K2 made the flash a short, bright yellow burst (7 sprites, 0.07 s), but the sprites don't move, so it may read as a static blob.
 - **Expected:** A small omnidirectional pop. Add an AddVelocity or cone velocity module if playtesting shows it looks flat.
-- **Status:** Open (optional polish).
+- **Status:** Open (optional polish). Scheduled: Phase 12 A3.
 
 
 ## Old `ZombieTest` walk/idle clips are corrupt; `SK_Zombie` has no physics asset
@@ -71,7 +71,7 @@
 - **Repro:** Play `Enemy_Walk` on `ZombieTest`. Its pelvis evaluates about 110 m up. `Enemy_Idle` collapses every bone to one point.
 - **Actual:** Those two clips are unusable, and anything retargeted from them is too. The zombie BPs (`BP_Zombie_Base`, `BP_ZombieBase`) now use `SK_Zombie` with `ABP_SK_Zombie`, which plays `Enemy_Walk_ZM` and `Enemy_Idle_ZM`. Those are retargeted from the clean `/Game/AnimStarterPack` originals via `RTG_Mannequin_To_Zombie`. `SK_Zombie` still has no physics asset.
 - **Expected:** Old corrupt clips are deleted or ignored. `SK_Zombie` gets a physics asset if ragdoll or hit reactions need one.
-- **Status:** Open (known limitation). Gameplay no longer uses the corrupt clips.
+- **Status:** Open (known limitation). Gameplay no longer uses the corrupt clips. Audit 2026-09-30 (text-only, unverified): likely stale — Replaced by modern rig.
 
 ## Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE
 
@@ -125,7 +125,7 @@
   - `BT_Customer`: "Move To Shelf" now targets `TargetShelfStandLocation` instead of `TargetShelf`.
   All four assets compile clean and are saved. Needs a real in-PIE confirmation pass (fill a
   shelf, watch a customer walk to it and take an item) since this was only observed in live
-  manual play, not the automation test bed.
+  manual play, not the automation test bed. (audit 2026-09-30: verified) 2026-09-24 plus 5 follow-ups.
 - **Follow-up (2026-09-24):** user confirmed the above fix works — customers now walk toward
   shelves — but found a new issue: customers stopped and grabbed the item from ~10 meters away
   instead of walking up to it, with no pause before the item was taken. Root cause: the shelf's
@@ -302,7 +302,7 @@
   repo-wide grep of `.uasset`/`.umap` files for the name found only `Map_Startup.umap` itself),
   and it was a valid-but-unrelated Unreal package header, not part of the real level — deleted.
   `Map_Startup.umap` (the real level, already committed and verified working via the breach-point
-  fix's test-bed runs) is untouched.
+  fix's test-bed runs) is untouched. (audit 2026-09-30: verified) Deleted 2026-09-24.
 
 ## `BP_CustomerSpawner::ActiveCustomers` is not actually replicated
 
@@ -356,7 +356,7 @@
   the trap-unlock rows (Barricade, Slow Strip, Gas Trap, Turret) show real icons.
 - **Expected:** Every row shows an icon, or the image is collapsed when no texture is set.
 - **Status:** Open, cosmetic. No icon textures exist yet for perks/weapons; the image brush
-  draws white when its texture is null.
+  draws white when its texture is null. Scheduled: Phase 12 A3.
 
 ## `ui.set_widget_property` writes zeros for color strings
 
@@ -397,6 +397,7 @@
 - **Verified:** Full test-bed run, session-scoped log read: 16/16 tests pass including
   `Test_Equipment_ReloadReplenishesMagazine`; zero `State.Weapon.Reloading` tag warnings in the
   session log; no regressions in the rest of the suite.
+- **Status:** RESOLVED (audit 2026-09-30: verified) 2026-09-24 fixed.
 
 ## Automation-test shared-state races on `StoreCash` cause flaky async test failures (RESOLVED 2026-09-24)
 
@@ -433,6 +434,7 @@
   expected amount is still a correct pass condition.
 - **Verified:** Full test-bed run, single PIE launch, session-scoped log read anchored to that
   launch: 26/26 tests pass, including all three previously-flaky tests.
+- **Status:** RESOLVED (audit 2026-09-30: verified) 26/26 PASS single session.
 
 ## Decorative barrel actor has auto-generated name / no outliner folder
 
@@ -484,7 +486,7 @@
   `QueryAndPhysics`, profile `BlockAllDynamic`), so the earlier read that flagged this was
   stale. `Server_RollAndSpawnLoot` in `BP_ZombieBase` targets `InteractionMesh` correctly
   with `bVelChange=true`. No graph or property change was needed; confirmed in-game test
-  still recommended to eyeball the scatter feel.
+  still recommended to eyeball the scatter feel. (audit 2026-09-30: verified) 2026-09-29 verified.
 
 ## Ammo replication is unconditioned (bandwidth concern)
 
@@ -509,7 +511,7 @@
   project-level `DynamicModifiersOnly` override only applies to newly-created nav data — so
   the breach `NavModifier` toggle won't rebuild pathing at runtime.
 - **Expected:** Breach points should open the nav footprint at runtime in any level.
-- **Status:** Open, known limitation/gotcha. Needs a manual check/set of `RuntimeGeneration`
+- **Status:** RESOLVED for Map_Startup (2026-09-24) (audit 2026-09-30: verified) 2026-09-24 Map_Startup rebuilt. Still a known limitation/gotcha for other existing levels. Needs a manual check/set of `RuntimeGeneration`
   in-editor (or a re-placed Nav Mesh Bounds Volume) per existing level before the
   breach-triggered nav opening will work.
 - Note 2026-09-23: already satisfied for `Map_Startup` and `Test_Level_Zero`. Both have a
@@ -554,7 +556,7 @@
   new `Test_CheckoutQueueSpotLocation` (added to `BP_TestController`) both pass. Still needs
   a manual in-game check in `Map_Startup` (Build Paths, PIE with 1 then 2 players — shopping
   → queue → checkout → exit flow, no walking to (0,0,0), and archetype walk-speed
-  differences visible to a client) before closing this out completely.
+  differences visible to a client) before closing this out completely. (audit 2026-09-30: verified) 2026-09-24 plus 5 follow-ups.
 
 ## Test_Level_Zero has no checkout counter or customer exit point
 
@@ -584,7 +586,7 @@
   output pin type before moving any link, and can be switched off with
   `bDuplicateSharedGetters=False` under `[VesperNodeCleaner]` in `Config/DefaultEditor.ini`.
   Keep recompiling after vesper `auto_layout` calls until this has held up for a while,
-  then close this entry.
+  then close this entry. Audit 2026-09-30 (text-only, unverified): likely fixed — Vesper rewrite 2026-09.
 
 ## Shelf UI has no item-placement slots — only upgrade/close buttons and text
 
@@ -618,7 +620,7 @@
   stale. The root node's internal variable name is still literally `"CanvasPanel"` (a
   leftover from before the class swap) — cosmetic only, not worth a rename pass. Still
   needs a real in-PIE confirmation that stocked slots render at visible (non-zero) size
-  and are clickable for transfer.
+  and are clickable for transfer. (audit 2026-09-30: verified) 2026-09-24 SizeBox fix.
 
 ## Customer NPCs never spawn — `BP_CustomerSpawner` cast failure has no retry, and re-spawn timer never re-arms
 
@@ -667,7 +669,7 @@
   placement validity in `Map_Startup` (and whether its navmesh predates the
   `RuntimeGeneration` config change tracked elsewhere in this file) still needs a
   manual PIE day-phase check to confirm customers visually appear at sensible
-  shelf-adjacent spawn points, not just off-origin ones.
+  shelf-adjacent spawn points, not just off-origin ones. (audit 2026-09-30: verified) All 4 fixes landed.
 
 ## Monolith tooling: `add_node` with `MakeStruct` for Vector/Transform can produce uncompilable nodes
 
@@ -705,7 +707,7 @@
   spawns a zombie targeting the sole test player, kills the player via a lethal `GE_MeleeDamage`
   GameplayEffect, and asserts the zombie's blackboard `TargetActor` is no longer the dead
   player (it clears to null, since no other living hero exists in the test bed). Confirmed
-  passing in the same clean 23/23 PIE automation run as the other zombie-death tests.
+  passing in the same clean 23/23 PIE automation run as the other zombie-death tests. (audit 2026-09-30: verified) 2026-09-29 IsAlive filter.
 
 ## Zombies can damage other zombies (no faction filter on melee sweep)
 
@@ -732,7 +734,7 @@
   `Test_Zombie_NoFriendlyFire` in `BP_TestController` spawns an attacker and victim zombie,
   calls `PerformMeleeAttack` on the attacker targeting the victim, and asserts the victim's
   health is unchanged afterward. Confirmed passing in a clean single-session PIE automation
-  run.
+  run. (audit 2026-09-30: verified) 2026-09-29 branch skip.
 
 ## Dead zombies keep rotating/attacking during their despawn delay
 
@@ -765,7 +767,7 @@
   test to apply damage via a `GameplayEffect` (`GE_MeleeDamage` + `SetByCallerMagnitude`
   on tag `Data.Damage`), matching the pattern the already-passing
   `Test_Zombie_RetargetsAfterTargetDies` uses to kill the player. Confirmed passing in a
-  clean single-session 22/22 PIE automation run.
+  clean single-session 22/22 PIE automation run. (audit 2026-09-30: verified) 2026-09-29 AI stopped.
 
 ## Store escalation's "cash pool" and "breach point" scaling are unimplemented (deferred scope)
 
@@ -788,7 +790,7 @@
   scaling without them.
 - **Status:** Open — deliberately deferred, not a bug in the landed system. Everything else
   in Task 1.1/1.2 is built and compiles clean; see `docs/PHASE_5_TASKLIST.md` Status Note
-  (1.1/1.2) for what shipped.
+  (1.1/1.2) for what shipped. Audit 2026-09-30 (text-only, unverified): likely stale — Not a bug.
 
 ## `GatherSessionState` logs a benign "Accessed None" for players with no PlayerState yet (RESOLVED)
 
@@ -806,7 +808,7 @@
   `IsValid(PlayerState)`, gating `GetPlayerName(PlayerState)` behind the true branch via a new
   local string variable `ResolvedPlayerName` (set from `GetPlayerName` on true, set to `""` on
   false). Compiles clean; behavior unchanged (saved `PlayerName` for an unassigned slot is still
-  `""`), but `GetPlayerName` is no longer called on a None `PlayerState`.
+  `""`), but `GetPlayerName` is no longer called on a None `PlayerState`. (audit 2026-09-30: verified) 2026-09-24 Branch guard.
 
 ## `OnEventChanged` dispatcher doesn't reach remote clients (host-only event banner)
 
@@ -860,7 +862,7 @@
   other logic changed). Verified `UnlockPerk`/`TrySpendMetaCurrency`/`UnlockWeapon` were already
   wired correctly, and `LoadOrCreateMeta` intentionally leaves both arrays at empty-array default
   since it only runs for a brand-new save. Blueprint compiles with 0 errors/0 warnings and was
-  saved.
+  saved. (audit 2026-09-30: verified) 2026-09-24 pins wired.
 
 ## Monolith tooling: `blueprint.add_struct_field`'s `type` param silently corrupts on an unrecognized token
 
@@ -957,7 +959,7 @@
   **Decision (2026-09-22, user-approved): the Meta-Shop UI's home is Option B — a real
   Main Menu level/flow** (`Map_MainMenu` + `WBP_MainMenu`), not a hub-kiosk actor (Option A)
   or a debug-key-openable widget stopgap (Option C). User's stated intent: "nail down a real
-  feature instead of a test fixture."
+  feature instead of a test fixture." (audit 2026-09-30: verified) 2026-09-22 built.
 
 ## Player no longer spawns with a starting pistol
 
@@ -983,7 +985,7 @@
   reads the test player's active equipment slot right after spawn (before any other test can
   re-equip it) and asserts its `ItemID` is `"Pistol"` — `GrantStartingLoadoutIfEmpty` hardcodes
   the pistol as the starting weapon, so this directly confirms the grant fires. Confirmed
-  passing in a clean single-session 24/24 PIE automation run (`pie_smoke_44_054057`).
+  passing in a clean single-session 24/24 PIE automation run (`pie_smoke_44_054057`). (audit 2026-09-30: verified) 2026-09-29 Sequence added.
 
 
 ## Build Menu: clicking a trap does nothing (root-caused, fix in progress)
@@ -1122,7 +1124,7 @@
   that the data pins resolve.
   Note: the Unreal Editor crashed once during the original (misdiagnosed) investigation
   (process fully exited) after back-to-back `pie_call_function` calls — cause unconfirmed,
-  but avoid rapid repeated `pie_call_function` calls against the same function as a precaution.
+  but avoid rapid repeated `pie_call_function` calls against the same function as a precaution. (audit 2026-09-30: verified) 2026-09-22 PIE-confirmed.
 
 ## Checkout counter stand-location bug — customer permanently loops between claim/queue (RESOLVED)
 
@@ -1147,7 +1149,7 @@
   75-second-held PIE automation run, alongside the other 12 sync tests in
   `BP_TestController`'s `RunAllTests` chain (only the pre-existing, unrelated
   `Test_Equipment_ReloadReplenishesMagazine` GAS bug still fails — see its own entry above).
-  Vision-keeper gate 2: ALIGNED. Committed (`40c8a41`).
+  Vision-keeper gate 2: ALIGNED. Committed (`40c8a41`). (audit 2026-09-30: verified) 2026-09-24 PASS.
 
 ## Monolith/Unreal gotcha: a `BlueprintPure` function with branching logic can silently return zeroed output when called cross-actor (RESOLVED)
 
@@ -1184,7 +1186,7 @@
   make/break step — generic Vector struct nodes were rejected as "not a BlueprintType" when
   created from scratch in this rebuild (same class of issue as the existing
   `add_node`-with-`MakeStruct` entry above, now confirmed to also affect manually
-  reconstructed graphs, not just that action).
+  reconstructed graphs, not just that action). (audit 2026-09-30: verified) 2026-09-24 recreated.
 
 ## Test-bed log ambiguity: some tests appear to log a result twice within one `RunAllTests` session (RESOLVED)
 
@@ -1354,7 +1356,7 @@
 - **Repro:** Interact with a shelf to open the shelf UI, then press Tab.
 - **Actual:** Only the inventory closes; the shelf panel stays open.
 - **Expected:** Tab, Escape, and E each close the whole interaction window the player is in (shelf, kiosks, and any other interaction UI).
-- **Status:** Fixed and confirmed by the user in PIE on 2026-09-25 (Tab, Escape and E). Tab, Escape and E now route through `CloseActiveInteractionUI` on `BP_PlayerController_ZombieStore`, which closes the shelf and inventory together. Covered by `Test_InteractionUI_CloseActive`.
+- **Status:** Fixed and confirmed by the user in PIE on 2026-09-25 (Tab, Escape and E). Tab, Escape and E now route through `CloseActiveInteractionUI` on `BP_PlayerController_ZombieStore`, which closes the shelf and inventory together. Covered by `Test_InteractionUI_CloseActive`. (audit 2026-09-30: verified) 2026-09-25 routes both.
 
 ## UI open/close functions have empty MappingContext pins
 
@@ -1378,7 +1380,7 @@
 - **Repro:** Run the automation test bed (`L_AutomationTestBed`) and grep the log.
 - **Actual:** ~90 `Script Msg: Attempted to access index 0 from array 'EquipmentSlots' of length 0` warnings from `BP_HeroCharacter_C_0.EquipmentComponent`, likely a getter (e.g. `GetActiveAmmo`/active-slot lookup) running before any item is equipped.
 - **Expected:** Getters guard with `IsValidIndex` and return defaults when no slot exists.
-- **Status:** RESOLVED (2026-09-29). `GetActiveSlotData` now checks `IsValidIndex(EquipmentSlots, ActiveSlotIndex)` first and returns empty slot data when the index is invalid. The test bed ran 118/0 with 0 of these warnings, down from ~70. Still needs a PIE check that equipping and swapping weapons works as before.
+- **Status:** RESOLVED (2026-09-29). `GetActiveSlotData` now checks `IsValidIndex(EquipmentSlots, ActiveSlotIndex)` first and returns empty slot data when the index is invalid. The test bed ran 118/0 with 0 of these warnings, down from ~70. Still needs a PIE check that equipping and swapping weapons works as before. (audit 2026-09-30: verified) 2026-09-29 IsValidIndex.
 
 ### Monolith `blueprint.disconnect_pins` can remove an unrelated link on a fan-out exec pin
 - **Area:** Monolith MCP tooling (Blueprint graph editing).
@@ -1444,7 +1446,7 @@
 - **Repro:** Launch the editor and check the log for circular-dependency load warnings.
 - **Actual:** The cycles load with warnings. Before the fix below, they crashed the editor at startup (`AsyncLoading2.cpp:11167`, `!Object->HasAnyFlags(RF_NeedLoad | RF_NeedInitialization)` on the `BP_PlayerController_ZombieStore` CDO).
 - **Expected:** No cycles. Use soft class refs (`TSoftClassPtr` / soft class variables) for the pickup drop class and the DataTable's zombie class columns.
-- **Status:** Crash fixed. `AGASDocumentationGameMode` loaded `BP_HeroCharacter` with `StaticLoadClass` in its constructor, which recursed through the cycle while the CDO was built. The load now happens in `BeginPlay`. The cycles remain. They're harmless for now, but any new constructor-time sync load of these assets could trip the same assert.
+- **Status:** Crash fixed. `AGASDocumentationGameMode` loaded `BP_HeroCharacter` with `StaticLoadClass` in its constructor, which recursed through the cycle while the CDO was built. The load now happens in `BeginPlay`. The cycles remain. They're harmless for now, but any new constructor-time sync load of these assets could trip the same assert. Audit 2026-09-30 (text-only, unverified): likely fixed — Load at BeginPlay.
 
 ## Monolith has no Get Subsystem node (K2Node_GetSubsystem)
 
@@ -1573,7 +1575,7 @@
   - The 60/155 capsule may snag on geometry, or fail to spawn at a tight spawn point. `SpawnBoss` returns false and the night goes on without a boss.
   - Player count is sampled once, when the boss spawns. Players who join or leave later don't rescale its health.
 - **Expected:** `ActiveBoss` is restored on load and tracks every live boss; the boss has its own locomotion clips; boss health follows the current player count.
-- **Status:** Open, known limitations (accepted for K6).
+- **Status:** Open, known limitations (accepted for K6). Audit 2026-09-30 (text-only, unverified): likely stale — Accepted.
 
 
 ## Spitter glob can hit its own Spitter on clients
@@ -1680,7 +1682,7 @@
 - **Repro:** Upgrade a shelf to T4 and stock a long rifle next to other items.
 - **Actual:** the rifle mesh extends into the adjacent slots.
 - **Expected:** each item reads as its own slot.
-- **Status:** Open, cosmetic. Possible fixes: a per-item display scale or yaw, or shorter long-gun display meshes authored in Blender (never component scale).
+- **Status:** Open, cosmetic. Possible fixes: a per-item display scale or yaw, or shorter long-gun display meshes authored in Blender (never component scale). Deferred from Phase 12 A3: neither S_ItemData nor BP_ShelfActor has a display-transform field, so the fix needs a struct field, BP_ShelfActor logic and a DT_Items value (multi-asset).
 
 ## Shelf_Camp_Gond1 has only 20 cm clearance from Archery_Divider
 
@@ -1733,7 +1735,7 @@
 - **Expected:** PASS.
 - **Status:** RESOLVED (2026-09-29).
   - **Cause:** the test's expectation was out of date. `GetQueueSpotLocation` projects each spot onto navmesh. The test bed counter has no `QueueSpotOffsets`, so spot 0 falls back to the spacing formula. Projection lands it 124 uu from QueuePoint against `QueueSpacing` 110, which fails the old ±5 tolerance.
-  - **Fix:** check 4 now compares spot 0 against the raw unprojected spot, within 100 uu. The test also prints `SAssert1..4`/`SpotDiag`. It PASSES.
+  - **Fix:** check 4 now compares spot 0 against the raw unprojected spot, within 100 uu. The test also prints `SAssert1..4`/`SpotDiag`. It PASSES. (audit 2026-09-30: verified) 2026-09-29 resolved.
 
 ## Test_Brute_ChargeUsesCharacterMovement is intermittently flaky (2026-09-29)
 
@@ -1784,7 +1786,7 @@
 - **Repro:** Spawn or place a `BP_ItemPickup` with Quantity 3 and walk over it.
 - **Actual:** One item goes into the inventory, and the pickup is destroyed.
 - **Expected:** Each unit takes a slot until the inventory is full, and the rest stays on the ground.
-- **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups.
+- **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups. Audit 2026-09-30 (text-only, unverified): likely stale — Phase 8 limit.
 
 ## Loot slot capacity checks always reported full (Phase 8) (RESOLVED, needs in-PIE confirmation)
 
@@ -1823,8 +1825,8 @@
 - **Area:** `BP_ItemPickup` `LootTier` RepNotify (`docs/PHASE_8_TASKLIST.md` E.1)
 - **Repro:** As a client, look at a Junk drop.
 - **Actual (expected from code):** Junk is enum value 0, the same as the default, so `OnRep_LootTier` never fires on clients. The light keeps its default color and there's no overlay.
-- **Expected:** A gray glow, like on the host.
-- **Status:** Open, needs a PIE check. Fix: call `ApplyTierVisuals` from `BeginPlay` on clients too.
+- **Expected:** No glow on Junk, on host or client (GDD §3: only Common and above glow).
+- **Status:** Open, needs a PIE check. Fix: call `ApplyTierVisuals` from `BeginPlay` on clients too. Scheduled: Phase 12 A3.
 
 ## Flaky tests: `Test_Brute_ChargeUsesCharacterMovement` and `Test_Zombie_TargetsNearestDoorWhenOutside`
 
@@ -1856,7 +1858,7 @@
 - **Repro:** Drop a weapon by equipping over it, and have another player pick it up.
 - **Actual:** Only the weapon and its tier transfer. Reserve ammo stays with the ammo pool of the player who dropped it.
 - **Expected:** Matches the current per-player ammo pool design, so no change is planned.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Zombie weapon drops ignore elite/pity tier shifts (Phase 10)
 
@@ -1864,7 +1866,7 @@
 - **Repro:** Kill elites and the boss, and compare the tiers of their weapon drops with normal item drops.
 - **Actual:** The weapon's tier rolls on the plain night curve for the current day. The elite and pity tier shifts that item loot uses don't apply, so an elite's weapon isn't more likely to be high-tier.
 - **Expected:** Matches the chosen design ("plain night curve only"). Revisit if boss drops feel unrewarding.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Weapon shop purchases after the Day save are lost on quit (Phase 10)
 
@@ -1872,7 +1874,7 @@
 - **Repro:** Buy a weapon or reroll during Day or Dusk, after the Day autosave, then have the host quit and reload.
 - **Actual:** The shop state and the buyer's equipment reload as they were at the last save point. The SOLD flag, the reroll count, the new weapon and the cash deduction are all undone.
 - **Expected:** Consistent with all other mid-phase changes, since the session only saves at phase save points.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Weapon shop charges even if the equip fails (Phase 10)
 
@@ -1880,7 +1882,7 @@
 - **Repro:** Buy a weapon when `EquipWeaponWithTier` would fail. One example is a buyer pawn with no valid equipment component.
 - **Actual:** StoreCash is deducted and the slot is marked SOLD before the equip runs. The equip's `bSuccess` is ignored, so the buyer pays and gets nothing.
 - **Expected:** Either equip first and charge only on success, or refund and unmark the slot on failure.
-- **Status:** Open. Low risk, because the checks before the equip make failure unlikely in normal play.
+- **Status:** Open. Low risk, because the checks before the equip make failure unlikely in normal play. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Closing the deposit box doesn't remove its mapping context (pre-existing)
 
@@ -1896,7 +1898,7 @@
 - **Repro:** After the last autosave, buy a blueprint, upgrade a trap or reroll the shop. Then have the host quit and reload.
 - **Actual:** Owned blueprints, the shop stock, trap tiers and cash reload as they were at the last save point.
 - **Expected:** Consistent with all other mid-phase changes, since the session only saves at phase save points.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Blueprint shop reroll availability doesn't refresh when a player with new meta unlocks joins mid-day (Phase 11)
 
@@ -1904,7 +1906,7 @@
 - **Repro:** When nothing new is left to roll, a client whose meta unlocks add new trap blueprints joins mid-day.
 - **Actual:** The reroll stays disabled ("Nothing new to roll") until the next roll or purchase recomputes it.
 - **Expected:** The candidate pool is recomputed when a player joins.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Saved traps are matched to sockets by actor name; renamed sockets drop old saved traps (Phase 11)
 
@@ -1912,7 +1914,7 @@
 - **Repro:** Save mid-run with traps placed, rename or replace a `BP_DefenseSocket` in the map, then load that save.
 - **Actual:** A trap whose socket name no longer matches is silently not restored.
 - **Expected:** Acceptable for now. A stable socket ID would fix it.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Hold-E repair on placed traps is replaced by the trap panel's instant Repair button (Phase 11)
 
@@ -1920,7 +1922,7 @@
 - **Repro:** Outside Build Mode, press or hold E on a damaged placed trap.
 - **Actual:** The trap panel opens, and repair happens through its Repair button. The old hold-E defense repair path (`GetAimedDamagedDefense` → RepairHold) is now unreachable for defenses. Breach-door hold-repair is unchanged.
 - **Expected:** By design: trap management lives in one panel.
-- **Status:** Known limitation (by design).
+- **Status:** Known limitation (by design). Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## Mid-run saves from before the Junk-start change load traps at Common ×1.25 (Phase 11)
 
@@ -1928,7 +1930,7 @@
 - **Repro:** Load a mid-run save made before the 2026-09-30 Junk-start change, with traps placed.
 - **Actual:** Saved traps keep their stored tier (Common), which now means ×1.25 instead of ×1.0. They also keep their old TotalSpent. No migration is done.
 - **Expected:** Acceptable: only affects saves from the dev period.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## SlowStrip slow curve: Treasure slows zombies to 10% speed; watch balance (Phase 11)
 
@@ -1952,7 +1954,7 @@
 - **Repro:** Put several zombies inside a turret's detection sphere.
 - **Actual:** It shoots the first overlapped actor, not the nearest or the most threatening.
 - **Expected:** Nearest-target selection.
-- **Status:** Known limitation (pre-existing; noted during Phase 11 T8).
+- **Status:** Known limitation (pre-existing; noted during Phase 11 T8). Audit 2026-09-30 (text-only, unverified): likely stale — Pre-existing.
 
 ## Dead Phase 11 leftovers: WBP_BuildMenu.TrackedSocket and the PC's defense hold-repair path (Phase 11)
 
@@ -2028,7 +2030,7 @@
 - **Repro:** Start a new run.
 - **Actual:** The run opens at "DUSK - DAY 1", so the first day has no customers and no daily-event roll. The first session save happens at Morning of Day 2.
 - **Expected:** User-requested (2026-09-30), to cut the wait before the first Night.
-- **Status:** Known limitation.
+- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
 
 ## UI layout follow-ups from the 2026-09-30 layout fix
 

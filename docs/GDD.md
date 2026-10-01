@@ -28,12 +28,14 @@ No Brainers is our first dip into the multiplayer genre. It's a test of how well
 
 **Session Structure:**
 A four-phase, time-based day/night cycle (updated 2026-09-24 — user-confirmed; previously wave-based, ending Night on a zombie-kill count rather than a timer):
-- **Night:** Zombies spawn continuously at random intervals from outside the store for the phase's full duration. Players fight to survive using weapons and placed defenses (turrets, spike traps, etc.) inside the store, and collect item drops from kills. Night ends on its timer regardless of how many zombies are still alive — surviving zombies are never forcibly despawned and can carry over into later phases.
+- **Night:** Zombies spawn continuously at random intervals from outside the store for the phase's full duration. Players fight to survive using weapons and placed defenses (turrets, spike traps, etc.) inside the store, and collect item drops from kills. Night ends on its timer (except Night 9, the final night; see below) regardless of how many zombies are still alive — surviving zombies are never forcibly despawned and can carry over into later phases.
 - **Morning:** A quiet buffer phase. Neither zombies nor customers spawn; players can regroup and build. Surviving defenses are automatically restored to full health at the start of Day; destroyed defenses must be rebought. (Updated 2026-09-26: players can also pay to repair a damaged defense in any phase, at a cost proportional to missing health, and dismantle one for a 50% refund. Updated 2026-09-29: breach points (doors/walls) can also be paid-repaired the same way, but only in Morning, Day, and Dusk, never at Night. Breach points are real doors: any player can tap Interact to open or close one in any phase, while holding Interact repairs it. An open door can't be damaged and lets zombies walk straight through; a broken door can't be closed until it's repaired, and repairing always leaves it closed. Updated 2026-09-30: traps can be placed in Morning, Day and Dusk. Dismantling refunds 50% of everything spent on the trap, placement plus upgrades. Upgrading and selling are closed at Night, while repair works in any phase. Players manage a placed trap by pressing E on it.)
 - **Day:** Customers come and shop for stocked items, generating money; players place looted items on shelves to stock the store. (Updated 2026-09-30: the weapon kiosk sells a shared daily stock of 4 tiered weapons, rolled each Morning. It's open in Morning, Day and Dusk and closed at Night, and paid rerolls double in cost. The Defense kiosk likewise sells a shared daily stock of 3 trap blueprints, and is also closed at Night.)
 - **Dusk:** Customers stop spawning as the store closes; zombies still don't spawn. Another buffer for last-minute building/repair before Night returns.
 
 The cycle repeats Night → Morning → Day → Dusk → Night indefinitely. Because zombies can persist across phases, defeat (all players dead) can now trigger in any phase, not just Night.
+
+(Updated 2026-09-30, user decision, Phase 12: **the run is won on Night 9.** The game's theme is groups of 3. Night 9 has no timer, and it ends when the team kills the 3-phase Final Boss, which wins the run and adds +300 meta-currency to the payout. The host then chooses **Cash Out** or **Continue into Endless**. Endless nights ramp zombie health and damage by +12% per night (compounding), with more and faster spawns and more elites. Every endless night has a boss: the Swamp boss, or the Final Boss on every 3rd night. The host gets the same choice again each endless dawn. The endless payout is the normal payout × (1 + 0.10 per endless night survived) plus the victory bonus, and a wipe in Endless keeps everything earned. Detail is in `docs/PHASE_12_TASKLIST.md`.)
 
 (Updated 2026-09-30, user-requested: a new run starts at Dusk of Day 1 to cut the wait before the first Night. Day 1 has no Day phase, so there are no customers and no daily-event roll that day. Both kiosk shops still roll their stock at that first Dusk. A resumed session keeps its saved phase, and a new run's first session save is at Morning of Day 2.)
 
@@ -97,6 +99,12 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
 ## 4. Enemies
 
 Special zombie types are planned (e.g. fast, tanky, defense-targeting), all deriving from a single shared base zombie class.
+
+**Combat feel (user decision, 2026-09-30, Phase 12):**
+- **Zombie attacks:** melee zombie and boss attacks deal damage at the apex of the swing, and only if the target is still in range, so players can dodge by stepping back. Spitter globs and Bloater explosions are unchanged.
+- **Stagger:** player melee hits stagger zombies for 0.35 × the weapon's swing interval, clamped to 0.25–0.8 s. Brutes take half, and bosses are immune.
+- **Hit feedback:** player hits show a green goo splat and a brief white flash.
+- **Bosses:** the Swamp boss comes on Nights 3 and 6. The Night 9 Final Boss is an upgraded Swamp boss with 3 health phases: normal; then it summons 3 special adds and moves faster; then it enrages and summons more often.
 
 ## 5. Technical Notes
 
