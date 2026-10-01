@@ -48,6 +48,10 @@
 
 * [ ] **2.3 Shelf-Stocking & Customer Event UI**
 * Combo feedback overlay on shelves showing matching row bonuses (e.g., "3x Combo! +50% Profit").
+  * STATUS NOTE (2026-10-01):
+    * The combo is built as same-category clusters that connect left/right/up/down, with no wrap across rows. The tiers are 2 = +25%, 3–4 = +50% and 5+ = +75%, applied to both the sell price and the buy chance.
+    * `WBP_ShelfPanel` lays its slots out as the shelf's rows×columns and shows "{N}x Combo! +{P}%".
+    * The world-space overlay isn't built yet. See docs/BUGS.md — "Shelf combo has no world-space overlay."
 * Dynamic event notification banner (e.g., "CUSTOMER EVENT: Nurse Surge Incoming! Stock Medical Items!").
 
 * [ ] **2.4 Build Mode UI & Shop Kiosks**

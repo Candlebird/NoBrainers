@@ -97,7 +97,7 @@
 - **Repro:** Play `Enemy_Walk` on `ZombieTest`. Its pelvis evaluates about 110 m up. `Enemy_Idle` collapses every bone to one point.
 - **Actual:** Those two clips are unusable, and anything retargeted from them is too. The zombie BPs (`BP_Zombie_Base`, `BP_ZombieBase`) now use `SK_Zombie` with `ABP_SK_Zombie`, which plays `Enemy_Walk_ZM` and `Enemy_Idle_ZM`. Those are retargeted from the clean `/Game/AnimStarterPack` originals via `RTG_Mannequin_To_Zombie`. `SK_Zombie` still has no physics asset.
 - **Expected:** Old corrupt clips are deleted or ignored. `SK_Zombie` gets a physics asset if ragdoll or hit reactions need one.
-- **Status:** Open (known limitation). Gameplay no longer uses the corrupt clips. Audit 2026-09-30 (text-only, unverified): likely stale — Replaced by modern rig.
+- **Status:** Open (known limitation). Gameplay no longer uses the corrupt clips.
 
 ## Map_Store_Outdoors: scaled BP_BreachPoint wall panels unverified in PIE
 
@@ -612,7 +612,8 @@
   output pin type before moving any link, and can be switched off with
   `bDuplicateSharedGetters=False` under `[VesperNodeCleaner]` in `Config/DefaultEditor.ini`.
   Keep recompiling after vesper `auto_layout` calls until this has held up for a while,
-  then close this entry. Audit 2026-09-30 (text-only, unverified): likely fixed — Vesper rewrite 2026-09.
+  then close this entry.
+- **Closed 2026-10-01:** it has held up across repeated use. The 2026-10-01 shelf-combo, escalation and save-ID run made 10+ vesper passes over multi-function graphs, and every one recompiled with 0 errors and no duplicated nodes. Reopen if a post-layout compile fails again.
 
 ## Shelf UI has no item-placement slots — only upgrade/close buttons and text
 
@@ -795,7 +796,13 @@
   `Test_Zombie_RetargetsAfterTargetDies` uses to kill the player. Confirmed passing in a
   clean single-session 22/22 PIE automation run. (audit 2026-09-30: verified) 2026-09-29 AI stopped.
 
-## Store escalation's "cash pool" and "breach point" scaling are unimplemented (deferred scope)
+## Store escalation's "cash pool" and "breach point" scaling are unimplemented (RESOLVED 2026-10-01, needs in-PIE confirmation)
+
+- **Resolution (2026-10-01):**
+  - **Cash pool:** each customer gets a `SpendBudget` = `Round(150 × MaxPriceMultiplier × CustomerVolumeMultiplier)` (from `BP_StoreEscalationComponent.ComputeCustomerSpendBudget`). It's set at spawn in `BP_CustomerSpawner.TrySpawnCustomer`, and `BTT_FindBestShelfSlot` skips any slot that would push the cart over budget.
+  - **Breach spawn frequency:** `BP_ZombieSpawnerManager` scales its spawn interval by `ComputeZombieSpawnIntervalScale(ZombieHordeSizeMultiplier)` (clamped to 0.6–1.0). It also biases spawns toward zones within `BreachAdjacencyRadius` (1500 uu) of a `BP_BreachPoint`, capped at `BreachBiasMaxChance` (0.75).
+  - **Covered by:** `Test_Escalation_SpendBudgetFormula`, `Test_Escalation_SpawnIntervalScale`.
+- The original entry follows.
 
 - **Area:** Store Advertisement System (`/Game/Core/Components/BP_StoreEscalationComponent`,
   `docs/PHASE_5_TASKLIST.md` Task 1.1)
@@ -816,7 +823,7 @@
   scaling without them.
 - **Status:** Open — deliberately deferred, not a bug in the landed system. Everything else
   in Task 1.1/1.2 is built and compiles clean; see `docs/PHASE_5_TASKLIST.md` Status Note
-  (1.1/1.2) for what shipped. Audit 2026-09-30 (text-only, unverified): likely stale — Not a bug.
+  (1.1/1.2) for what shipped.
 
 ## `GatherSessionState` logs a benign "Accessed None" for players with no PlayerState yet (RESOLVED)
 
@@ -1318,13 +1325,27 @@
     - Pops are RenderOpacity-only.
     - See "Shelf matching-row combo bonus never built."
 
-## Shelf matching-row combo bonus never built
+## Shelf matching-row combo bonus never built (RESOLVED 2026-10-01, needs in-PIE confirmation)
 
 - **Area:** shelf stocking and sales (`BP_ShelfActor`, checkout pricing); `docs/PHASE_6_TASKLIST.md` §2.3.
 - **Repro:** Stock one shelf row with matching items and sell from it.
 - **Actual:** No combo is detected, no bonus is paid, and no "3x Combo! +50% Profit" overlay appears. No combo logic, variable or widget exists anywhere in the project.
 - **Expected:** Per Phase 6 §2.3, a matching row pays a profit bonus and shows a combo overlay on the shelf.
-- **Status:** Open (known gap, not a regression). Found during Phase 7 K5, whose "combo/event banner check" had nothing to verify on the combo side. It needs a design pass first: the rules for what counts as matching, the bonus size, and whether it stacks with archetype events.
+- **Status:** Resolved 2026-10-01. Found during Phase 7 K5.
+  - **Rules:** slots match when they hold the same `EItemCategory`. Clusters are 4-connected (left, right, up, down) and never wrap across rows. Every item in a cluster gets the tier bonus: 2 items = +25%, 3–4 = +50%, 5+ = +75%.
+  - **Where the bonus applies:** both the sell price and the customer buy chance (70/80/90/100%).
+  - **Code:** `BP_ShelfMatchingComponent` (`ComputeClusterSizes`, `GetComboMultiplierForSize`, `BuildSlotKeys`, `EvaluateMatching`).
+  - **UI:** the shelf panel (`WBP_ShelfPanel`) now lays its slots out as the shelf's rows×columns and shows "{N}x Combo! +{P}%".
+  - **Behaviour change:** `BP_ShelfActor.Server_PurchaseSlot` now applies the bonus to the player-purchase price as well.
+  - **Covered by:** `Test_ShelfCombo_ClusterSizes`.
+  - **Follow-up:** see "Shelf combo has no world-space overlay."
+
+## Shelf combo has no world-space overlay
+
+- **Area:** `BP_ShelfActor`, combo feedback; `docs/PHASE_6_TASKLIST.md` §2.3.
+- **Actual:** the combo text only appears in the shelf panel and the per-slot labels. Nothing floats over the physical shelf in the world.
+- **Expected:** a world-space "3x Combo! +50%" overlay above the shelf, visible without opening the panel.
+- **Status:** Open (follow-up from the 2026-10-01 combo build). Read `BP_ShelfMatchingComponent.BestClusterSize`/`BestClusterMultiplier` and refresh on `OnShelfBonusUpdated`.
 
 ## Build mode: no trap can be placed (spike, swinging), placement flow needs ghost preview
 
@@ -1472,7 +1493,7 @@
 - **Repro:** Launch the editor and check the log for circular-dependency load warnings.
 - **Actual:** The cycles load with warnings. Before the fix below, they crashed the editor at startup (`AsyncLoading2.cpp:11167`, `!Object->HasAnyFlags(RF_NeedLoad | RF_NeedInitialization)` on the `BP_PlayerController_ZombieStore` CDO).
 - **Expected:** No cycles. Use soft class refs (`TSoftClassPtr` / soft class variables) for the pickup drop class and the DataTable's zombie class columns.
-- **Status:** Crash fixed. `AGASDocumentationGameMode` loaded `BP_HeroCharacter` with `StaticLoadClass` in its constructor, which recursed through the cycle while the CDO was built. The load now happens in `BeginPlay`. The cycles remain. They're harmless for now, but any new constructor-time sync load of these assets could trip the same assert. Audit 2026-09-30 (text-only, unverified): likely fixed — Load at BeginPlay.
+- **Status:** Crash fixed. `AGASDocumentationGameMode` loaded `BP_HeroCharacter` with `StaticLoadClass` in its constructor, which recursed through the cycle while the CDO was built. The load now happens in `BeginPlay`. The cycles remain. They're harmless for now, but any new constructor-time sync load of these assets could trip the same assert.
 
 ## Monolith has no Get Subsystem node (K2Node_GetSubsystem)
 
@@ -1601,7 +1622,7 @@
   - The 60/155 capsule may snag on geometry, or fail to spawn at a tight spawn point. `SpawnBoss` returns false and the night goes on without a boss.
   - Player count is sampled once, when the boss spawns. Players who join or leave later don't rescale its health.
 - **Expected:** `ActiveBoss` is restored on load and tracks every live boss; the boss has its own locomotion clips; boss health follows the current player count.
-- **Status:** Open, known limitations (accepted for K6). Audit 2026-09-30 (text-only, unverified): likely stale — Accepted.
+- **Status:** Open, known limitations (accepted for K6).
 
 
 ## Spitter glob can hit its own Spitter on clients
@@ -1695,12 +1716,12 @@
 - **Expected:** the early game stays tight; capacity, customer volume and upgrade costs are balanced together.
 - **Status:** Open. It needs a playtest pass on stocking pace, customer demand and upgrade cost.
 
-## Full-category match is harder on 16-slot shelves
+## Full-category match is harder on 16-slot shelves (RESOLVED 2026-10-01)
 
 - **Area:** shelf matching / meta payout, `BP_ShelfActor`.
 - **Actual:** a T4 shelf has 16 slots (was 8 per shelf before), so filling a whole shelf with one category takes twice the items.
 - **Expected:** matching stays achievable. Tune it together with "Shelf matching-row combo bonus never built," for example by matching per row instead of per shelf.
-- **Status:** Open (design question).
+- **Status:** Resolved 2026-10-01. A shelf now counts as "fully matched" (`Server_RecordShelfFullyMatched`, latched once per shelf) when its largest same-category cluster reaches `min(5, slot count)`. A full fill is no longer needed.
 
 ## Long rifle overlaps neighbouring slots on T4 shelves
 
@@ -1717,12 +1738,12 @@
 - **Expected:** players and customers can move around the aisle end.
 - **Status:** Open. Check in play whether the gap causes nav or player snagging.
 
-## Dead C++ SpectatorController_ZombieStore
+## Dead C++ SpectatorController_ZombieStore (RESOLVED 2026-10-01)
 
 - **Area:** `Source/GASDocumentation/{Public,Private}/Player/SpectatorController_ZombieStore.*`.
 - **Actual:** nothing references it. Spectating is done in `BP_PlayerController_ZombieStore`.
 - **Expected:** delete the class in its own task.
-- **Status:** Open, cleanup.
+- **Status:** Resolved 2026-10-01. Both files are deleted. Before deleting, I checked `Source/`, `Config/` and `Content/` and found no references. The full rebuild succeeded.
 
 ## Turret and socket collision volumes: follow-ups after the trace fix
 
@@ -1812,7 +1833,7 @@
 - **Repro:** Spawn or place a `BP_ItemPickup` with Quantity 3 and walk over it.
 - **Actual:** One item goes into the inventory, and the pickup is destroyed.
 - **Expected:** Each unit takes a slot until the inventory is full, and the rest stays on the ground.
-- **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups. Audit 2026-09-30 (text-only, unverified): likely stale — Phase 8 limit.
+- **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups.
 
 ## Loot slot capacity checks always reported full (Phase 8) (RESOLVED, needs in-PIE confirmation)
 
@@ -1884,7 +1905,7 @@
 - **Repro:** Drop a weapon by equipping over it, and have another player pick it up.
 - **Actual:** Only the weapon and its tier transfer. Reserve ammo stays with the ammo pool of the player who dropped it.
 - **Expected:** Matches the current per-player ammo pool design, so no change is planned.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## Zombie weapon drops ignore elite/pity tier shifts (Phase 10)
 
@@ -1892,7 +1913,7 @@
 - **Repro:** Kill elites and the boss, and compare the tiers of their weapon drops with normal item drops.
 - **Actual:** The weapon's tier rolls on the plain night curve for the current day. The elite and pity tier shifts that item loot uses don't apply, so an elite's weapon isn't more likely to be high-tier.
 - **Expected:** Matches the chosen design ("plain night curve only"). Revisit if boss drops feel unrewarding.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## Weapon shop purchases after the Day save are lost on quit (Phase 10)
 
@@ -1900,7 +1921,7 @@
 - **Repro:** Buy a weapon or reroll during Day or Dusk, after the Day autosave, then have the host quit and reload.
 - **Actual:** The shop state and the buyer's equipment reload as they were at the last save point. The SOLD flag, the reroll count, the new weapon and the cash deduction are all undone.
 - **Expected:** Consistent with all other mid-phase changes, since the session only saves at phase save points.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## Weapon shop charges even if the equip fails (Phase 10)
 
@@ -1924,7 +1945,7 @@
 - **Repro:** After the last autosave, buy a blueprint, upgrade a trap or reroll the shop. Then have the host quit and reload.
 - **Actual:** Owned blueprints, the shop stock, trap tiers and cash reload as they were at the last save point.
 - **Expected:** Consistent with all other mid-phase changes, since the session only saves at phase save points.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## Blueprint shop reroll availability doesn't refresh when a player with new meta unlocks joins mid-day (Phase 11)
 
@@ -1932,7 +1953,7 @@
 - **Repro:** When nothing new is left to roll, a client whose meta unlocks add new trap blueprints joins mid-day.
 - **Actual:** The reroll stays disabled ("Nothing new to roll") until the next roll or purchase recomputes it.
 - **Expected:** The candidate pool is recomputed when a player joins.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## Saved traps are matched to sockets by actor name; renamed sockets drop old saved traps (Phase 11)
 
@@ -1940,7 +1961,7 @@
 - **Repro:** Save mid-run with traps placed, rename or replace a `BP_DefenseSocket` in the map, then load that save.
 - **Actual:** A trap whose socket name no longer matches is silently not restored.
 - **Expected:** Acceptable for now. A stable socket ID would fix it.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## Hold-E repair on placed traps is replaced by the trap panel's instant Repair button (Phase 11)
 
@@ -1948,7 +1969,7 @@
 - **Repro:** Outside Build Mode, press or hold E on a damaged placed trap.
 - **Actual:** The trap panel opens, and repair happens through its Repair button. The old hold-E defense repair path (`GetAimedDamagedDefense` → RepairHold) is now unreachable for defenses. Breach-door hold-repair is unchanged.
 - **Expected:** By design: trap management lives in one panel.
-- **Status:** Known limitation (by design). Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation (by design).
 
 ## Mid-run saves from before the Junk-start change load traps at Common ×1.25 (Phase 11)
 
@@ -1956,7 +1977,7 @@
 - **Repro:** Load a mid-run save made before the 2026-09-30 Junk-start change, with traps placed.
 - **Actual:** Saved traps keep their stored tier (Common), which now means ×1.25 instead of ×1.0. They also keep their old TotalSpent. No migration is done.
 - **Expected:** Acceptable: only affects saves from the dev period.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## SlowStrip slow curve: Treasure slows zombies to 10% speed; watch balance (Phase 11)
 
@@ -1980,7 +2001,7 @@
 - **Repro:** Put several zombies inside a turret's detection sphere.
 - **Actual:** It shoots the first overlapped actor, not the nearest or the most threatening.
 - **Expected:** Nearest-target selection.
-- **Status:** Known limitation (pre-existing; noted during Phase 11 T8). Audit 2026-09-30 (text-only, unverified): likely stale — Pre-existing.
+- **Status:** Known limitation (pre-existing; noted during Phase 11 T8).
 
 ## Dead Phase 11 leftovers: WBP_BuildMenu.TrackedSocket and the PC's defense hold-repair path (Phase 11)
 
@@ -2056,7 +2077,7 @@
 - **Repro:** Start a new run.
 - **Actual:** The run opens at "DUSK - DAY 1", so the first day has no customers and no daily-event roll. The first session save happens at Morning of Day 2.
 - **Expected:** User-requested (2026-09-30), to cut the wait before the first Night.
-- **Status:** Known limitation. Audit 2026-09-30 (text-only, unverified): likely stale — Known limit.
+- **Status:** Known limitation.
 
 ## UI layout follow-ups from the 2026-09-30 layout fix
 
@@ -2090,7 +2111,9 @@
 - **Expected:** Every boss damage source ramps the same way, so bosses eventually outpace player growth.
 - **Status:** Fixed 2026-10-01. InitBoss caches `BaseChargeDamage`/`BaseChargeBreachDamage` once and scales both by the same `ComputeEndlessBossScale` result as `SlamDamage`. Still unverified: `ServerInitZombie` does read `TypeMaxHealth`, but the call order relative to InitBoss (set by the spawner) wasn't traced. Check boss current health equals max on an endless night in PIE.
 
-## Per-player run stats are restored by player index (Phase 12, known limitation)
+## Per-player run stats are restored by player index (Phase 12) (RESOLVED 2026-10-01, needs in-PIE confirmation)
+
+- **Resolution:** the save now keys each player entry by `UGDBlueprintLibrary::GetPlayerStableId` (the unique net ID, falling back to the player name). On respawn, `BP_GameMode_ZombieStore.RespawnDeadPlayers` calls `BP_GameInstance_NoBrainers.ClaimPlayerSaveEntry`. That function matches by stable key, then display name, then slot index, and claims each entry only once. With the Null OSS in PIE the IDs aren't stable across sessions, so PIE falls back to name and then slot. Covered by `Test_Save_StablePlayerIdMapping`.
 
 - **Area:** Run stats on the PlayerState (C1, the mid-run save restore in `BP_GameInstance_NoBrainers`).
 - **Repro:** Save a multiplayer run mid-way, then resume with the players joining in a different order.

@@ -6,6 +6,26 @@
 #include "Components/Image.h"
 #include "Abilities/GameplayAbility.h"
 #include "UObject/UnrealType.h"
+#include "GameFramework/PlayerState.h"
+
+FString UGDBlueprintLibrary::GetPlayerStableId(const APlayerState* PlayerState)
+{
+	if (!PlayerState)
+	{
+		return FString();
+	}
+	const FUniqueNetIdRepl& Id = PlayerState->GetUniqueId();
+	if (Id.IsValid())
+	{
+		// Virtual call on FUniqueNetId avoids needing a CoreOnline link dependency.
+		const FUniqueNetIdPtr NetId = Id.GetUniqueNetId();
+		if (NetId.IsValid())
+		{
+			return NetId->ToString();
+		}
+	}
+	return PlayerState->GetPlayerName();
+}
 
 bool UGDBlueprintLibrary::IsAbilityLocalPredicted(TSubclassOf<UGameplayAbility> AbilityClass)
 {

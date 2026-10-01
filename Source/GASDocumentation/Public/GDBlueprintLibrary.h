@@ -10,6 +10,7 @@
 class UDragDropOperation;
 class UImage;
 class UGameplayAbility;
+class APlayerState;
 
 /**
  *
@@ -29,6 +30,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "NoBrainers|Abilities")
 	static bool IsAbilityLocalPredicted(TSubclassOf<UGameplayAbility> AbilityClass);
+
+	/** Stable per-player id for save data: unique net id string if valid, else the player name. */
+	UFUNCTION(BlueprintPure, Category = "NoBrainers|Save")
+	static FString GetPlayerStableId(const APlayerState* PlayerState);
 
 	/** Test-harness only (automation test bed); not for gameplay use.
 	 *  Calls a zero-input-parameter function on Target by name. Returns false if not found or it takes inputs. */
