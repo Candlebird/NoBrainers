@@ -1,5 +1,25 @@
 # Known Bugs
 
+## Test_ZombieApexDodge fails because the hero is dead (Phase 12, test harness)
+
+- **Area:** `/Game/Tests/Automation/Blueprints/BP_TestController`, EventGraph chain `ApexDodgeTest_Run`. This is the test only. The game's apex logic was checked by the architect and is correct: `BP_ZombieBase.ResolveAttackApex` → `BP_ZombieAttackComponent.PerformMeleeAttack` box-traces at apex time, so a target out of range is not hit.
+- **Repro:** Run the full test bed.
+- **Actual:** At 08.10.57 the diag line was `alive=false`, with H0, H2, H1 and Hfinal all 0. Before the isolation fix, H2 was 86.57.
+  - `ZombieRetargetTest_Trigger` kills `TargetPlayer` with 99999 damage at t=1.0 s, and a -100000 GE heal at t=2.5 s doesn't revive it.
+  - At t=8 s, a heal with the same GE also leaves the hero dead.
+  - Earlier runs read health while concurrent tests were damaging and healing the hero, with live-AI zombies nearby.
+- **Expected:** An isolated, living hero. The test passes when V1==V2 (no damage while dodged) and V4<V3 (damage while standing still).
+- **Status:** Open. The test is test-side; it was retried twice and the architect's replacement packet also failed.
+  - **Fix options:**
+    - Have the test respawn or revive the hero with the game's real respawn path. This must clear the death state, not just restore health.
+    - Or run the apex test on a dedicated spawned dummy target that the zombie can hit.
+    - Or make the retarget test not kill the shared hero.
+  - **Open check:** floor at dodge point Origin+(0,-600,0) is unverified.
+  - **Other run notes (08.10):**
+    - The runner counted 388 passes. `Test_CustomerSpawnerMaxConcurrent` FAIL appears twice (08.10.34 and 08.10.44), so `RunAllTests` may have run twice within the same PIE session.
+    - The pass/fail set is the same as the 07.58 run (197/3).
+  - **PIE check:** PIE test checklist item 2 in `docs/PHASE_12_TASKLIST.md` covers the dodge in real play.
+
 ## Phase 9: tiered perks unverified in PIE (needs PIE testing)
 
 - **Area:** Phase 9 tiered meta progression (`DT_MetaPerks`, `BP_PerkComponent`, `BP_InventoryComponent`, `WBP_MetaShop`, `GA_BP_FireWeapon`, `GA_BP_MeleeAttack`, `BP_EquipmentComponent`).
@@ -2063,6 +2083,22 @@
 - **Actual:** Neither InitBoss nor ComputeBossMaxHealth reads GetZombieStatMultiplier, so bosses keep their normal health. The ramp only reaches regular zombies.
 - **Expected:** Per the Phase 12 design, endless bosses (Swamp and Final) scale with the ramp: ×1.12^N health and damage.
 - **Status:** Open. Accepted for the Phase 12 night run. Fix: multiply ComputeBossMaxHealth (and the boss melee damage) by GetZombieStatMultiplier.
+
+## Per-player run stats are restored by player index (Phase 12, known limitation)
+
+- **Area:** Run stats on the PlayerState (C1, the mid-run save restore in `BP_GameInstance_NoBrainers`).
+- **Repro:** Save a multiplayer run mid-way, then resume with the players joining in a different order.
+- **Actual:** Kills, damage, deaths and loot are restored by player index, so they can land on the wrong player.
+- **Expected:** Each player gets their own stats back.
+- **Status:** Open. This is an accepted architect risk. Fix: key the saved stats by a stable player ID (the online unique net ID or the player name) instead of the index.
+
+## Speed buffs can stack: Screamer plus Final Boss phase 2 (Phase 12, balance risk)
+
+- **Area:** `BP_Zombie_FinalBoss` phase-2 speed buff, Screamer speed buff.
+- **Repro:** On Night 9 or an endless Final Boss night, have a Screamer buff the Final Boss after it reaches phase 2.
+- **Actual (expected from the graphs, not seen in PIE):** The two speed multipliers multiply, so the boss may get very fast.
+- **Expected:** The boss stays catchable and dodgeable.
+- **Status:** Open. Watch for it in PIE (Phase 12 checklist item 5). Fix if needed: cap MaxWalkSpeed, or make bosses immune to the Screamer buff.
 
 ## Mid-run save dropped owned blueprints, the blueprint shop and placed traps (Phase 11, fixed 2026-09-30)
 

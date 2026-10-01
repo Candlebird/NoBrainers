@@ -6,7 +6,7 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
-**UPDATE (2026-09-30, Phase 12): Phase 12 (Combat Feel, Night 9 Victory, Endless & Bug Audit) is planned, waiting on the user's review before the overnight run.** See `docs/PHASE_12_TASKLIST.md`.
+**UPDATE (2026-09-30, Phase 12): Phase 12 (Combat Feel, Night 9 Victory, Endless & Bug Audit) is built (overnight run 2026-09-30/10-01). PIE testing is outstanding.** See `docs/PHASE_12_TASKLIST.md` and its "PIE test checklist".
 - The run is won by killing a 3-phase Final Boss on Night 9 (+300 meta bonus), then the team can cash out or continue into a ramping Endless mode.
 - Zombie attacks land at the swing apex and can be dodged. Melee hits stagger zombies and show a goo splat and flash. New one-handed and two-handed player swing animations.
 - New Sledgehammer and Katana, a Magnum buff, a Night 1 loot-tier leak fix, a death screen with spectate switching, and a BUGS.md audit.

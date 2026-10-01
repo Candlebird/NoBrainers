@@ -8,7 +8,7 @@
 - Two new melee weapons: the Sledgehammer and the Katana.
 - BUGS.md gets audited, so it matches the game again.
 
-**Status (2026-09-30).** Overnight run in progress. Groups A–E built (need PIE). C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
+**Status (2026-09-30).** Overnight run complete. Groups A–F built (need PIE). Vision gate 2 found DRIFT on docs only; it's fixed. C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
 
 **Group order is the cut order.** Groups land A → E. If the night runs short, cut from the end (E first).
 
@@ -114,8 +114,8 @@ The architect turns these into dispatch-ready packets. The numbers are for track
 - [x] **E2.** `DT_Weapons` rows for both (stats above, plus the melee class), the `DT_MetaPerks` unlock rows (250 / 300), and entry into the shop's melee pool.
 
 ### Group F — Tests and wrap-up
-- [ ] **F1.** Tests: apex dodge (out of range at the notify means no damage), stagger duration and the Brute/boss rules, the loot clamp on Night 1, the Magnum damage, the final-night flag and the victory trigger, the endless ramp multiplier, and the payout math.
-- [ ] **F2.** Vision gate 2, the GDD check, commits through `ue-git-manager` (local only), and the run log.
+- [x] **F1.** Tests: apex dodge (out of range at the notify means no damage), stagger duration and the Brute/boss rules, the loot clamp on Night 1, the Magnum damage, the final-night flag and the victory trigger, the endless ramp multiplier, and the payout math. 8 tests added: 7 pass, and Test_ZombieApexDodge fails because of a test-harness problem. See docs/BUGS.md — "Test_ZombieApexDodge fails because the hero is dead (Phase 12, test harness)."
+- [x] **F2.** Vision gate 2, the GDD check, commits through `ue-git-manager` (local only), and the run log.
 
 ## PIE test checklist (for the user, after the run)
 1. Melee a regular zombie with the Machete and then the Fire Axe. Check that each stagger is visibly short and long, that there's one clean swing with no double hit, and that the goo splat and flash appear.
