@@ -8,7 +8,7 @@
 - Two new melee weapons: the Sledgehammer and the Katana.
 - BUGS.md gets audited, so it matches the game again.
 
-**Status (2026-09-30).** Overnight run in progress. Groups A, B and C built (need PIE). C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
+**Status (2026-09-30).** Overnight run in progress. Groups A–D built (need PIE). C3 tint: see docs/BUGS.md — "Final Boss material is not darkened or red-tinted (Phase 12)."
 
 **Group order is the cut order.** Groups land A → E. If the night runs short, cut from the end (E first).
 
@@ -105,9 +105,9 @@ The architect turns these into dispatch-ready packets. The numbers are for track
 - [x] **C6.** `WBP_RunSummary`: per-player and team stats, the meta-currency count-up, and host-only Continue / Cash Out buttons (clients see a waiting state). It is used for victory, cash-out and defeat.
 
 ### Group D — Endless mode and death screen
-- [ ] **D1.** Endless state: the flag and night count, the ramp multipliers applied at spawn, and the boss on every night (the Final Boss on nights divisible by 3). Saved and restored.
-- [ ] **D2.** The endless dawn choice: at each endless Morning, the host gets Continue / Cash Out before the day phase. Cash Out → payout → summary → Main Menu.
-- [ ] **D3.** Death screen: the styled overlay with the respawn timer and the spectated name. Fire switches to the next teammate and Aim to the previous one while spectating.
+- [x] **D1.** Endless state: the flag and night count, the ramp multipliers applied at spawn, and the boss on every night (the Final Boss on nights divisible by 3). Saved and restored.
+- [x] **D2.** The endless dawn choice: at each endless Morning, the host gets Continue / Cash Out before the day phase. Cash Out → payout → summary → Main Menu.
+- [x] **D3.** Death screen: the styled overlay with the respawn timer and the spectated name. Fire switches to the next teammate and Aim to the previous one while spectating.
 
 ### Group E — New melee weapons
 - [ ] **E1.** Blender: the Sledgehammer and Katana meshes, sized correctly at the source, imported to `/Game/Weapons/Meshes/`.
