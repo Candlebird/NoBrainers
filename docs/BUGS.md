@@ -1723,7 +1723,7 @@
 - **Repro:** play through a night. The cycle logic is correct (Night, Morning, Day, Dusk, Night) but the user reported it looked like Night to Dusk.
 - **Actual:** the Morning and Dusk switch outputs are empty.
 - **Expected:** the HUD, lighting and music handle all five phases.
-- **Status:** Open, awaiting the user's description of what looked wrong.
+- **Status:** Superseded (2026-09-30). The HUD now shows "MORNING - DAY {Day}" and "DUSK - DAY {Day}". Lighting and music for those phases are unchanged.
 
 ## Test_CheckoutQueueSpotLocation started failing (2026-09-29)
 
@@ -1848,7 +1848,7 @@
 - **Repro:** Fire some rounds from a gun, equip a different weapon of the same type so the first one drops, then pick the first one back up.
 - **Actual:** The pickup keeps the ItemID and tier but not the magazine count, so the weapon comes back with a full magazine.
 - **Expected:** Arguably, the magazine count should be kept. It's minor, because swapping costs time and the reserve ammo is shared.
-- **Status:** Known limitation.
+- **Status:** Superseded by "Weapon pickup refills ammo: infinite ammo by swapping guns (pre-existing)" (fixed 2026-09-30).
 
 ## Dropped weapons don't carry reserve ammo (Phase 10)
 
@@ -1961,3 +1961,78 @@
 - **Actual:** The RepairSellBox removal (T18) and the trap panel routing (T20) left these unused.
 - **Expected:** Removed in a cleanup pass.
 - **Status:** Open. Cleanup only, with no gameplay effect.
+
+## Placed traps show no E prompt and can't be upgraded (Phase 11)
+
+- **Area:** Interaction trace and prompt on placed defenses, `OpenTrapPanelUI` routing (`BP_PlayerController_ZombieStore` IA_Interact)
+- **Repro:** Place a Spike or SlowStrip in PIE, look at it, press E.
+- **Actual:** No "E" prompt appears and pressing E does nothing, so the trap panel never opens.
+- **Expected:** An E prompt on the trap, and E opens WBP_TrapPanel for upgrades.
+- **Root cause:** The interaction trace hits the `BP_DefenseSocket` the trap sits on, not the trap itself, so `GetAimedPlacedDefense` and `GetAimedDamagedDefense` never found it, and the prompt text had no trap case.
+- **Status:** Fixed (2026-09-30), needs PIE confirmation. Both getters now fall back from a hit socket to its `OccupyingDefense`, and `GetAimedInteractPromptText` shows "[E] Upgrade {DisplayName}".
+
+## Meta shop unlock purchase takes currency but never raises the tier (Phase 10/11)
+
+- **Area:** `WBP_MetaShop` / `WBP_MetaShopEntry` Buy → meta purchase path for weapon/trap unlocks
+- **Repro:** In the main-menu meta shop, Buy "Machete Unlock".
+- **Actual:** Currency is subtracted, the toast says "Purchased Machete Unlock tier 0", the row stays at Tier 0/1, and the machete isn't unlocked in game.
+- **Expected:** The tier goes to 1/1 and the item joins the daily shop pool.
+- **Root cause:** `BP_GameInstance_NoBrainers.SaveMeta` didn't write the `UnlockedPerkIDs` and `UnlockedWeaponIDs` arrays, so every purchase was lost on save, and `TryPurchaseNextTier` never called `UnlockWeapon` / `UnlockBlueprint` for weapon and trap rows.
+- **Status:** Fixed (2026-09-30), needs PIE confirmation. Meta saves made before the fix have to be reset, because their spent currency was never matched by saved unlocks.
+
+## Weapon pickup refills ammo: infinite ammo by swapping guns (pre-existing)
+
+- **Area:** Weapon pickup/drop path (ammo state on pickup)
+- **Repro:** Fire part of a clip, pick up a gun from the ground, then pick the first gun back up.
+- **Actual:** Each pickup gives a full clip, so swapping gives infinite ammo.
+- **Expected:** A dropped weapon keeps its remaining ammo, and picking it up restores that value.
+- **Root cause:** `Server_EquipItem` always set `CurrentAmmo` to the full magazine, and pickups carried no ammo count.
+- **Status:** Fixed (2026-09-30), needs PIE confirmation. `DropSlotAsPickup` stores the magazine count in `BP_ItemPickup.StoredAmmo` (−1 means a fresh, full gun), and the pickup equips through `EquipWeaponWithTierAndAmmo`.
+
+## Stockroom box and inventory UIs have no minimum size, and their contents overlap (pre-existing)
+
+- **Area:** The Stockroom box transfer widget and the player inventory widget
+- **Repro:** Open a Stockroom box, or open the inventory.
+- **Actual:** Item cells are tiny and their names overlap each other. Panels don't fit their contents (the stock UI is mostly empty space, and the inventory's item row overflows its cells).
+- **Expected:** Cells with a minimum size, names that fit, and panels sized to their contents.
+- **Status:** Fixed (2026-09-30), needs PIE confirmation. `WBP_DepositEntry` (240×60) and `WBP_InventorySlot` (170×64) use fixed-size SizeBoxes. `WBP_DepositBox` and `WBP_Inventory` are centered dark panels with minimum sizes and scroll areas.
+
+## TrySpendMetaCurrency can return false after a successful spend (fixed 2026-09-30)
+
+- **Area:** `BP_GameInstance_NoBrainers.TrySpendMetaCurrency`
+- **Repro:** Spend meta currency when the balance is enough.
+- **Actual:** The return value was recomputed after the balance dropped, so a successful spend could report false.
+- **Expected:** It returns true whenever the spend happened.
+- **Status:** Fixed (2026-09-30). The result is latched in `bCanSpend` before the balance changes.
+
+## Hold-E repair may conflict with tap-E trap panel on damaged traps (Phase 11)
+
+- **Area:** `BP_PlayerController_ZombieStore` IA_Interact, now that `GetAimedDamagedDefense` finds traps through their socket
+- **Repro:** Look at a damaged placed trap and hold E, then tap E.
+- **Actual:** Not yet tested. The hold-repair path may now be reachable again for traps, and tap and hold may compete.
+- **Expected:** Tap opens the trap panel. Hold either repairs or does nothing, but never both.
+- **Status:** Watch.
+
+## WBP_Inventory.RefreshInventory passes Quantity=1 to SetSlotData
+
+- **Area:** `WBP_Inventory.RefreshInventory` → `WBP_InventorySlot.SetSlotData`
+- **Repro:** Hold a stack of more than one item and open the inventory.
+- **Actual:** The quantity is hard-wired to 1, so the slot's quantity label stays hidden.
+- **Expected:** The slot shows the stack count.
+- **Status:** Open.
+
+## Day 1 has no Day phase (by design)
+
+- **Area:** `BP_GameMode_ZombieStore.StartFirstDayAtDusk`
+- **Repro:** Start a new run.
+- **Actual:** The run opens at "DUSK - DAY 1", so the first day has no customers and no daily-event roll. The first session save happens at Morning of Day 2.
+- **Expected:** User-requested (2026-09-30), to cut the wait before the first Night.
+- **Status:** Known limitation.
+
+## UI layout follow-ups from the 2026-09-30 layout fix
+
+- **Area:** `WBP_MetaShop` (`EntriesScrollBox` slot), `WBP_Inventory` (header `CloseButton`), `BP_PlayerController_ZombieStore.GetInteractKeyText`
+- **Repro:** Open the meta shop and the inventory, and look at a trap.
+- **Actual:** Monolith can't set a Fill slot size, so the meta shop scroll area may not fill its panel and the inventory close button may not sit right-aligned. `GetInteractKeyText` has no Action set, so the prompt may show fallback key text.
+- **Expected:** The scroll area fills the panel, the close button is right-aligned, and the prompt shows the bound key.
+- **Status:** Open. Check in PIE, and fix by hand in the designer if needed.

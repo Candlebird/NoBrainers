@@ -7,7 +7,7 @@
 - Pressing E on a placed trap opens one panel for upgrade, repair and sell.
 
 **Status (2026-09-30).** Built unattended while the user can't test. **Needs PIE testing.** See the "PIE test checklist" at the bottom.
-- **Automation suite:** 186 PASS / 1 FAIL. The only failure is the known-flaky `Test_CustomerSpawnerMaxConcurrent`. All 18 Phase 11 tests pass. Two fixes landed during testing: the 6 trap CDOs now default to Common (T24b), and the blueprint shop's `IsShopOpen` and `GetCurrentRerollCost` got their missing Entry→Return exec links (T10b).
+- **Automation suite:** 191 PASS / 1 FAIL after the 2026-09-30 PIE-feedback fixes (186 PASS at the original Phase 11 build). The only failure is the known-flaky `Test_CustomerSpawnerMaxConcurrent`. All 18 Phase 11 tests pass. Two fixes landed during testing: the 6 trap CDOs now default to Common (T24b), and the blueprint shop's `IsShopOpen` and `GetCurrentRerollCost` got their missing Entry→Return exec links (T10b).
 
 ## Design decisions (confirmed with the user)
 
@@ -116,10 +116,15 @@
 - See docs/BUGS.md — "Trap panel and blueprint shop give no failure feedback from the server (Phase 11)."
 - See docs/BUGS.md — "Turret only targets the first overlapped zombie (pre-existing)."
 - See docs/BUGS.md — "Dead Phase 11 leftovers: WBP_BuildMenu.TrackedSocket and the PC's defense hold-repair path (Phase 11)."
+- **PIE-feedback fixes (2026-09-30):** these landed: the trap E prompt through the socket, the meta save and unlock purchase, meta shop category tabs, the deposit box and inventory layouts, the Dusk Day 1 start, and kept magazine ammo on weapon pickups.
+- See docs/BUGS.md — "Placed traps show no E prompt and can't be upgraded (Phase 11)."
+- See docs/BUGS.md — "Meta shop unlock purchase takes currency but never raises the tier (Phase 10/11)."
+- See docs/BUGS.md — "Hold-E repair may conflict with tap-E trap panel on damaged traps (Phase 11)."
+- See docs/BUGS.md — "UI layout follow-ups from the 2026-09-30 layout fix."
 
 ## PIE test checklist
 
-1. **Meta shop:** the 4 Trap unlock rows appear with costs 120/150/200/300, and buying one works. The meta shop is one scrolling list, so scroll down to the Trap rows.
+1. **Meta shop:** the 4 Trap unlock rows appear with costs 120/150/200/300, and buying one works. The Trap rows are on the meta shop's Buildables tab (tabs added 2026-09-30).
 2. **Blueprint shop:**
    - The Defense kiosk opens the 3-card shop. The Weapons kiosk still opens the weapon shop. (`KioskCategory = "Defense"` on the map instance couldn't be confirmed without opening the map. It's most likely `Kiosk_Upgrades`.)
    - Only meta-unlocked blueprints you don't own appear. Empty cards read "All blueprints owned".

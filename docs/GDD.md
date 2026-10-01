@@ -35,6 +35,8 @@ A four-phase, time-based day/night cycle (updated 2026-09-24 — user-confirmed;
 
 The cycle repeats Night → Morning → Day → Dusk → Night indefinitely. Because zombies can persist across phases, defeat (all players dead) can now trigger in any phase, not just Night.
 
+(Updated 2026-09-30, user-requested: a new run starts at Dusk of Day 1 to cut the wait before the first Night. Day 1 has no Day phase, so there are no customers and no daily-event roll that day. Both kiosk shops still roll their stock at that first Dusk. A resumed session keeps its saved phase, and a new run's first session save is at Morning of Day 2.)
+
 **Core Loop:**
 Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy tiered weapons from the daily weapon shop and trap blueprints from the daily blueprint shop, place and upgrade traps, buy ammo with employee discount -> Repeat
 
