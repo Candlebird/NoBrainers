@@ -2076,13 +2076,13 @@
 - **Expected:** The body is about 40% darker, with red glowing veins (1.0, 0.1, 0.05) × 3. The aura and burst read as red mist and a red shockwave.
 - **Status:** Open. Fix: add `BaseColorTint` and `EmissiveTint` vector parameters to `M_Zombie_PBR` (default white, so other zombies are unchanged), or make a boss master material. Then set the overrides on the instance. Check the VFX look in PIE.
 
-## Endless bosses don't get the +12% health/damage ramp (Phase 12)
+## Endless boss charge damage doesn't ramp (Phase 12, known limitation)
 
-- **Area:** `BP_Zombie_Boss.InitBoss`, `BP_GameState_ZombieStore.ComputeBossMaxHealth`, `BP_StoreEscalationComponent.GetZombieStatMultiplier`
-- **Repro:** Continue into Endless and compare the Swamp boss's health on Night 10 and Night 15.
-- **Actual:** Neither InitBoss nor ComputeBossMaxHealth reads GetZombieStatMultiplier, so bosses keep their normal health. The ramp only reaches regular zombies.
-- **Expected:** Per the Phase 12 design, endless bosses (Swamp and Final) scale with the ramp: ×1.12^N health and damage.
-- **Status:** Open. Accepted for the Phase 12 night run. Fix: multiply ComputeBossMaxHealth (and the boss melee damage) by GetZombieStatMultiplier.
+- **Area:** `BP_Zombie_Boss.InitBoss`, inherited `ChargeDamage` / `ChargeBreachDamage`
+- **Repro:** Continue into Endless and compare a boss charge hit on endless night 1 and night 5.
+- **Actual:** InitBoss scales boss health (×`EndlessBossHealthBase`^N, 1.15) and `SlamDamage` (×`EndlessBossDamageBase`^N, 1.12). The Brute-inherited `ChargeDamage` (40) and `ChargeBreachDamage` (100) stay flat.
+- **Expected:** Every boss damage source ramps the same way, so bosses eventually outpace player growth.
+- **Status:** Open, low priority. Fix: cache and scale both variables in InitBoss the same way as `BaseBossDamage`/`SlamDamage`. Also unverified: that `BP_ZombieBase.ServerInitZombie` reads `TypeMaxHealth` after InitBoss sets it. Check boss current health equals max on an endless night in PIE.
 
 ## Per-player run stats are restored by player index (Phase 12, known limitation)
 
