@@ -154,49 +154,77 @@ def stock_shelf():
 T_W = 700.0                     # overall width (Y)
 T_D = 60.0                      # overall depth (X)
 T_INNER = 346.0                 # inner half-width (Y half-extent of usable bay)
-T_ROW_TOPS = (70.0, 130.0)      # top surface z of each row's board
-T_TIERS = {
-    "StockShelf_T0": (1, 4),
-    "StockShelf_T1": (1, 6),
-    "StockShelf_T2": (2, 4),
-    "StockShelf_T3": (2, 6),
-    "StockShelf_T4": (2, 8),
+# Row board tops. MUST match BP_ShelfActor.GetSlotTransform: z = 45 + row * 95, y = 346 - (col + 0.5) * 692 / cols.
+# Rows are 95 apart because carried items are 3x real size (tallest ~62 cm, widest ~72 cm, deepest 60 cm).
+T_ROW_TOPS = (45.0, 140.0)
+T_TOP = 218.0                   # top of uprights / bottom of the header
+T_TIERS = {                     # (rows, cols) -> 2 / 4 / 6 / 8 / 12 slots, matching DT_ShelfTiers
+    "StockShelf_T0": (1, 2),
+    "StockShelf_T1": (1, 4),
+    "StockShelf_T2": (1, 6),
+    "StockShelf_T3": (2, 4),
+    "StockShelf_T4": (2, 6),
 }
 
 
 def stock_shelf_tier(rows, cols):
-    """700 W (Y) x 60 D (X) tiered stock shelf; rows x cols slots, identical frame across all tier variants."""
-    cube(BLACK, -28.57, 28.57, -348.23, 348.23, 0, 6)              # plinth, inset so it doesn't z-fight the ends/kick
-    cube(ORANGE, -30, 30, -350, -346, 0, 200)                      # end panels
-    cube(ORANGE, -30, 30, 346, 350, 0, 200)
-    cube(BLUE, -30, -27, -346, 346, 6, 200)                        # back panel
-    for yy in range(-325, 326, 50):                                # vertical ribs
-        cube(DARK, -27, -26, yy - 1, yy + 1, 6, 200)
-    cube(ORANGE, 27, 30, -346, 346, 0, 16)                         # front kick rail
-    cube(STOCK, -30, -24, -349.5, 349.5, 200, 230)                 # header, inset so it doesn't z-fight the end panels
-    cube(STOCK, -29.5, -24, -349.5, -342, 190, 200)                # header ears (inset in X and Y for the same reason)
-    cube(STOCK, -29.5, -24, 342, 349.5, 190, 200)
-    cube(WHITE, -24, -23, -340, 340, 203, 227)                     # blank sign face
+    """700 W (Y) x 60 D (X) tiered stock shelf; rows x cols slots, identical frame across all tier variants.
+    Closed orange base cabinet, steel-lipped boards with lit undersides, pegboard back, low wire slot dividers,
+    end panels with a yellow stripe, glowing header with a blank white sign face."""
+    H = T_TOP
+    # base cabinet: recessed black toe kick + orange front panel up to the bottom board
+    cube(BLACK, -28.57, 25, -348.23, 348.23, 0, 8)                 # plinth, inset so it doesn't z-fight the ends
+    cube(ORANGE, 25, 29, -346, 346, 8, T_ROW_TOPS[0] - 7)          # base front panel
+    cube(WHITE, 29, 29.4, -330, 330, 18, 22)                       # pinstripe on the base panel
+    # end panels with a front steel edge and an aisle-facing stripe
+    cube(ORANGE, -30, 29, -350, -346, 0, H)                        # end panels
+    cube(ORANGE, -30, 29, 346, 350, 0, H)
+    cube(STEEL, 29, 31, -350, -345, 0, H)                          # front edge caps
+    cube(STEEL, 29, 31, 345, 350, 0, H)
+    cube(YELLOW, -12, 12, -350.6, -350, 25, H - 25)                # aisle-facing stripes on the outer faces
+    cube(YELLOW, -12, 12, 350, 350.6, 25, H - 25)
+    # pegboard back with a dot grid
+    cube(BLUE, -30, -27, -346, 346, 8, H)
+    for yy in range(-330, 331, 22):
+        for zz in range(int(T_ROW_TOPS[0]) + 12, int(H) - 6, 22):
+            cube(DARK, -27, -26.7, yy - 1.5, yy + 1.5, zz - 1.5, zz + 1.5)
+    bays = [-346 + c * 692.0 / cols for c in range(1, cols)]       # divider positions; uprights frame each bay
+    for yy in bays:
+        cube(STEEL, -27, -25, yy - 2, yy + 2, 8, H)
+    # header: glowing frame, blank sign face (TextRender goes here), down-lighting strip under it
+    cube(STOCK, -30, -22, -349.5, 349.5, H, H + 36)                # inset so it doesn't z-fight the end panels
+    cube(STOCK, -29.5, -22, -349.5, -342, H - 10, H)               # header ears
+    cube(STOCK, -29.5, -22, 342, 349.5, H - 10, H)
+    cube(WHITE, -22, -21, -338, 338, H + 4, H + 32)                # blank sign face
+    cube(LAMP, -22, -6, -338, 338, H - 2, H)                       # light strip under the header
 
     for r in range(rows):
         zt = T_ROW_TOPS[r]
         pitch = 692.0 / cols
         cube(WHITE, -27, 27, -346, 346, zt - 3, zt)                # board
-        cube(YELLOW, 27, 29.3, -346, 346, zt - 6, zt + 1.5)        # price-tag rail
+        cube(STEEL, 27, 29, -346, 346, zt - 7, zt + 2)             # steel front lip
+        cube(YELLOW, 29, 30.2, -346, 346, zt - 7, zt - 1)          # price-tag rail
+        if r > 0:
+            cube(LAMP, 10, 24, -338, 338, zt - 4.5, zt - 3)        # light strip under the board, lights the row below
+            for yy in bays:
+                cube(DARK, -25, -8, yy - 1.5, yy + 1.5, zt - 12, zt - 3)  # board brackets
         for c in range(cols):
             yc = -346 + (c + 0.5) * pitch
-            cube(RED, 29.3, 30, yc - 6, yc + 6, zt - 5, zt + 0.5)  # price tag
-            w = min(pitch - 12, 80)
-            cube(TAN, -20, 20, yc - w / 2, yc + w / 2, zt, zt + 0.6)  # slot pad
-        for c in range(1, cols):
+            cube(WHITE, 30.2, 30.8, yc - 9, yc + 9, zt - 7, zt - 1)   # price tag
+            cube(RED, 30.8, 31.1, yc - 9, yc + 9, zt - 3, zt - 1)     # tag header band
+            w = min(pitch - 16, 90)
+            cube(TAN, -22, 22, yc - w / 2, yc + w / 2, zt, zt + 0.6)  # slot pad
+        for c in range(1, cols):                                   # low wire divider: base bar, front post, top rail
             yb = -346 + c * pitch
-            cube(DARK, -27, 27, yb - 1, yb + 1, zt, zt + 38)      # divider
+            cube(STEEL, -25, 25, yb - 0.6, yb + 0.6, zt, zt + 1)
+            cube(STEEL, 23.5, 25, yb - 0.6, yb + 0.6, zt, zt + 18)
+            cube(STEEL, -25, 25, yb - 0.6, yb + 0.6, zt + 17, zt + 18)
 
     for i in range(rows * cols):
         row, col = i // cols, i % cols
         pitch = 692.0 / cols
         REPORT.append("slot %d: UE %s" % (i, ue((0, -346 + (col + 0.5) * pitch, T_ROW_TOPS[row]))))
-    REPORT.append("sign face: UE centre (-23, 0, 215) facing +X")
+    REPORT.append("sign face: UE centre (-21, 0, %g) facing +X, 676 W x 28 H" % (H + 18))
 
 
 # ---------------------------------------------------------------- 2. checkout counter

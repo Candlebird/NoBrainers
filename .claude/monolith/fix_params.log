@@ -3302,3 +3302,23 @@ blueprint.add_local_variable: variable_name->name, variable_type->type
 blueprint.get_execution_flow: graph_name->entry_point
 blueprint.add_local_variable: variable_name->name, variable_type->type
 blueprint.add_local_variable: variable_name->name, variable_type->type
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point

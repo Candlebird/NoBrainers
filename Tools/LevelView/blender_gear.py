@@ -8,7 +8,7 @@ Writes to <project>/PlaceholderAssets:
 Unlike blender_placeholders.py, nothing is normalized: models are authored in cm at real size.
   Weapons: pivot = grip, barrel/blade along UE +Y (axis=y, default) or UE +X (axis=x), up +Z.
            Note Blender->UE FBX import flips Y, so UE +Y is authored along Blender -Y.
-  Items:   pivot = bottom centre, front faces +X; scaled by ITEM_SCALE (2x) at export for pickup readability.
+  Items:   pivot = bottom centre, front faces +X; scaled by ITEM_SCALE (3x) at export for pickup readability.
 Material slot names are lvlib.MATERIALS keys; ue_import_gear.py maps them to MI_LV_<key>.
 """
 import math
@@ -26,9 +26,10 @@ from blender_placeholders import mat, new_obj, reset  # noqa: E402
 PROJ = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(PROJ, "PlaceholderAssets")
 AXIS = "y"
-# Items are only used as world pickups (zombie drops), so they're authored 2x real size to be easy to see and grab.
+# Items are carried one at a time and shown on shelves/as drops, so they're authored 3x real size (was 2x, then
+# bumped 1.5x in Phase 14) to be easy to see and to read as "one big thing in your hands".
 # Size is baked into the mesh here; the mesh is imported and placed at 1x scale in UE.
-ITEM_SCALE = 2.0
+ITEM_SCALE = 3.0
 
 
 # ---------------------------------------------------------------- primitives (cm, final UE-ish frame)

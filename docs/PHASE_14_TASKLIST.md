@@ -101,6 +101,9 @@ Run as a 2-player listen server (host plus a client).
 ## Checkpoint 3 tasks (built 2026-10-02, needs PIE testing)
 
 - [x] **T1.** `DT_ShelfTiers`: slots 2 / 4 / 6 / 8 / 12, columns 2 / 4 / 6 / 4 / 6, meshes T0 / T0 / T1 / T2 / T3.
+  - **Playtest fix (2026-10-02):** the meshes didn't match the new slot counts. `SM_StockShelf_T0..T4` were rebuilt as 1×2, 1×4, 1×6, 2×4 and 2×6, with a restyled frame (`Tools/Props/blender_store_fixtures.py`). Each tier now uses its own mesh. Rows sit at z 45 and 140, and `BP_ShelfActor.GetSlotTransform` uses Z = 45 + 95·row, so the bigger items fit.
+  - All 23 `SM_Item_*` meshes are now 3× real size, 1.5× the previous size (`blender_gear.py` `ITEM_SCALE`), and still imported at 1×.
+  - **Playtest fix (2026-10-02):** the HUD hold bar (`WBP_HUD.Bar_RepairHold`, moved out of the interact-prompt border) now fills for shelf hold-E and the throw charge as well as breach repair. The PC has `GetShelfHoldProgress`, `GetThrowChargeProgress` and `GetHoldBarProgress` (the max of the three), and the HUD polls it from Event Tick. The free Spike can be placed again (`BP_BuildModeComponent.CanAffordSelected` honours `bFreeSpike`).
 - [x] **T2.** `DT_Items`: `BaseSellPrice` x3 on the 23 loot-pool rows.
 - [x] **T3.** `DT_ZombieLoot`: drop chances cut to about 1/3 (Default and Runner 0.047, Spitter 0.053). Elites guarantee 0 extra, and the boss pinata is 3 (max 4) with at least 1 Treasure.
 - [x] **T4.** `BP_ZombieBase.RollTieredLoot`: elites drop exactly 1 item.
