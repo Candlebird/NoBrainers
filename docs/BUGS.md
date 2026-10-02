@@ -1,5 +1,13 @@
 # Known Bugs
 
+## Shelf tier retune truncates items from old saves (Phase 14 CP3)
+
+- **Area:** Shelves/Save.
+- **Repro:** Load a save made before CP3 that has a shelf stocked beyond its new slot count.
+- **Actual:** ApplyShelfTier resizes the slots and the extra items are lost.
+- **Expected:** Overflow items spawn as pickups.
+- **Status:** Open, low (pre-release saves only).
+
 ## Throw-to-shelf stocking bypasses Server_StockItemToSlot side effects (Phase 14 CP2)
 
 - **Area:** `/Game/Interactable/BP_ThrownItem.ResolveImpact` calls `BP_ShelfActor.SetSlotItem` directly instead of going through `BP_PlayerController_ZombieStore.Server_StockItemToSlot`.
@@ -1357,6 +1365,7 @@
   - **Behaviour change:** `BP_ShelfActor.Server_PurchaseSlot` now applies the bonus to the player-purchase price as well.
   - **Covered by:** `Test_ShelfCombo_ClusterSizes`.
   - **Follow-up:** see "Shelf combo has no world-space overlay."
+  - Superseded 2026-10-02 (Phase 14 CP3): thresholds now scale with slot count via GetComboThresholds; see PHASE_14 CP3.
 
 ## Shelf combo has no world-space overlay
 

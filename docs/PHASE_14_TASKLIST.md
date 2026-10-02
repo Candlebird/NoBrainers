@@ -2,7 +2,7 @@
 
 **Goal.** Give the Day retail loop more to do and make stocking less tedious. Players carry one item in their hands instead of using an inventory. Full user decisions are in `docs/CARRY_OVERHAUL_DECISIONS.md`, which is authoritative.
 
-**Status (2026-10-01).** Checkpoint 1 (core carry, place, storage zone, inventory removal) was built unattended overnight. Everything compiles. **It needs PIE testing, and the storage zone must be placed in `Map_Store_Outdoors` by hand before playing** (steps below). Checkpoint 2 (throwing) was built on 2026-10-02 and also needs PIE testing. Checkpoint 3 (economy retune and customer scaling) follows.
+**Status (2026-10-01).** Checkpoint 1 (core carry, place, storage zone, inventory removal) was built unattended overnight. Everything compiles. **It needs PIE testing, and the storage zone must be placed in `Map_Store_Outdoors` by hand before playing** (steps below). Checkpoint 2 (throwing) was built on 2026-10-02 and also needs PIE testing. Checkpoint 3 (economy retune and customer scaling) was built on 2026-10-02 and needs PIE testing.
 
 ## Before you play: place the storage zone
 
@@ -98,12 +98,52 @@ Run as a 2-player listen server (host plus a client).
 14. **Dusk.** Landed items outside the zone are cleaned up, and ones inside survive.
 15. **Tutorial and combo after a throw-stock.** See `docs/BUGS.md` — "Throw-to-shelf stocking bypasses Server_StockItemToSlot side effects."
 
+## Checkpoint 3 tasks (built 2026-10-02, needs PIE testing)
+
+- [x] **T1.** `DT_ShelfTiers`: slots 2 / 4 / 6 / 8 / 12, columns 2 / 4 / 6 / 4 / 6, meshes T0 / T0 / T1 / T2 / T3.
+- [x] **T2.** `DT_Items`: `BaseSellPrice` x3 on the 23 loot-pool rows.
+- [x] **T3.** `DT_ZombieLoot`: drop chances cut to about 1/3 (Default and Runner 0.047, Spitter 0.053). Elites guarantee 0 extra, and the boss pinata is 3 (max 4) with at least 1 Treasure.
+- [x] **T4.** `BP_ZombieBase.RollTieredLoot`: elites drop exactly 1 item.
+- [x] **T5.** `BP_StoreEscalationComponent.BaseCustomerBudget` 150 → 450.
+- [x] **T6.** `BP_ShelfMatchingComponent`:
+  - Fully matched means `BestClusterSize >= NumSlots`.
+  - New pure `GetComboThresholds(NumSlots)`: Pair 2, Mid max(3, half) capped at Top, Top = all slots.
+  - `GetComboMultiplierForSize(Size, NumSlots)` returns 1.0 / 1.25 / 1.5 / 1.75.
+- [x] **T7.** `BP_CustomerSpawner`:
+  - The spawn interval and max concurrent customers scale by a stock factor: `clamp(0.25 + 0.075 × stocked items, 0.25, 2.0)`.
+  - New vars `StockScaleMin`, `StockScalePerItem`, `StockScaleMax`.
+  - New functions `GetTotalStockedItemCount`, `ComputeStockScaleFactor`, `GetStockScaleFactor`.
+- [x] **T8.** `DT_CodexEntries`: Store_01, 03 and 04 rewritten for the new slots and combos.
+- [x] **T9.** `Tools/loot_sim_data.json` updated. Over 1000 runs, every night lands in band.
+- [x] **T11.** Tests: failing tests retargeted to the new values. New Retail tests: `Test_Shelf_MatchedAllSlotsSameCategory`, `Test_ShelfCombo_ThresholdsScaleWithSlots`, `Test_CustomerSpawner_IntervalScalesWithStock`.
+
+## PIE test checklist (Checkpoint 3)
+
+Run on a 2-player listen server.
+
+1. **Slots.** A new shelf has 2 slots. Each upgrade gives 4, 6, 8, then 12, and the slot UI lays out without overlap. Tier0 looks like Tier1 (D2).
+2. **Drops.** Night drops are noticeably rarer, and each sells for about 3x. Elites drop about 1 item, and the boss pinata gives at least 3.
+3. **Customers.** Customers still buy the higher-priced items. None of them leave because of budget more often than before.
+4. **Matched.** A 2-slot shelf holding two items of one category counts as fully matched. Mixing categories does not.
+5. **Combos scale.** In the shelf panel:
+   - On a 4-slot shelf: 2 same-category adjacent items show +25%, 3 show +50%, and 4 show +75%.
+   - On an 8-slot shelf: 4 adjacent items show +50%, and +75% appears only when all 8 match.
+6. **Spawn pace.**
+   - With empty shelves, customers trickle in about every 32 s.
+   - With about 10 items stocked, the pace is the same as before.
+   - With 24 or more items, it is about 2x, with more customers in the store at once.
+7. **Client.** The client sees the same shelves, prices and customer flow.
+
 ## Status notes
 
 - **Pending user decisions:**
   - **Stockroom Expansion.** The kiosk entry is blocked until you decide what it should do now that there's no box capacity. The `DT_KioskCatalog` row is kept.
   - **Save restore into storage.** Saves happen at Morning, so unstored Night loot is moved into storage on resume. Weapons lying on the floor aren't saved.
   - **Dusk deletes weapons.** Weapon pickups outside the zone are deleted, as a literal reading of "deletes every loose item".
+  - **D1, combo curve (CP3).** Combo thresholds scale with slot count: pair 2, mid max(3, half), top = all slots. So +75% needs a full shelf on 8- and 12-slot shelves. The alternatives are absolute thresholds (2/3/5) or a purely proportional curve.
+  - **D2, Tier0 mesh (CP3).** The 2-slot Tier0 reuses the T0 mesh, so it looks the same as Tier1.
+  - **D3, empty-store trickle (CP3).** With zero stock, customers still arrive at a quarter of the base rate (about every 32 s) instead of stopping.
+  - **Customer budget (CP3).** `BaseCustomerBudget` was tripled to 450 to match the x3 prices, so affordability stays the same.
 - **Known limitations, follow-ups:**
   - Prompts are static. Pickups still say "Pick up" when your hands are full.
   - The storage zone has no in-game visual, only the editor wireframe.
@@ -113,3 +153,4 @@ Run as a 2-player listen server (host plus a client).
   - A dropped pickup keeps the default Quantity.
   - A thrown item in flight at Dusk or save time, or one that falls out of the world, is lost. See `docs/BUGS.md` — "Thrown item lost if mid-flight at Dusk/save or past KillZ."
   - The crate shows the wrong message if adding the carried item fails.
+  - Old saves can lose shelf items. See `docs/BUGS.md` — "Shelf tier retune truncates items from old saves (Phase 14 CP3)."
