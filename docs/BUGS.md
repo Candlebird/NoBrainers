@@ -2136,3 +2136,10 @@
 - **Actual:** The Make S_SaveSession node left SavedUnlockedBlueprintIDs, BlueprintShopRerollCount, BlueprintShopRolledDay, BlueprintShopSlots and PlacedDefenses unwired, so the save held empty or zero values. Found in Phase 12 Task 23.
 - **Expected:** The GameState snapshot values pass through to the save.
 - **Status:** Fixed 2026-09-30 by wiring Break→Make for the five pins. Not yet verified in PIE.
+
+### Free Spike re-granted on rejoin or session resume
+- **Area:** Free Spike (Phase 13), BP_PlayerState_ZombieStore.bFreeSpikeAvailable
+- **Repro:** Use the free Spike, then leave and rejoin the session (or quit and resume a mid-run save).
+- **Actual:** The new PlayerState defaults the flag to true, so a second free Spike is granted.
+- **Expected:** One free Spike per player per run.
+- **Status:** Known limitation, accepted for Phase 13. Fix later by storing the flag in the mid-run save, keyed by player.

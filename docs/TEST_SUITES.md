@@ -6,14 +6,14 @@ The automation test bed is split into **suites**. Each suite runs in its own map
 
 | Suite | Map (`/Game/Tests/Automation/Maps/`) | Tests (top-level + chained) | SettleSeconds | run_pie_smoke `duration` | Covers |
 |---|---|---|---|---|---|
-| Data | `L_Test_Data` | 39 + 0 | 3 | 20 | Pure data, settings, audio, net-string checks; no world interaction |
-| Economy | `L_Test_Economy` | 40 + 0 | 5 | 25 | Loot, meta progression, weapon tiers, weapon and blueprint shops, save round-trips |
-| Defense | `L_Test_Defense` | 30 + 0 | 15 | 35 | Build mode, breach points, repair, doors, traps, trap upgrades |
+| Data | `L_Test_Data` | 42 + 0 | 3 | 20 | Pure data, settings, audio, net-string checks, tutorial hint settings; no world interaction |
+| Economy | `L_Test_Economy` | 45 + 0 | 5 | 25 | Loot, meta progression, weapon tiers, weapon and blueprint shops, save round-trips, tutorial progress |
+| Defense | `L_Test_Defense` | 33 + 0 | 15 | 35 | Build mode, breach points, repair, doors, traps, trap upgrades, free first Spike |
 | Player | `L_Test_Player` | 23 + 2 | 25 | 45 | Hero spawn/move, phases, equipment, bloom, reload chain |
 | Retail | `L_Test_Retail` | 22 + 2 | 45 | 65 | Shelves, crates, customers, checkout, inventory, deposit box |
 | Zombie | `L_Test_Zombie` | 20 + 1 | 45 | 65 | Zombie AI, spawner, damage, melee, brute; contains the hero-lethal retarget test |
 | BossNight | `L_Test_BossNight` | 13 + 3 | 60 | 80 | Boss, final night, endless, apex dodge and store-interior chain |
-| All | `L_AutomationTestBed` | 187 + 8 | 90 | 120 | Legacy full run. Contaminated (tests share one hero); regression use only |
+| All | `L_AutomationTestBed` | 198 + 8 | 90 | 120 | Legacy full run. Contaminated (tests share one hero); regression use only |
 
 To run only what a change touches, pick the matching suites. For a full check, run every suite except All, one PIE session at a time.
 

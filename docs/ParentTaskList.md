@@ -6,6 +6,8 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-10-01, Phase 13): Phase 13 (Tutorialization & Onboarding) is built (goal checklist, phase banners, How to Play codex, tutorial settings, free first Spike Trap, interact-prompt audit). Automation passes; PIE playtest pending.** See docs/PHASE_13_TASKLIST.md.
+
 **UPDATE (2026-09-30, Phase 12): Phase 12 (Combat Feel, Night 9 Victory, Endless & Bug Audit) is built (overnight run 2026-09-30/10-01). PIE testing is outstanding.** See `docs/PHASE_12_TASKLIST.md` and its "PIE test checklist".
 - The run is won by killing a 3-phase Final Boss on Night 9 (+300 meta bonus), then the team can cash out or continue into a ramping Endless mode.
 - Zombie attacks land at the swing apex and can be dodged. Melee hits stagger zombies and show a goo splat and flash. New one-handed and two-handed player swing animations.
@@ -147,6 +149,7 @@ that can go stale (as it just did).**
 | 10 | Weapon Tiers & Daily Weapon Shop | Weapons use the loot tiers (Junk ×0.9 to Treasure ×1.3 stats, HUD label, glow), tiered weapon drops, and a shared daily weapon shop: 1 primary, 2 secondary and 1 melee rolled each Morning from the players' meta weapon unlocks, with doubling paid rerolls. Built 2026-09-30, needs PIE testing. |
 | 11 | Trap Unlocks, Daily Blueprint Shop & Trap Upgrades | Meta-shop trap unlocks, a shared 3-card daily blueprint shop for in-run ownership, per-trap tier upgrades (Junk → Treasure, ×1.0 to ×2.0, glow), an E trap panel for upgrade, repair and sell, and LMB-place / RMB-exit in Build Mode. Built 2026-09-30, needs PIE testing. |
 | 12 | Combat Feel, Night 9 Victory, Endless & Bug Audit | Night 9 Final Boss victory (+300 meta), Continue/Cash Out into a ramping Endless mode, run summary screen, apex-timed zombie attacks, melee stagger and hit VFX, Blender 1H/2H swing animations, Sledgehammer and Katana, Magnum buff, Night 1 loot leak fix, death screen with spectate switching, and a BUGS.md audit. Planned 2026-09-30. |
+| 13 | Tutorialization & Onboarding | One-goal HUD checklist (per-profile, per-player), phase banners with explanations, How to Play codex (main menu + Options), meta-shop first-visit hints, Tutorial hints toggle and reset, free first Spike Trap per player per run, interact prompts show the bound key. Built 2026-10-01; PIE playtest pending. |
 
 Phases are meant to be tackled roughly in order (1 → 6), since later phases assume earlier
 systems exist (e.g. Phase 4's defenses assume Phase 1's Day/Night state loop and Phase 2's

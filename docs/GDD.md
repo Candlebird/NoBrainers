@@ -42,6 +42,8 @@ The cycle repeats Night → Morning → Day → Dusk → Night indefinitely. Bec
 **Core Loop:**
 Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers buy items for money -> Buy tiered weapons from the daily weapon shop and trap blueprints from the daily blueprint shop, place and upgrade traps, buy ammo with employee discount -> Repeat
 
+**Onboarding (user decision, 2026-10-01, Phase 13):** New players learn in play, not in a separate tutorial level. A small HUD card shows one goal at a time, only when it can be done in the current phase, and hides at Night. Goals cover stocking, sales, shelf combos and fully matched shelves; placing, managing and buying traps; doors; and the weapon, Defense and ammo kiosks, rerolls and tiers. Each goal is learned once per profile and is driven only by that player's own actions. Every phase change shows a banner with the phase name, plus a one-line explanation the first two times a player sees that phase. A "How to Play" codex is available from the main menu and from Options (Tutorial > How to Play), and the meta shop shows two hints on the first visit after a run. Options has a Tutorial hints toggle and a Reset tutorial progress button. Tutorial text is plain and instructional, an exception to the game's comedic tone. Every player's first Spike Trap placement in each run is free; selling it refunds 50% of the normal price. Detail is in `docs/PHASE_13_TASKLIST.md`.
+
 ## 3. Progression
 
 **Run Structure:** Roguelite — progress and gear reset each run.
