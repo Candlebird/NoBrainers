@@ -7,10 +7,10 @@ The automation test bed is split into **suites**. Each suite runs in its own map
 | Suite | Map (`/Game/Tests/Automation/Maps/`) | Tests (top-level + chained) | SettleSeconds | run_pie_smoke `duration` | Covers |
 |---|---|---|---|---|---|
 | Data | `L_Test_Data` | 44 + 0 | 3 | 20 | Pure data, settings, audio, net-string checks, tutorial hint settings, zombie attack ranges, ammo category mapping; no world interaction |
-| Economy | `L_Test_Economy` | 47 + 0 | 5 | 25 | Loot, meta progression, weapon tiers, weapon and blueprint shops, save round-trips, tutorial progress, event min-day gate, heavy-ammo kiosk |
+| Economy | `L_Test_Economy` | 46 + 0 | 5 | 25 | Loot, meta progression, weapon tiers, weapon and blueprint shops, save round-trips, tutorial progress, event min-day gate, heavy-ammo kiosk |
 | Defense | `L_Test_Defense` | 33 + 0 | 15 | 35 | Build mode, breach points, repair, doors, traps, trap upgrades, free first Spike |
 | Player | `L_Test_Player` | 24 + 2 | 25 | 45 | Hero spawn/move, phases, equipment, bloom, reload chain, ammo refill pickup |
-| Retail | `L_Test_Retail` | 24 + 2 | 45 | 65 | Shelves, crates, customers, checkout ready-gate, dusk settle-and-leave, inventory, deposit box |
+| Retail | `L_Test_Retail` | 24 + 2 | 45 | 65 | Shelves, crates, customers, checkout ready-gate, dusk settle-and-leave, carry (pick up, drop, place/take shelf, death drop, carry tag, dusk cleanup) |
 | Zombie | `L_Test_Zombie` | 21 + 1 | 45 | 65 | Zombie AI, spawner, damage, melee, melee friendly fire / one hit per swing, brute; contains the hero-lethal retarget test |
 | BossNight | `L_Test_BossNight` | 13 + 3 | 60 | 80 | Boss, final night, endless, apex dodge and store-interior chain |
 | All | `L_AutomationTestBed` | 206 + 8 | 90 | 120 | Legacy full run. Contaminated (tests share one hero); regression use only |
@@ -48,4 +48,5 @@ To run only what a change touches, pick the matching suites. For a full check, r
 - **Every new `Test_*` function needs a `DT_AutomationTests` row** in the right suite. Without one, `Registry_AllTestsRegistered` fails and the test never runs.
 - **Hero-lethal tests** (`Test_Zombie_RetargetsAfterTargetDies`) must not share a suite with async tests that need a live hero.
 - **`Test_Spectator_SoloEntersFreeCam` must stay the last Data row.** It leaves `bIsSpectating` set.
+- **`Test_Carry_DuskCleanupSparesZone` must stay the last Retail row.** It destroys every loose pickup outside storage zones.
 - **Async tests that share a target actor** chain off each other's events. Mark the chained test `Chained=true` and put it in the parent's suite.

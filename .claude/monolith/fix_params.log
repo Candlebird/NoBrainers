@@ -2920,3 +2920,385 @@ blueprint.get_execution_flow: graph_name->entry_point
 blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
 blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
 blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.add_function: function_name->name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+project.search: search_term->query
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+blueprint.add_function: function_name->name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.add_function: function_name->name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+describe.action_schema: target->ns/action
+describe.action_schema: target->ns/action
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+ai.get_bt_node_properties: node_name->node_id
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+monolith_discover.None: top-level->params
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.search_nodes: search_term->query
+blueprint.search_nodes: search_term->query
+blueprint.get_execution_flow: graph_name->entry_point
+monolith_discover.None: top-level->params
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.get_execution_flow: graph_name->entry_point
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.remove_function: function_name->name
+blueprint.remove_function: function_name->name
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.get_interface_functions: asset_path->interface_class
+blueprint.add_local_variable: variable_name->name, variable_type->type
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.add_local_variable: variable_name->name, variable_type->type
+blueprint.add_local_variable: variable_name->name, variable_type->type

@@ -6,6 +6,8 @@ active before opening a phase file — don't guess from git history or Content/ 
 
 ## Current Phase
 
+**UPDATE (2026-10-01, Phase 14 — ACTIVE): Carry-One-Item Overhaul.** Checkpoint 1 is built overnight: there's no inventory, players carry one item in their hands, E picks up, places on a shelf slot or drops, a storage zone around the deposit box survives Dusk, and Deep Pockets is removed. **Place the storage zone in `Map_Store_Outdoors` before playing, then run the PIE checklist.** Throwing (Checkpoint 2) and the economy retune (Checkpoint 3) follow. See `docs/PHASE_14_TASKLIST.md` and `docs/CARRY_OVERHAUL_DECISIONS.md`.
+
 **UPDATE (2026-10-01, Phase 13): Phase 13 (Tutorialization & Onboarding) is built (goal checklist, phase banners, How to Play codex, tutorial settings, free first Spike Trap, interact-prompt audit). Automation passes; PIE playtest pending.** See docs/PHASE_13_TASKLIST.md.
 
 **UPDATE (2026-09-30, Phase 12): Phase 12 (Combat Feel, Night 9 Victory, Endless & Bug Audit) is built (overnight run 2026-09-30/10-01). PIE testing is outstanding.** See `docs/PHASE_12_TASKLIST.md` and its "PIE test checklist".

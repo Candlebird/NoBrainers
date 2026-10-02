@@ -1835,7 +1835,7 @@
 - **Expected:** Each unit takes a slot until the inventory is full, and the rest stays on the ground.
 - **Status:** Known limitation. Phase 8 loot always spawns Quantity 1, and `DropItem` splits drops into Quantity-1 pickups, so this only hits hand-placed or legacy pickups.
 
-## Loot slot capacity checks always reported full (Phase 8) (RESOLVED, needs in-PIE confirmation)
+## Loot slot capacity checks always reported full (Phase 8) (RESOLVED, needs in-PIE confirmation) (OBSOLETE 2026-10-01: system removed by the Carry Overhaul, see docs/PHASE_14_TASKLIST.md)
 
 - **Area:** `BP_InventoryComponent` `GetFreeLootSlotCount` / `HasFreeLootSlot` (`docs/PHASE_8_TASKLIST.md` C.2–C.4)
 - **Repro:** With an empty inventory, walk over a loot pickup, take an item back from a shelf, withdraw from the deposit box, or buy a kiosk Item.
@@ -1883,7 +1883,7 @@
 - **Expected:** A stable pass.
 - **Status:** Resolved 2026-10-01. Both were test-side races on a single fixed-delay sample: the Brute's velocity was read once at 0.3 s, and the zombie's BreachTarget once at 1.0 s. Both now poll (every 0.1 s and 0.25 s) until the condition holds, timing out after about 3 s. The Zombie suite passed 24/24 in two back-to-back runs. The poll counters (`AsyncBruteChargeTest_Polls`, `AsyncStore_Polls`) aren't reset per run, which is fine for one run per PIE session.
 
-## `GatherSessionState` hardcodes the deposit box capacity fallback (Phase 8)
+## `GatherSessionState` hardcodes the deposit box capacity fallback (Phase 8) (OBSOLETE 2026-10-01: system removed by the Carry Overhaul, see docs/PHASE_14_TASKLIST.md)
 
 - **Area:** `BP_GameInstance_NoBrainers.GatherSessionState`
 - **Repro:** Save a run on a map with no `BP_DepositBox`.
@@ -1931,7 +1931,7 @@
 - **Expected:** Either equip first and charge only on success, or refund and unmark the slot on failure.
 - **Status:** Fixed 2026-10-01. `Server_DeductCash` stays the affordability gate. The slot is marked SOLD only after `EquipWeaponWithTier` succeeds; on failure the price is refunded with `Server_AddCash` and the slot stays unsold. Needs a PIE purchase check.
 
-## Closing the deposit box doesn't remove its mapping context (pre-existing)
+## Closing the deposit box doesn't remove its mapping context (pre-existing) (OBSOLETE 2026-10-01: system removed by the Carry Overhaul, see docs/PHASE_14_TASKLIST.md)
 
 - **Area:** `BP_PlayerController_ZombieStore.CloseDepositBoxUI`
 - **Repro:** Inspect the graph. The RemoveMappingContext node's MappingContext pin is unset.
@@ -2038,7 +2038,7 @@
 - **Root cause:** `Server_EquipItem` always set `CurrentAmmo` to the full magazine, and pickups carried no ammo count.
 - **Status:** Fixed (2026-09-30), needs PIE confirmation. `DropSlotAsPickup` stores the magazine count in `BP_ItemPickup.StoredAmmo` (−1 means a fresh, full gun), and the pickup equips through `EquipWeaponWithTierAndAmmo`.
 
-## Stockroom box and inventory UIs have no minimum size, and their contents overlap (pre-existing)
+## Stockroom box and inventory UIs have no minimum size, and their contents overlap (pre-existing) (OBSOLETE 2026-10-01: system removed by the Carry Overhaul, see docs/PHASE_14_TASKLIST.md)
 
 - **Area:** The Stockroom box transfer widget and the player inventory widget
 - **Repro:** Open a Stockroom box, or open the inventory.
@@ -2063,7 +2063,7 @@
 - **Expected:** Tap opens the trap panel. Hold either repairs or does nothing, but never both.
 - **Status:** Watch.
 
-## WBP_Inventory.RefreshInventory passes Quantity=1 to SetSlotData
+## WBP_Inventory.RefreshInventory passes Quantity=1 to SetSlotData (OBSOLETE 2026-10-01: system removed by the Carry Overhaul, see docs/PHASE_14_TASKLIST.md)
 
 - **Area:** `WBP_Inventory.RefreshInventory` → `WBP_InventorySlot.SetSlotData`
 - **Repro:** Hold a stack of more than one item and open the inventory.
@@ -2205,3 +2205,22 @@
   - Door target: after the door opened, `BreachTarget` was still `BP_BreachPoint_C_2` (expected None).
 - **Expected:** A stable pass.
 - **Status:** Open. ApexDodge may be the multi-hit-per-swing issue above, or a swing that was already mid-apex when the dodge began. The door check samples once after opening; the earlier poll fix covered only the initial target, not the after-open sample.
+
+## Carry Overhaul Checkpoint 1: unverified in PIE, known limitations (Phase 14)
+
+- **Area:** `BP_CarryComponent`, `BP_PlayerController_ZombieStore` interact flow, `BP_ItemPickup`, `BP_ShelfActor`, `BP_DepositBox`, `BP_StorageZone`, `BP_GameMode_ZombieStore.CleanupLooseItems`, `BP_GameInstance_NoBrainers` save.
+- **Repro:** Place the storage zone, then follow the "PIE test checklist" in `docs/PHASE_14_TASKLIST.md`.
+- **Actual:** Built unattended. Compiles, but it has never been played.
+- **Expected:** Every checklist item passes on host and client.
+- **Status:** Open. Known limitations:
+  - **No zone placed means every pickup is deleted at Dusk.**
+  - Running auto-fire continues after pickup until release (ActivationBlockedTags don't cancel a running ability).
+  - Prompts are static: pickups say "Pick up" even with full hands.
+  - The storage zone has no in-game visual.
+  - `BP_DepositBox.OnInteract` is now authority-gated (it was IsLocalController); client interaction is untested.
+  - `BP_StorageZone` NoCollision was set through BodyInstance and is unverified in play.
+  - `BP_ShelfActor.FindNearestSlot` assumes slot meshes attach to the shelf root.
+  - Dropped pickups keep the default Quantity.
+  - `BP_ShippingCrate` shows the "carry an item here" message if adding the carried item fails.
+  - Kiosk Item entries return "Unavailable", and Stockroom Expansion is blocked pending a user decision.
+  - Tutorial and codex text edited in Task 5 lost its localization keys.

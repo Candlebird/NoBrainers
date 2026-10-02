@@ -11,6 +11,8 @@ on the task.
 automation tests pass (see G.3). Nothing has been played in PIE yet: see the Morning test
 checklist below.
 
+
+**SUPERSEDED IN PART (2026-10-01):** The Carry Overhaul (`docs/PHASE_14_TASKLIST.md`) removed the inventory (section C), the deposit-box storage and UI (section D), Deep Pockets, and the quick-drop input. The loot data model and roll logic (A, B) still apply. Inventory and deposit checklist items are obsolete. Stockroom Expansion is blocked pending a user decision.
 ## Confirmed design decisions
 
 | Topic | Decision |

@@ -4,6 +4,8 @@
 
 **Status (2026-09-30).** Built unattended while the user couldn't test. Everything compiles and passes automation, and it's committed locally, not pushed. **Needs PIE testing.** See the "PIE test checklist" at the bottom.
 
+**SUPERSEDED IN PART (2026-10-01):** The Deep Pockets track was removed with no refund by the Carry Overhaul (`docs/PHASE_14_TASKLIST.md`). Deep Pockets rows, tasks and checklist items here are obsolete; the other tracks are unchanged.
+
 ## Design decisions (confirmed with the user)
 
 - **Deep Pockets** gives +1 loot slot at tiers 1–6 and +2 at tiers 7–9. That's 6 base slots, 12 at T6 and 18 at T9.

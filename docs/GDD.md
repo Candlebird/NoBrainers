@@ -51,11 +51,12 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
 **Meta-Progression:** Persistent unlocks purchased with meta-currency, awarded as a lump sum at the end of each run (victory or defeat). The payout is calculated from that run's performance: total store cash generated, days survived, zombie kills, and shelves fully matched.
 
 **Tiered perk tracks (user decision, 2026-09-30):** Most meta perks are 9-tier tracks bought in order. Each tier costs ×1.5 the previous one.
-- Deep Pockets adds loot slots: +1 per tier for tiers 1–6 and +2 per tier for tiers 7–9, so 6 base slots becomes 18.
 - The stat tracks each give +5% per tier (+45% at max): max health, max stamina, health regen, stamina regen, armor, fire rate, weapon damage, reload speed, and melee damage.
 - All tracks are per-player: they affect only the buyer's own character.
 - QuickFeet (move speed) and Scavenger (loot luck) stay single unlocks.
 - The 5%-per-tier rule replaces the earlier single-unlock magnitudes. Detail is in `docs/PHASE_9_TASKLIST.md`.
+
+**Carry model (user decision, 2026-10-01):** There is no inventory. Each player carries one item in their hands and can't shoot while carrying. E picks up, places on the shelf slot being looked at, or sets the item down at their feet. Night loot stays on the floor and must be carried to the storage zone around the deposit box; Dusk deletes every loose item outside it. The Deep Pockets perk is removed with no refund. Shelf slots go 2/4/6/8/12. Throwing (hold fire) and the economy retune follow. Full decisions: `docs/CARRY_OVERHAUL_DECISIONS.md`.
 
 **Weapon tiers and daily weapon shop (user decision, 2026-09-30):** Weapons use the same 5 rarity tiers as loot drops.
 - **Tier multipliers:** Junk ×0.9, Common ×1.0, Uncommon ×1.1, Rare ×1.2, Treasure ×1.3.
