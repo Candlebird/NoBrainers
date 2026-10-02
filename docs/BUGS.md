@@ -1,5 +1,23 @@
 # Known Bugs
 
+## Throw-to-shelf stocking bypasses Server_StockItemToSlot side effects (Phase 14 CP2)
+
+- **Area:** `/Game/Interactable/BP_ThrownItem.ResolveImpact` calls `BP_ShelfActor.SetSlotItem` directly instead of going through `BP_PlayerController_ZombieStore.Server_StockItemToSlot`.
+- **Repro:** In PIE, during the tutorial or with a shelf combo in progress, stock a shelf slot by throwing an item into it.
+- **Actual:** Unverified. The shelf contents replicate through the `StockedItems` RepNotify. Any extra work that `Server_StockItemToSlot` does (tutorial goal progress, combo or match refresh, messages) is skipped.
+- **Expected:** A throw-stock behaves the same as stocking with E.
+- **Status:** Open, needs PIE. Known risk accepted at plan time (CP2 risk R2). If PIE shows a missed tutorial step or combo update, route the throw through a shared stock function.
+
+## Thrown item lost if mid-flight at Dusk/save or past KillZ (Phase 14 CP2)
+
+- **Area:** `/Game/Interactable/BP_ThrownItem`. `BP_GameMode_ZombieStore.CleanupLooseItems` and the session save only look at `BP_ItemPickup` actors and carried items.
+- **Repro:**
+  1. Throw an item just as Dusk starts or the Morning save fires.
+  2. Or throw an item off the map.
+- **Actual:** An item still in flight is neither cleaned up nor saved. If Dusk is pending it lands afterwards as a pickup. If it is in flight at save time, it's missing from the save. An item that falls past KillZ is destroyed and lost.
+- **Expected:** Acceptable for now. Optionally, force-land in-flight thrown items before cleanup and save.
+- **Status:** Known limitation (CP2 risk R8).
+
 ## Test_ZombieApexDodge fails because the hero is dead (Phase 12, test harness) (RESOLVED 2026-10-01)
 
 - **Area:** `/Game/Tests/Automation/Blueprints/BP_TestController`, EventGraph chain `ApexDodgeTest_Run`. This is the test only. The game's apex logic was checked by the architect and is correct: `BP_ZombieBase.ResolveAttackApex` → `BP_ZombieAttackComponent.PerformMeleeAttack` box-traces at apex time, so a target out of range is not hit.

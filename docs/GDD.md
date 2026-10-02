@@ -56,7 +56,7 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
 - QuickFeet (move speed) and Scavenger (loot luck) stay single unlocks.
 - The 5%-per-tier rule replaces the earlier single-unlock magnitudes. Detail is in `docs/PHASE_9_TASKLIST.md`.
 
-**Carry model (user decision, 2026-10-01):** There is no inventory. Each player carries one item in their hands and can't shoot while carrying. E picks up, places on the shelf slot being looked at, or sets the item down at their feet. Night loot stays on the floor and must be carried to the storage zone around the deposit box; Dusk deletes every loose item outside it. The Deep Pockets perk is removed with no refund. Shelf slots go 2/4/6/8/12. Throwing (hold fire) and the economy retune follow. Full decisions: `docs/CARRY_OVERHAUL_DECISIONS.md`.
+**Carry model (user decision, 2026-10-01):** There is no inventory. Each player carries one item in their hands and can't shoot while carrying. E picks up, places on the shelf slot being looked at, or sets the item down at their feet. Night loot stays on the floor and must be carried to the storage zone around the deposit box; Dusk deletes every loose item outside it. The Deep Pockets perk is removed with no refund. Shelf slots go 2/4/6/8/12. **Throwing (built 2026-10-02):** while carrying, hold fire (`IA_Throw`, left mouse / gamepad right trigger) to charge for up to 1 s, then release to throw. Damage depends on the item's base rarity: Junk 10, Common 20, Uncommon 30, Rare 45, Treasure 60. Each zombie takes at most one hit per throw. A direct shelf hit fills the nearest empty slot, and anything else lands as a floor pickup. The economy retune follows. Full decisions: `docs/CARRY_OVERHAUL_DECISIONS.md`.
 
 **Weapon tiers and daily weapon shop (user decision, 2026-09-30):** Weapons use the same 5 rarity tiers as loot drops.
 - **Tier multipliers:** Junk ×0.9, Common ×1.0, Uncommon ×1.1, Rare ×1.2, Treasure ×1.3.
@@ -95,7 +95,7 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
   - The tier shows as a colored glow, and selling or losing the trap loses it.
 - **Selling:** refunds 50% of everything spent on the trap.
 - **Managing a trap:** outside Build Mode, press E on a placed trap to open its panel: stats, Upgrade, Repair and Sell.
-- **Build Mode controls:** left click places and right click exits. Weapons can't fire or aim in Build Mode.
+- **Build Mode controls:** left click places and right click exits. Weapons can't fire or aim in Build Mode. Build Mode can't be entered while carrying an item, so left click never both throws and places.
 - **Save:** the mid-run save stores owned blueprints, the shop state, and every placed trap's tier, total spent and health. A new run resets them.
 - Detail is in `docs/PHASE_11_TASKLIST.md`.
 

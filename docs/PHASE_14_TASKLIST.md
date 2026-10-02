@@ -2,7 +2,7 @@
 
 **Goal.** Give the Day retail loop more to do and make stocking less tedious. Players carry one item in their hands instead of using an inventory. Full user decisions are in `docs/CARRY_OVERHAUL_DECISIONS.md`, which is authoritative.
 
-**Status (2026-10-01).** Checkpoint 1 (core carry, place, storage zone, inventory removal) was built unattended overnight. Everything compiles. **It needs PIE testing, and the storage zone must be placed in `Map_Store_Outdoors` by hand before playing** (steps below). Checkpoint 2 (throwing) and Checkpoint 3 (economy retune and customer scaling) follow.
+**Status (2026-10-01).** Checkpoint 1 (core carry, place, storage zone, inventory removal) was built unattended overnight. Everything compiles. **It needs PIE testing, and the storage zone must be placed in `Map_Store_Outdoors` by hand before playing** (steps below). Checkpoint 2 (throwing) was built on 2026-10-02 and also needs PIE testing. Checkpoint 3 (economy retune and customer scaling) follows.
 
 ## Before you play: place the storage zone
 
@@ -56,6 +56,48 @@ Run as a 2-player listen server (host plus a client), and check each item on bot
 14. **Kiosk.** Stockroom Expansion shows "Stockroom Expansion is being reworked." and charges nothing.
 15. **Auto-fire edge.** Holding auto-fire and then picking something up keeps firing until release. This is known (ActivationBlockedTags don't cancel a running ability).
 
+## Checkpoint 2 tasks (built 2026-10-02, needs PIE testing)
+
+- [x] **T1.** New `IA_Throw` (Boolean) in `/Game/Characters/Input/`, mapped in `IMC_Default` to Left Mouse Button and Gamepad Right Trigger. `IA_PrimaryAction` keeps the same keys.
+- [x] **T2.** `BFL_LootMath.GetThrowDamageForTier(Tier)` returns Junk 10 / Common 20 / Uncommon 30 / Rare 45 / Treasure 60. `GetThrowDamageForItem(ItemID)` uses the `DT_Items` row tier, and unknown items return 10.
+- [x] **T3.** New `/Game/Interactable/BP_ThrownItem`: a replicated, bouncing projectile. `ResolveImpact` behaves like this:
+  - Each zombie takes at most one `GE_MeleeDamage` hit (SetByCaller `Data.Damage`) per throw.
+  - A first-contact shelf hit fills the nearest empty slot.
+  - Anything else becomes a floor pickup when it stops, or after 8 s.
+- [x] **T4.** `BP_CarryComponent.ThrowCarried(Charge, AimDir)` is server-only. Speed is lerped from 600 to 1800 by charge. It spawns `BP_ThrownItem` and clears the carried item.
+- [x] **T5.** Player controller:
+  - `IA_Throw` Started begins a charge when carrying, with no cursor shown and not spectating.
+  - Completed runs `ReleaseThrow`: charge = held seconds / 1.0, capped at 1. Aim is the camera forward vector plus a small upward lift. It calls `Server_ThrowCarried`.
+- [x] **T6.** Tests (Retail): `Test_Carry_ThrowDamageByTier`, `Test_Carry_ThrowHitsZombieOnce`, `Test_Carry_ThrowIntoShelfFillsNearestEmpty`. `Test_Carry_DuskCleanupSparesZone` stays the last Retail row.
+
+**Design notes.**
+- Throw damage uses the item's base tier in `DT_Items`, not the tier rolled when the pickup dropped. The carry stores only the ItemID, so the same item always throws for the same damage.
+- Build Mode is refused while carrying (CP1 T12), so a throw press can't place a defense. `IA_Throw` and `IA_PrimaryAction` share Left Mouse. Weapon fire is blocked while carrying by `State.Carrying`.
+- There is no charge meter UI.
+
+## PIE test checklist (Checkpoint 2)
+
+Run as a 2-player listen server (host plus a client).
+
+1. **Charge.** Tap and release gives a short lob. A 1 s hold throws much farther. The item leaves your hands and the gun reappears.
+2. **Zombie hit.** It damages once. Rare and Treasure items hit noticeably harder than Junk.
+3. **Crowd bounce.** Each zombie is damaged at most once per throw.
+4. **Direct shelf hit.** The item fills the nearest *empty* slot. The mesh and shelf UI update for both players. Occupied slots are never overwritten.
+5. **Full shelf.** A direct hit lands the item as a floor pickup.
+6. **Floor bounce into a shelf.** It lands as a pickup and does *not* stock.
+7. **Miss.** The item comes to rest as a pickup, and E picks it up.
+8. **Client throw.** The host sees the client's throw and its outcome, and vice versa.
+9. **Empty hands.** LMB fires the gun normally. While carrying, the gun never fires.
+10. **UI open (cursor shown).** LMB doesn't throw.
+11. **Build Mode and spectating.** Defense placement and spectator LMB still work.
+11b. **Carrying plus Build Mode.**
+   - You can't enter Build Mode while carrying.
+   - Enter Build Mode first, then try to pick up an item and press LMB. A throw press never places a defense, and nothing fires twice.
+12. **Gamepad.** RT charges and throws.
+13. **Self-hit.** The item never hits or blocks the thrower on release.
+14. **Dusk.** Landed items outside the zone are cleaned up, and ones inside survive.
+15. **Tutorial and combo after a throw-stock.** See `docs/BUGS.md` — "Throw-to-shelf stocking bypasses Server_StockItemToSlot side effects."
+
 ## Status notes
 
 - **Pending user decisions:**
@@ -69,4 +111,5 @@ Run as a 2-player listen server (host plus a client), and check each item on bot
   - Tutorial and codex text lost its localization keys.
   - Shelf slot positions assume the slot meshes attach to the shelf root.
   - A dropped pickup keeps the default Quantity.
+  - A thrown item in flight at Dusk or save time, or one that falls out of the world, is lost. See `docs/BUGS.md` — "Thrown item lost if mid-flight at Dusk/save or past KillZ."
   - The crate shows the wrong message if adding the carried item fails.
