@@ -2143,3 +2143,65 @@
 - **Actual:** The new PlayerState defaults the flag to true, so a second free Spike is granted.
 - **Expected:** One free Spike per player per run.
 - **Status:** Known limitation, accepted for Phase 13. Fix later by storing the flag in the mid-run save, keyed by player.
+
+## Playtest batch 2026-10-01 (fixed 2026-10-01; in-game verification pending)
+
+### Trap placement dust puff loops forever
+- **Area:** `/Game/VFX/NS_DustPuff`
+- **Repro:** Place any trap.
+- **Actual:** The dust puff kept looping.
+- **Expected:** It plays once.
+- **Status:** Fixed. The "Goo" emitter's LoopBehavior is now Once.
+
+### Customers walk to the exit at dusk but never leave
+- **Area:** `BP_CustomerSpawner.SendCustomersToExit`
+- **Repro:** Let the day end with customers in the store.
+- **Actual:** A bare MoveToLocation fought the running behavior tree, so customers stalled at the exit.
+- **Expected:** Customers settle up and despawn.
+- **Status:** Fixed. A new `SettleCustomerAtDusk` pays out CartTotal and releases the counter and queue. After that, the BT is stopped and `BeginLeaveStore(ExitLocation)` runs. Covered by `Test_CustomerSpawner_DuskSettleAndLeave`.
+
+### Customers stop short of the checkout counter, so the interact distance check fails
+- **Area:** `BT_Customer` "Move To Counter", `BP_CheckoutCounter`, `BTT_WaitForCheckoutInteraction`
+- **Repro:** Watch customers queue at the counter.
+- **Actual:** A customer sometimes stopped out of range, and the player could interact before the customer was in place.
+- **Expected:** The customer reaches the counter, and interaction is allowed only once the customer is waiting.
+- **Status:** Fixed. Move To Counter now uses AcceptableRadius 30, excludes agent radius, and has an 8 s time limit with a 0 s fallback. A new replicated `bCustomerReady` gates CanInteract and OnInteract. It is set by BTT_WaitForCheckoutInteraction and cleared by ReleaseCounter and TryClaimCounter. Covered by `Test_Checkout_ReadyGatesInteract`.
+
+### Zombies never hit a moving player
+- **Area:** `DT_ZombieTypes.AttackRange`
+- **Status:** Fixed. AttackRange is raised about 1.2x: normal types 180, Brute 216, bosses 336. Covered by `Test_ZombieTypes_AttackRangeApplied`.
+
+### Special customer events fire too early
+- **Area:** `DT_CustomerEvents.MinDayNumber`, `BP_GameMode_ZombieStore.PickEventRow`
+- **Status:** Fixed. Events have MinDayNumber 4 (HighRollers stays 5), and `PickEventRow(ForDay)` filters on it. Covered by `Test_Events_MinDayGate`. Cosmetic leftover: PickEventRow has a stray, unwired `SelectedRow1` output that Monolith can't remove. Delete it by hand in the function's Return node.
+
+### Zombie melee swing may damage other zombies (unverified)
+- **Area:** `BP_ZombieAttackComponent.PerformMeleeAttack`
+- **Repro:** Code read only, not observed in play. The `ClassIsChildOf` filter node (K2Node_CallFunction_20) has an empty ParentClass, so it always returns false, and the NOT that follows lets every hit actor through.
+- **Actual:** Every actor with an ASC inside the swing box gets `GE_MeleeDamage`, which may include other zombies.
+- **Expected:** Only players (and maybe destructibles) take zombie melee damage.
+- **Status:** Open. Found by the architect on 2026-10-01 while diagnosing Test_ZombieApexDodge. Needs a design call on what zombies may hit.
+
+### Zombie melee can apply damage more than once per actor per swing (unverified)
+- **Area:** `BP_ZombieAttackComponent.PerformMeleeAttack`
+- **Repro:** Code read only. The multi-box trace covers WorldStatic, WorldDynamic and Pawn, so one actor can return several hits (for example capsule and mesh). Nothing de-duplicates hits by actor.
+- **Actual:** One actor could receive the GE more than once per swing. Observed drops of about 11 against MeleeDamageAmount 15 suggest a single application in practice.
+- **Expected:** One application per actor per swing.
+- **Status:** Open, unverified. `DebugMeleeHitCount` (added 2026-10-01) can confirm it.
+
+### Old saves may hold "ShotgunShells" ammo
+- **Area:** Per-player and mid-run saves, AmmoPool, inventory
+- **Repro:** Load a save made before 2026-10-01, when ShotgunShells was renamed to HeavyAmmo.
+- **Actual:** A stale `ShotgunShells` pool entry is ignored, and HeavyAmmo seeds fresh. A saved inventory item with ItemID `ShotgunShells` fails its DT_Items lookup.
+- **Expected:** Old shells convert to HeavyAmmo, or the stale entries are dropped quietly.
+- **Status:** Known limitation. No save migration was added. Pre-release, so start a fresh save.
+
+### Flaky in BossNight: `Test_ZombieApexDodge` and `Test_Zombie_TargetsNearestDoorWhenOutside` (1 of 3 runs)
+
+- **Area:** `BP_TestController`, BossNight suite
+- **Repro:** Run the BossNight suite 3 times.
+- **Actual:** Both failed in run 2 only:
+  - ApexDodge: `DodgeHits=1`, `SecondHits=1`.
+  - Door target: after the door opened, `BreachTarget` was still `BP_BreachPoint_C_2` (expected None).
+- **Expected:** A stable pass.
+- **Status:** Open. ApexDodge may be the multi-hit-per-swing issue above, or a swing that was already mid-apex when the dodge began. The door check samples once after opening; the earlier poll fix covered only the initial target, not the after-open sample.

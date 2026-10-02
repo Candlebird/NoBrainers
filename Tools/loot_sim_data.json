@@ -48,7 +48,7 @@
    "in_pool": true,
    "drop_weight": 1
   },
-  "ShotgunShells": {
+  "HeavyAmmo": {
    "price": 30,
    "tier": "Uncommon",
    "in_pool": true,

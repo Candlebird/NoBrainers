@@ -13,9 +13,11 @@ both consume the same ammo type.
 ## What's already built (untracked this session)
 
 - `DT_Weapons`' `AmmoItemID` field is now populated per row, grouping weapons into three
-  shared ammo categories: `PistolAmmo` (Pistol, SMG, Magnum), `RifleAmmo` (Rifle, Long
-  Rifle), `ShotgunShells` (Shotgun only). Previously this field was unset on every row
-  (see `PHASE_3_TASKLIST.md` line 65's now-stale flag).
+  shared ammo categories: `PistolAmmo` (Pistol, SMG), `RifleAmmo` (Rifle, LeverAction),
+  `HeavyAmmo` (Shotgun, Magnum, LongRifle, SawedOff). The grouping is set for balance, not
+  realism. It changed on 2026-10-01: `HeavyAmmo` replaced `ShotgunShells`, and Magnum and
+  LongRifle moved into it. Previously this field was unset on every row (see
+  `PHASE_3_TASKLIST.md` line 65's now-stale flag).
 - `DT_AmmoCatalog` (new, `S_KioskCatalogEntry` rows) lists the three ammo categories as
   purchasable kiosk entries (`FulfillmentType: Ammo`), for `BP_AmmoKiosk`.
 - `BP_AmmoKiosk` and `BP_AmmoPickup` (new actors) exist as the two acquisition paths
@@ -64,13 +66,15 @@ which all read through the same function) for free.
 
 ## Stockpile caps (decided)
 
-Reserve ammo per category is capped, two tiers:
+Reserve ammo is capped per category. These values are current as of 2026-10-01:
 
-| Category | Tier | Cap | Starting stockpile | Kiosk purchase quantity |
-|---|---|---|---|---|
-| `PistolAmmo` | Light | 500 | 500 | 30 |
-| `RifleAmmo` | Heavy | 250 | 250 | 20 |
-| `ShotgunShells` | Heavy | 250 | 100 | 12 |
+| Category | Weapons | Cap | Starting stockpile | Kiosk qty @ cost | Refill pickup |
+|---|---|---|---|---|---|
+| `PistolAmmo` | Pistol, SMG | 500 | 192 | 40 @ 12 | 16 |
+| `RifleAmmo` | Rifle, LeverAction | 400 | 200 | 50 @ 15 | 20 |
+| `HeavyAmmo` | Shotgun, Magnum, LongRifle, SawedOff | 120 | 30 | 12 @ 20 | 5 |
+
+Heavy ammo is meant to be scarce and premium. Rifle and SMG are low-damage, high-rate sprayers.
 
 Starting stockpile and purchase quantity live on `DT_AmmoTypes` (`DefaultStockpile`) and
 `DT_AmmoCatalog` (`Quantity`, currently `1` on all three rows and needs updating to the
