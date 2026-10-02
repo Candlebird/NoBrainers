@@ -2180,14 +2180,14 @@
 - **Repro:** Code read only, not observed in play. The `ClassIsChildOf` filter node (K2Node_CallFunction_20) has an empty ParentClass, so it always returns false, and the NOT that follows lets every hit actor through.
 - **Actual:** Every actor with an ASC inside the swing box gets `GE_MeleeDamage`, which may include other zombies.
 - **Expected:** Only players (and maybe destructibles) take zombie melee damage.
-- **Status:** Open. Found by the architect on 2026-10-01 while diagnosing Test_ZombieApexDodge. Needs a design call on what zombies may hit.
+- **Status:** Resolved 2026-10-01. The filter's ParentClass is now `BP_ZombieBase`, so zombie hits are skipped. The user's design call: players and breachables only. Covered by `Test_ZombieMelee_NoFriendlyFireOneHit` (Zombie suite).
 
 ### Zombie melee can apply damage more than once per actor per swing (unverified)
 - **Area:** `BP_ZombieAttackComponent.PerformMeleeAttack`
 - **Repro:** Code read only. The multi-box trace covers WorldStatic, WorldDynamic and Pawn, so one actor can return several hits (for example capsule and mesh). Nothing de-duplicates hits by actor.
 - **Actual:** One actor could receive the GE more than once per swing. Observed drops of about 11 against MeleeDamageAmount 15 suggest a single application in practice.
 - **Expected:** One application per actor per swing.
-- **Status:** Open, unverified. `DebugMeleeHitCount` (added 2026-10-01) can confirm it.
+- **Status:** Resolved 2026-10-01. The local array `HitActorsThisSwing` de-duplicates hit actors, giving one application per swing for players and breachables. `Test_ZombieMelee_NoFriendlyFireOneHit` checks for a hit delta of exactly 1 per call.
 
 ### Old saves may hold "ShotgunShells" ammo
 - **Area:** Per-player and mid-run saves, AmmoPool, inventory
