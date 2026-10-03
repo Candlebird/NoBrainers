@@ -112,4 +112,8 @@ Made by the architect (see `docs/FREEFORM_BUILDING_PLAN.md` section 8 for detail
 - The Z scale is 2.325, not the plan's 2.3. That makes the area run from 20 cm below the volume's bottom to 10 cm above its top.
 - 26 sockets were removed from Map_Store_Outdoors, 8 from Map_Startup and 8 from Test_Level_Zero. RecastNavMesh RuntimeGeneration was already Dynamic.
 
+**Tasks 39–40 (tests):**
+- The planned check that a placed defense has `bReplicateMovement` set was dropped. That flag can't be read from Blueprint, so Move replication needs a PIE check (move a trap as host, watch it on the client).
+- The test helper `TU_PlaceCls` became `TU_PlaceDef(BlueprintID)`, because Monolith can't remove a function param once added.
+
 23. GDD's planned future "defense-targeting" zombie type would need an exception to rule 4. Not resolved now.

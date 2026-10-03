@@ -1,5 +1,18 @@
 # Known Bugs
 
+## Ghost rebuild fails with "Needs a floor", and ghosts aren't detected as overlaps (freeform building)
+
+- **Area:** `BP_DefenseGhost` / `BP_BuildGhost` collision against `UGDBuildPlacementLibrary::ValidatePlacement`, and `BP_PlayerController_ZombieStore.TryServerRebuildGhost`. Found by the Defense suite on 2026-10-03.
+- **Repro:** Run the Defense suite (`L_Test_Defense`). The tests have already been isolated (`BV_ClearSpot`) and log DIAG lines.
+- **Actual:**
+  - `Test_Defense_GhostRebuildCostAndTier` logs `DIAG Rebuild fail=Needs a floor`.
+  - `Test_Build_ValidateRejectsGhostOverlap` logs `DIAG BV reason=` (empty, so placement was judged valid on top of a ghost).
+  - `Test_Defense_GhostSpawnsOnDestroy` finds no ghost within 10 cm of the destroyed defense.
+  - `Test_Defense_NoGhostOnSell` also failed in this run (it passed in the two runs before).
+- **Expected:** Rebuilding a ghost succeeds in place. Placement on a ghost is rejected with "Overlaps a ghost". Destroying a defense leaves a ghost at its spot.
+- **Suspected cause (unverified):** the rebuild's floor trace may hit the ghost's own mesh (`ApplyGhostVisual` makes GhostMesh block Visibility) instead of the floor. That would mean rebuild is broken in game too, not just in the test. The overlap check may not see the ghost because its tag/bounds pass runs before the ghost's collision is set.
+- **Status:** Open. The fix loop is exhausted (retry, then architect replacement R1, both failed), so this was stopped for user review per CLAUDE.md. Needs in-game checking: destroy a trap at night, then try to rebuild its ghost the next morning.
+
 ## Defense meshes sit 5–7 cm below their actor origin (freeform building)
 
 - **Area:** `/Game/Defense/` mesh bottoms below local Z 0: Turret -6.7, Barricade -5.5, Trap_Spike -7.5, Trap_SlowStrip -5, Trap_Gas -5. Found in Tasks 12–17 of `docs/FREEFORM_BUILDING_PLAN.md`.
