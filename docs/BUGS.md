@@ -16,6 +16,22 @@
 - **Expected:** The mount sits flush on the wall face, centred on the aim point.
 - **Status:** Open, deferred during the overnight run. SwingMount is the root, so it can't be rotated in the Blueprint. The fix needs either a new scene root with SwingMount under it at yaw 180 and Z -65, or a re-exported mesh. Either risks the swing logic, so it was left for a supervised session.
 
+## A Turret or Barricade placed on a pawn can trap it (freeform building)
+
+- **Area:** `UGDBuildPlacementLibrary` overlap check. Pawns are deliberately ignored, since the spec allows building over players, zombies and customers.
+- **Repro:** In PIE, stand a teammate, zombie or customer still and place a Barricade or Turret on top of them.
+- **Actual:** Unverified. The new blocker's collision may trap or push the pawn.
+- **Expected:** Accepted for v1. If it's a problem in play, reject placement over pawns, or nudge them out.
+- **Status:** Known limitation.
+
+## Floor items can be placed on raised fixtures such as the counter top (freeform building)
+
+- **Area:** Floor placement in `UGDBuildPlacementLibrary`. Any walkable surface within 15° counts as floor if the footprint is inside a `BP_BuildArea`.
+- **Repro:** In PIE Build Mode, aim a floor trap at the top of a checkout counter that sits inside a build area.
+- **Actual:** Placement is valid if the footprint fits under the build area's top.
+- **Expected:** The spec says floor items are store-interior only and can't overlap the counter. See decision 21 in `docs/FREEFORM_BUILDING_DECISIONS.md`.
+- **Status:** Known limitation (decided by architect, user may overrule). Cheap fix: reject floor hits more than 30 cm above the build area's bottom.
+
 ## Shelf tier retune truncates items from old saves (Phase 14 CP3)
 
 - **Area:** Shelves/Save.
@@ -612,7 +628,7 @@
      Empty Handed" by `HasPurchasedItem` Is Set (should be Is Not Set), so shopping could
      never run at all.
   4. Minor: `BP_CustomerExitPoint`'s `ExitMarkerMesh` (BlockAllDynamic) and the overlap-only
-     boxes on `BP_ShelfActor`, `BP_CheckoutCounter`, and `BP_DefenseSocket` had
+     boxes on `BP_ShelfActor` and `BP_CheckoutCounter` had
      `CanEverAffectNavigation` on and cut small holes in the navmesh.
   - Not the cause: the navmesh itself (`Map_Startup` has a working `NavMeshBoundsVolume`
     and `Dynamic` `RecastNavMesh`), and the `TargetShelf`/`AssignedCounter` blackboard keys
@@ -1793,7 +1809,7 @@
 - **Area:** `BP_Turret_Automated.DetectionSphere`, `BP_DefenseSocket.SocketCollision` (moved from WorldDynamic to PhysicsBody so object-type interact and fire traces skip them).
 - **Actual:** not checked: `BP_Trap_Spike`'s trigger box, per-instance collision overrides on sockets placed in `Map_Store_Outdoors`, and a stale line near 932 of this file saying the build trace uses ObjectTypeQuery2.
 - **Expected:** no defense volume blocks the interact or fire traces; build-mode repair and dismantle still work.
-- **Status:** Needs PIE confirmation.
+- **Status:** Socket half resolved by freeform building (2026-10-02): socket actors are removed from the maps. The turret DetectionSphere and Spike trigger box still need PIE confirmation.
 
 ## Zombie replication smoothing: unchecked items
 
@@ -2004,7 +2020,7 @@
 - **Repro:** Save mid-run with traps placed, rename or replace a `BP_DefenseSocket` in the map, then load that save.
 - **Actual:** A trap whose socket name no longer matches is silently not restored.
 - **Expected:** Acceptable for now. A stable socket ID would fix it.
-- **Status:** Known limitation.
+- **Status:** Resolved by freeform building (2026-10-02): saves now store each trap and ghost by transform. Old socket-name saved traps are dropped on load, by design.
 
 ## Hold-E repair on placed traps is replaced by the trap panel's instant Repair button (Phase 11)
 
@@ -2052,7 +2068,7 @@
 - **Repro:** Inspect the graphs.
 - **Actual:** The RepairSellBox removal (T18) and the trap panel routing (T20) left these unused.
 - **Expected:** Removed in a cleanup pass.
-- **Status:** Resolved 2026-10-01. `TrackedSocket` turned out not to be dead: `RebuildMenu` reads it, so it stays. The PC's `IfThenElse_18` → RepairHold branch was provably unreachable, because `GetAimedDamagedDefense` returns a subset of what `GetAimedPlacedDefense` already catches one branch earlier. Its 11 nodes were removed and `IfThenElse_28.else` now goes straight to the door-toggle set. The breach-point hold-E repair path is untouched. Possible follow-up: `CompleteRepairHold`'s defense branch, `GetAimedDamagedDefense` and the `RepairHold*` variables may now be unused, but they weren't reference-checked, so they were left in place. Needs PIE: tap E on a trap opens its panel, hold E repairs a breach point, tap E toggles a door.
+- **Status:** Resolved 2026-10-01. `TrackedSocket` turned out not to be dead: `RebuildMenu` reads it, so it stays. The PC's `IfThenElse_18` → RepairHold branch was provably unreachable, because `GetAimedDamagedDefense` returns a subset of what `GetAimedPlacedDefense` already catches one branch earlier. Its 11 nodes were removed and `IfThenElse_28.else` now goes straight to the door-toggle set. The breach-point hold-E repair path is untouched. Possible follow-up: `CompleteRepairHold`'s defense branch, `GetAimedDamagedDefense` and the `RepairHold*` variables may now be unused, but they weren't reference-checked, so they were left in place. Needs PIE: tap E on a trap opens its panel, hold E repairs a breach point, tap E toggles a door. Update 2026-10-02 (freeform building): `TrackedSocket` and its `HandleTargetSocketChanged` bind were removed from `WBP_BuildMenu` along with sockets.
 
 ## Placed traps show no E prompt and can't be upgraded (Phase 11)
 
@@ -2061,7 +2077,7 @@
 - **Actual:** No "E" prompt appears and pressing E does nothing, so the trap panel never opens.
 - **Expected:** An E prompt on the trap, and E opens WBP_TrapPanel for upgrades.
 - **Root cause:** The interaction trace hits the `BP_DefenseSocket` the trap sits on, not the trap itself, so `GetAimedPlacedDefense` and `GetAimedDamagedDefense` never found it, and the prompt text had no trap case.
-- **Status:** Fixed (2026-09-30), needs PIE confirmation. Both getters now fall back from a hit socket to its `OccupyingDefense`, and `GetAimedInteractPromptText` shows "[E] Upgrade {DisplayName}".
+- **Status:** Fixed (2026-09-30), needs PIE confirmation. Both getters now fall back from a hit socket to its `OccupyingDefense`, and `GetAimedInteractPromptText` shows "[E] Upgrade {DisplayName}". Superseded by freeform building (2026-10-02): sockets are gone, so the socket fallbacks were removed and the trace hits the trap directly.
 
 ## Meta shop unlock purchase takes currency but never raises the tier (Phase 10/11)
 
@@ -2104,7 +2120,7 @@
 - **Repro:** Look at a damaged placed trap and hold E, then tap E.
 - **Actual:** Not yet tested. The hold-repair path may now be reachable again for traps, and tap and hold may compete.
 - **Expected:** Tap opens the trap panel. Hold either repairs or does nothing, but never both.
-- **Status:** Watch.
+- **Status:** Resolved by freeform building (2026-10-02): hold-E repair on live traps is removed (repair is panel-only). Hold E now only rebuilds ghosts, and a tap on a ghost opens its panel.
 
 ## WBP_Inventory.RefreshInventory passes Quantity=1 to SetSlotData (OBSOLETE 2026-10-01: system removed by the Carry Overhaul, see docs/PHASE_14_TASKLIST.md)
 

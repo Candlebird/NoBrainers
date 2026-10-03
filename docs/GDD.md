@@ -94,8 +94,9 @@ Fight Zombies -> Loot item drops -> Stock shelves during the day -> Customers bu
   - The multiplier scales damage and effect, health, attack rate, and range or area, wherever each applies.
   - The tier shows as a colored glow, and selling or losing the trap loses it.
 - **Selling:** refunds 50% of everything spent on the trap.
-- **Managing a trap:** outside Build Mode, press E on a placed trap to open its panel: stats, Upgrade, Repair and Sell.
-- **Build Mode controls:** left click places and right click exits. Weapons can't fire or aim in Build Mode. Build Mode can't be entered while carrying an item, so left click never both throws and places.
+- **Managing a trap:** outside Build Mode, press E on a placed trap to open its panel: stats, Upgrade, Repair, Move (Morning/Day/Dusk, free, keeps tier and health) and Sell.
+- **Destroyed traps:** a trap broken by zombies or worn out leaves a ghost in its place. Hold Interact (~1.5 s) on the ghost to rebuild it at its old tier for 25% of what was spent; tap Interact to open its panel and Remove it (no refund).
+- **Build Mode controls:** placement is freeform inside the store's build areas. Left click places, the Rotate key (T / gamepad right shoulder, rebindable) turns floor items in 90° steps, and right click exits. Turret and Barricade block pathing and can only be attacked while they block a zombie's path. Weapons can't fire or aim in Build Mode. Build Mode can't be entered while carrying an item, so left click never both throws and places.
 - **Save:** the mid-run save stores owned blueprints, the shop state, and every placed trap's tier, total spent and health. A new run resets them.
 - Detail is in `docs/PHASE_11_TASKLIST.md`.
 

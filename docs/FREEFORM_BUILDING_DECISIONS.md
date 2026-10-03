@@ -86,15 +86,15 @@ Made by the architect (see `docs/FREEFORM_BUILDING_PLAN.md` section 8 for detail
 10. A blocker counts as "blocking" (attackable) for 2 s after a zombie flags it. All zombie damage to defenses (melee, Bloater, Spitter acid) goes through this gate. *(Corrected at vision gate 1: the plan originally left Spitter acid ungated, contradicting "area damage only hurts path-blockers". Task 11 found that every zombie damage path to defenses (melee attack component, Bloater, Brute) goes through `ApplyBreachDamage`, which is now gated. Spitter acid is a GAS effect (`GE_AcidDamage`) and never touches defenses, so no extra fix was needed.)*
 11. Zombies attack a blocker when the detour is > 2.0x the direct path or there's no detour. "On the path" = within the blocker's half-width + 80 cm.
 12. Customers give up after 3 s stuck on a partial path, counted as a lost customer.
-13. Rebuild cost = round(25% × TotalSpent); rebuilding doesn't add to TotalSpent.
+13. Rebuild cost = round(25% × TotalSpent); rebuilding doesn't add to TotalSpent. *Decided by architect, user may overrule. Spec: "Costs 25% of total spent (placement + upgrades)."*
 14. Remove a ghost in any phase; Rebuild and Move only Morning/Day/Dusk.
-15. During Move the item stays put until the new spot is confirmed; cancel leaves it.
-16. Tap E (released before 1.5 s) on a ghost opens the panel. Hold-E repair on live traps is removed; repair is panel-only (resolves the old hold-E conflict).
+15. During Move the item stays put until the new spot is confirmed; cancel leaves it. *Decided by architect, user may overrule. Spec: Move "picks the buildable up into Build Mode".*
+16. Tap E (released before 1.5 s) on a ghost opens the panel. Hold-E repair on live traps is removed; repair is panel-only (resolves the old hold-E conflict). *Decided by architect, user may overrule. Spec only says: "Tap E on a ghost opens the trap panel in a destroyed state"; it doesn't ask to remove hold-E repair on live traps.*
 17. Ghost tint grey-blue; radius ring is a flat blue cylinder; placement pop doesn't play on save restore.
 18. Old socket C++ RPC, OwningSocket, AllowedSocketType and the TurretBase/Other enum values are kept but unused.
 19. `Test_Defense_K4SocketHighlight` is deleted.
 20. Each zombie swing hits an actor at most once (fixes a melee multi-hit bug).
-21. Floor items may sit on a raised surface (e.g. counter top) inside a build area. Accepted for v1.
+21. Floor items may sit on a raised surface (e.g. counter top) inside a build area. Accepted for v1. *Decided by architect, user may overrule. Spec: "Floor items: store interior only" and "Can't overlap: ... shelves, counter".*
 22. Codex names keys generically ("the Rotate key").
 **Please review (vision gate 1 flagged these as stretching your spec):** call 13 (spec: "costs 25% of total spent"), call 15 (spec: Move "picks the buildable up"), call 16 (spec doesn't ask to remove hold-E repair on live traps) and especially call 21 (spec: floor items are "store interior only" and can't overlap the counter, yet a counter *top* is currently allowed). Cheap alternative for 21: reject floor surfaces more than 30 cm above the floor.
 
@@ -105,5 +105,11 @@ Made by the architect (see `docs/FREEFORM_BUILDING_PLAN.md` section 8 for detail
 **Tasks 22–24:**
 - The tutorial goal Def_ManageTrap doesn't fire from the ghost panel.
 - Monolith can't create UMG property bindings, so the HUD's build-reason text (`Txt_BuildReason`) is set every frame from WBP_HUD's Event Tick through a new Sequence branch. The reason is read from the owning pawn (BP_HeroCharacter), because BuildModeComponent lives there, not on the PC. Vesper reflowed the whole HUD EventGraph; node positions moved but the logic is unchanged.
+
+**Tasks 31–35:**
+- Saves restore traps and ghosts by transform through deferred spawns, so values are set before BeginPlay.
+- Map_Store_Outdoors had 1 interior volume, so it got 1 build area, `BuildArea_1`, at (3500, 0, 395) with scale (7.05, 5.05, 2.325).
+- The Z scale is 2.325, not the plan's 2.3. That makes the area run from 20 cm below the volume's bottom to 10 cm above its top.
+- 26 sockets were removed from Map_Store_Outdoors, 8 from Map_Startup and 8 from Test_Level_Zero. RecastNavMesh RuntimeGeneration was already Dynamic.
 
 23. GDD's planned future "defense-targeting" zombie type would need an exception to rule 4. Not resolved now.

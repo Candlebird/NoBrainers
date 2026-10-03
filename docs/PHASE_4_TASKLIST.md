@@ -6,6 +6,8 @@ Engine Version: Unreal Engine 5.7.4
 
 Perspective: First-Person
 
+> **STATUS NOTE (2026-10-02):** Freeform placement (branch `feature/freeform-building`, see `docs/FREEFORM_BUILDING_DECISIONS.md`) supersedes the socket placement described in this file. Socket actors are removed from the maps; the socket sections below are kept as history.
+
 Architecture: Node-based socket placement system (pre-defined world anchors), blueprint unlock registry, day-only build mode UI, server-authoritative money transactions placement.
 
 Goal: Implement simplified build system players spend store cash Day Phase place unlocked defense blueprints onto specialized, pre-defined node sockets (Floor, Wall, TurretBase, Other).
