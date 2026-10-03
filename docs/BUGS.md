@@ -2186,6 +2186,8 @@
 - **Actual:** A bare MoveToLocation fought the running behavior tree, so customers stalled at the exit.
 - **Expected:** Customers settle up and despawn.
 - **Status:** Fixed. A new `SettleCustomerAtDusk` pays out CartTotal and releases the counter and queue. After that, the BT is stopped and `BeginLeaveStore(ExitLocation)` runs. Covered by `Test_CustomerSpawner_DuskSettleAndLeave`.
+- **Reopened (2026-10-02):** Customers reached the exit and stood there. `BeginLeaveStore` had no despawn on arrival, so only the 20 s lifespan removed them.
+- **Status (2026-10-02):** Fixed and verified in-game. `BeginLeaveStore` now starts a 0.25 s looping `CheckReachedExit` timer. It destroys the customer within 150 uu (2D) of the exit and re-issues the move if the customer stalls. The lifespan backup is raised to 60 s.
 
 ### Customers stop short of the checkout counter, so the interact distance check fails
 - **Area:** `BT_Customer` "Move To Counter", `BP_CheckoutCounter`, `BTT_WaitForCheckoutInteraction`
@@ -2193,6 +2195,8 @@
 - **Actual:** A customer sometimes stopped out of range, and the player could interact before the customer was in place.
 - **Expected:** The customer reaches the counter, and interaction is allowed only once the customer is waiting.
 - **Status:** Fixed. Move To Counter now uses AcceptableRadius 30, excludes agent radius, and has an 8 s time limit with a 0 s fallback. A new replicated `bCustomerReady` gates CanInteract and OnInteract. It is set by BTT_WaitForCheckoutInteraction and cleared by ReleaseCounter and TryClaimCounter. Covered by `Test_Checkout_ReadyGatesInteract`.
+- **Reopened (2026-10-02):** On long walks from a shelf, the 8 s time limit aborted Move To Counter. The 0 s fallback then started the checkout countdown far from the register, and the player could still check those customers out.
+- **Status (2026-10-02):** Fixed and verified in-game. The TimeLimit is raised to 60 s, so it now only guards against a customer that is truly stuck.
 
 ### Zombies never hit a moving player
 - **Area:** `DT_ZombieTypes.AttackRange`
@@ -2251,3 +2255,18 @@
   - `BP_ShippingCrate` shows the "carry an item here" message if adding the carried item fails.
   - Kiosk Item entries return "Unavailable", and Stockroom Expansion is blocked pending a user decision.
   - Tutorial and codex text edited in Task 5 lost its localization keys.
+
+## Customers who can't find their item spam "ugh" barks instead of giving up
+
+- **Area:** `BTT_FindBestShelfSlot` failure path, `AIC_Customer` (`MaxFindAttempts`), `BP_Customer.Multicast_PlayCustomerVoice`, `BT_Customer` "Shelf Attempt Failed" loop.
+- **Repro:** Run a day with no stock matching a customer's wanted category, then watch that customer.
+- **Actual:** The customer walks to a shelf and plays the annoyed voice over and over. Every failed search played a bark (annoyed from the 2nd one on). Give-up only happened at `FailedFindAttempts >= MaxFindAttempts` (3), and the counter only goes up after the wander, so give-up came on the 4th failed search.
+- **Expected:** Walk to a shelf, maybe one more, one annoyed bark, then leave.
+- **Status:** Fixed and verified (2026-10-02, user playtest passed all three checks):
+  - `MaxFindAttempts` lowered from 3 to 2.
+  - The give-up check now counts the current failure (`FailedFindAttempts + 1 >= Max`).
+  - "Hmm" plays only on the first failure, and "annoyed" only on give-up.
+  - `BP_Customer` now has a 3 s per-customer voice cooldown.
+  - **First fix failed playtest:** the customer said "hmm", then barked every 3 s and never left. Root cause: in `BT_Customer`, the "Leave Empty Handed" `HasPurchasedItem` decorator had `BasicOperation=NotSet` but a stale runtime `OperationType=0` (Is Set). A Monolith/Python property edit doesn't run `PostEditChangeProperty`, so the two never synced. So a customer who gave up empty-handed fell through to Browse Shelf → fail → bark, looping forever.
+  - **Second fix (2026-10-02):** set `OperationType=1` on that decorator and saved. Live PIE check, empty shelves, 1 customer: one wander, give-up at 2 attempts, then the customer walked out and despawned. The user verified it in-game.
+  - **Gotcha for future BT edits:** after setting `BasicOperation` on a `BTDecorator_Blackboard` via Monolith, also set `OperationType` (Set=0, NotSet=1).

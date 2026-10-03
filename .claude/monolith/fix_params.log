@@ -3331,3 +3331,30 @@ editor.run_python: code->command
 editor.run_python: code->command
 editor.run_python: code->command
 editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+blueprint.get_execution_flow: graph_name->entry_point
+blueprint.disconnect_pins: source_node->node_id, source_pin->pin_name
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
+editor.run_python: code->command
