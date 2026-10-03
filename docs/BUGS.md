@@ -1,5 +1,21 @@
 # Known Bugs
 
+## Defense meshes sit 5–7 cm below their actor origin (freeform building)
+
+- **Area:** `/Game/Defense/` mesh bottoms below local Z 0: Turret -6.7, Barricade -5.5, Trap_Spike -7.5, Trap_SlowStrip -5, Trap_Gas -5. Found in Tasks 12–17 of `docs/FREEFORM_BUILDING_PLAN.md`.
+- **Repro:** In PIE, place a turret or barricade on the floor in freeform Build Mode.
+- **Actual:** Unverified. Freeform placement puts the actor origin on the traced surface, so the mesh may sink a few cm into the floor. The NavBlockerBox spans Z 0..120, slightly above the mesh bottom.
+- **Expected:** The mesh rests on the floor.
+- **Status:** Open, cosmetic, needs PIE. Fix either at the source (re-export with the pivot at the base, per the unit-scale rule) or by offsetting the mesh components +Z in the Blueprint.
+
+## Swinging trap mount faces into the wall (freeform building)
+
+- **Area:** `/Game/Defense/BP_Trap_Swinging` vs `UGDBuildPlacementLibrary::ComputePlacementTransform`. Wall placement points actor +X out of the wall and puts the footprint at local X 0..2E.X, Z ±E.Z around the aim point. The SwingMount mesh, which is the root component, extends along **-X** (X -40..+5) and sits at Z 30..100.
+- **Repro:** In PIE, place a Swinging trap on a wall in freeform Build Mode.
+- **Actual:** Expected (unverified): the mount sits inside the wall, 30–100 cm above the aim point, and the overlap footprint doesn't match the visible mesh.
+- **Expected:** The mount sits flush on the wall face, centred on the aim point.
+- **Status:** Open, deferred during the overnight run. SwingMount is the root, so it can't be rotated in the Blueprint. The fix needs either a new scene root with SwingMount under it at yaw 180 and Z -65, or a re-exported mesh. Either risks the swing logic, so it was left for a supervised session.
+
 ## Shelf tier retune truncates items from old saves (Phase 14 CP3)
 
 - **Area:** Shelves/Save.

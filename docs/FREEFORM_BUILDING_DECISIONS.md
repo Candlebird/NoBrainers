@@ -83,7 +83,7 @@ Made by the architect (see `docs/FREEFORM_BUILDING_PLAN.md` section 8 for detail
 7. Ghosts are hit by interact traces only; pawns, bullets and nav ignore them.
 8. All 8 footprint corners and the center must be inside some build area.
 9. Map_Store_Outdoors build areas = each existing store interior volume + 25 cm. Map_Startup and Test_Level_Zero get none.
-10. A blocker counts as "blocking" (attackable) for 2 s after a zombie flags it. All zombie damage to defenses (melee, Bloater, Spitter acid) goes through this gate. *(Corrected at vision gate 1: the plan originally left Spitter acid ungated, contradicting "area damage only hurts path-blockers".)*
+10. A blocker counts as "blocking" (attackable) for 2 s after a zombie flags it. All zombie damage to defenses (melee, Bloater, Spitter acid) goes through this gate. *(Corrected at vision gate 1: the plan originally left Spitter acid ungated, contradicting "area damage only hurts path-blockers". Task 11 found that every zombie damage path to defenses (melee attack component, Bloater, Brute) goes through `ApplyBreachDamage`, which is now gated. Spitter acid is a GAS effect (`GE_AcidDamage`) and never touches defenses, so no extra fix was needed.)*
 11. Zombies attack a blocker when the detour is > 2.0x the direct path or there's no detour. "On the path" = within the blocker's half-width + 80 cm.
 12. Customers give up after 3 s stuck on a partial path, counted as a lost customer.
 13. Rebuild cost = round(25% × TotalSpent); rebuilding doesn't add to TotalSpent.
@@ -97,5 +97,7 @@ Made by the architect (see `docs/FREEFORM_BUILDING_PLAN.md` section 8 for detail
 21. Floor items may sit on a raised surface (e.g. counter top) inside a build area. Accepted for v1.
 22. Codex names keys generically ("the Rotate key").
 **Please review (vision gate 1 flagged these as stretching your spec):** call 13 (spec: "costs 25% of total spent"), call 15 (spec: Move "picks the buildable up"), call 16 (spec doesn't ask to remove hold-E repair on live traps) and especially call 21 (spec: floor items are "store interior only" and can't overlap the counter, yet a counter *top* is currently allowed). Cheap alternative for 21: reject floor surfaces more than 30 cm above the floor.
+
+**Deferred (Tasks 12–17):** the Swinging trap's mount mesh faces -X, but wall placement expects +X, so it will sit inside the wall. Fixing it means re-rooting the Blueprint, which risks the swing logic, so it was left for you. See docs/BUGS.md — "Swinging trap mount faces into the wall." The trap meshes have NoCollision, so the packet's "Pawn Overlap" setting is inert. Traps still trigger through their TriggerVolume, and this is unchanged.
 
 23. GDD's planned future "defense-targeting" zombie type would need an exception to rule 4. Not resolved now.
