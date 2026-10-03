@@ -100,4 +100,10 @@ Made by the architect (see `docs/FREEFORM_BUILDING_PLAN.md` section 8 for detail
 
 **Deferred (Tasks 12–17):** the Swinging trap's mount mesh faces -X, but wall placement expects +X, so it will sit inside the wall. Fixing it means re-rooting the Blueprint, which risks the swing logic, so it was left for you. See docs/BUGS.md — "Swinging trap mount faces into the wall." The trap meshes have NoCollision, so the packet's "Pawn Overlap" setting is inert. Traps still trigger through their TriggerVolume, and this is unchanged.
 
+**Task 20:** the free first Spike now records TotalSpent 0, so it sells for $0 and its ghost rebuilds for $0. The old socket code stored the row cost, which let a free Spike be sold for cash. Kept as-is.
+
+**Tasks 22–24:**
+- The tutorial goal Def_ManageTrap doesn't fire from the ghost panel.
+- Monolith can't create UMG property bindings, so the HUD's build-reason text (`Txt_BuildReason`) is set every frame from WBP_HUD's Event Tick through a new Sequence branch. The reason is read from the owning pawn (BP_HeroCharacter), because BuildModeComponent lives there, not on the PC. Vesper reflowed the whole HUD EventGraph; node positions moved but the logic is unchanged.
+
 23. GDD's planned future "defense-targeting" zombie type would need an exception to rule 4. Not resolved now.
